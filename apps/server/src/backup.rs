@@ -143,8 +143,8 @@ impl Drop for Stage {
     }
 }
 // Directory publication must not replace an empty directory another process
-// creates between validation and rename. Both supported Unix kernels provide
-// an atomic no-replace rename; Windows directory rename already refuses one.
+// creates between validation and rename. Each supported platform uses its
+// native no-replace operation; std::fs::rename can replace empty directories.
 fn publish_new(source: &Path, destination: &Path) -> Result<()> {
     #[cfg(any(target_os = "macos", target_os = "linux"))]
     {
@@ -182,10 +182,35 @@ fn publish_new(source: &Path, destination: &Path) -> Result<()> {
         }
         Ok(())
     }
-    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    #[cfg(windows)]
     {
-        fs::rename(source, destination)?;
+        use std::os::windows::ffi::OsStrExt;
+        fn wide_path(path: &Path) -> Result<Vec<u16>> {
+            let mut wide: Vec<u16> = path.as_os_str().encode_wide().collect();
+            if wide.contains(&0) {
+                return fail("Invalid backup path");
+            }
+            wide.push(0);
+            Ok(wide)
+        }
+        #[link(name = "kernel32")]
+        unsafe extern "system" {
+            fn MoveFileExW(existing: *const u16, destination: *const u16, flags: u32) -> i32;
+        }
+        let from = wide_path(source)?;
+        let to = wide_path(destination)?;
+        // SAFETY: both buffers contain live NUL-terminated UTF-16 paths. Zero
+        // flags prohibit replacement and cross-volume copy/delete fallback.
+        let status = unsafe { MoveFileExW(from.as_ptr(), to.as_ptr(), 0) };
+        if status == 0 {
+            return Err(std::io::Error::last_os_error().into());
+        }
         Ok(())
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux", windows)))]
+    {
+        let _ = (source, destination);
+        fail("Atomic backup publication is unavailable on this platform")
     }
 }
 fn stage(output: &Path, work: impl FnOnce(&Path) -> Result<()>) -> Result<()> {
@@ -563,5 +588,24 @@ mod tests {
         assert!(publish_new(&stage, &destination).is_err());
         assert!(stage.join("sentinel").is_file());
         assert!(fs::read_dir(&destination).unwrap().next().is_none());
+    }
+    #[test]
+    fn publication_preserves_unicode_paths_and_rejects_embedded_nul() {
+        let dir = tempfile::tempdir().unwrap();
+        let stage = dir.path().join("stage-📦");
+        let destination = dir.path().join("backup-搜寻");
+        fs::create_dir(&stage).unwrap();
+        fs::write(stage.join("sentinel"), b"staged").unwrap();
+        let mut invalid_source = stage.as_os_str().to_owned();
+        invalid_source.push("\0ignored");
+        let mut invalid_destination = destination.as_os_str().to_owned();
+        invalid_destination.push("\0ignored");
+        assert!(publish_new(Path::new(&invalid_source), &destination).is_err());
+        assert!(publish_new(&stage, Path::new(&invalid_destination)).is_err());
+        assert!(stage.join("sentinel").is_file());
+        assert!(!destination.exists());
+        publish_new(&stage, &destination).unwrap();
+        assert!(!stage.exists());
+        assert_eq!(fs::read(destination.join("sentinel")).unwrap(), b"staged");
     }
 }
