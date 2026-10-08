@@ -1,0 +1,110 @@
+.seller_conversation-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.seller_conversation-listing {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+.seller_conversation-listing p,
+.seller_conversation-listing small {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  display: block;
+}
+.seller_conversation-field,
+.seller_conversation-record {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.seller_conversation-panel small {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.seller_conversation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.seller_conversation-notice,
+.seller_conversation-record,
+.seller_conversation-suggestions {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  background: var(--muted);
+}
+.seller_conversation-notice p {
+  margin-bottom: 10px;
+}
+.seller_conversation-message {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+.seller_conversation-message p {
+  margin: 6px 0;
+}
+.seller_conversation-outgoing {
+  background: var(--muted);
+}
+.seller_conversation-times {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  font-size: 12px;
+}
+.seller_conversation-times dt {
+  color: var(--muted-foreground);
+}
+.seller_conversation-collection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.seller_conversation-collection > * {
+  flex: 1;
+  min-width: 120px;
+}
+.seller_conversation-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.seller_conversation-history {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.seller_conversation-history h3 {
+  font-weight: 600;
+}
+.seller_conversation-facets {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.seller_conversation-events {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+  overflow-wrap: anywhere;
+}
+.seller_conversation-events small {
+  display: block;
+}
+.seller_conversation-panel summary {
+  cursor: pointer;
+  font-weight: 500;
+}

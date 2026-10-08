@@ -1,0 +1,32 @@
+__pycache__/
+.local/
+output/
+dist/
+.DS_Store
+node_modules/
+formal/.lake/
+
+# Local credentials and machine-specific settings.
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+.codex/
+
+# Buyer workspaces, database sidecars and private exports.
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.sqlite3-*
+*.db
+*.db-*
+/workspace/
+/workspaces/
+/backups/
+/media/
+/workspace.json
+/observations.json

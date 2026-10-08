@@ -1,0 +1,1512 @@
+[
+  {
+    "id": "car-family",
+    "brief": "A used family car, total budget £12,000, near Birmingham. Need room for two child seats.",
+    "definition": {
+      "schema_version": 1,
+      "version": 1,
+      "category": "vehicle",
+      "title": "Family car",
+      "description": "Agent-authored test brief; fictional requirements, not a live search.",
+      "price": {
+        "currency": "GBP",
+        "period": "once"
+      },
+      "comparison_attributes": [
+        "make",
+        "model",
+        "generation",
+        "trim",
+        "gearbox",
+        "fuel_type",
+        "year_band",
+        "mileage_band"
+      ],
+      "fields": [
+        {
+          "id": "make",
+          "label": "Any preferred make?",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "make",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "model",
+          "label": "Any particular model?",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "model",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "budget",
+          "label": "Maximum total asking price",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "display_divisor": 100,
+          "unit": "£",
+          "hint": "Full item price. Delivery, fees and finance payments are separate.",
+          "match": {
+            "attribute": "price_minor",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "body",
+          "label": "Preferred vehicle shape",
+          "type": "single_choice",
+          "required": false,
+          "question_stage": "setup",
+          "options": [
+            {
+              "value": "hatchback",
+              "label": "Hatchback"
+            },
+            {
+              "value": "estate",
+              "label": "Estate"
+            },
+            {
+              "value": "suv",
+              "label": "SUV"
+            }
+          ],
+          "match": {
+            "attribute": "body_type",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "gearbox",
+          "label": "Gearbox preference",
+          "type": "single_choice",
+          "required": false,
+          "question_stage": "setup",
+          "options": [
+            {
+              "value": "manual",
+              "label": "Manual"
+            },
+            {
+              "value": "automatic",
+              "label": "Automatic"
+            }
+          ],
+          "match": {
+            "attribute": "gearbox",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "fuel",
+          "label": "Fuel preference",
+          "type": "single_choice",
+          "required": false,
+          "question_stage": "setup",
+          "options": [
+            {
+              "value": "petrol",
+              "label": "Petrol"
+            },
+            {
+              "value": "diesel",
+              "label": "Diesel"
+            },
+            {
+              "value": "hybrid",
+              "label": "Hybrid"
+            },
+            {
+              "value": "electric",
+              "label": "Electric"
+            }
+          ],
+          "match": {
+            "attribute": "fuel_type",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "max_drive",
+          "label": "Maximum collection drive",
+          "type": "integer",
+          "required": false,
+          "minimum": 1,
+          "unit": "minutes",
+          "question_stage": "setup",
+          "match": {
+            "attribute": "drive_minutes",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "min_year",
+          "label": "Earliest registration year",
+          "type": "integer",
+          "required": false,
+          "minimum": 1900,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "year",
+            "operator": "gte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "max_mileage",
+          "label": "Maximum recorded mileage",
+          "type": "integer",
+          "required": false,
+          "minimum": 0,
+          "unit": "miles",
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "mileage_miles",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "colour",
+          "label": "Preferred colour",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "colour",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "history",
+          "label": "Required history details",
+          "type": "text",
+          "required": false,
+          "hint": "Record observable service/history facts; reliability is not a verified yes/no attribute.",
+          "question_stage": "refinement"
+        },
+        {
+          "id": "item_state",
+          "label": "New or used",
+          "type": "single_choice",
+          "required": false,
+          "options": [
+            {
+              "value": "used",
+              "label": "Used"
+            },
+            {
+              "value": "new",
+              "label": "New"
+            }
+          ],
+          "match": {
+            "attribute": "item_state",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "child_seat_spaces",
+          "label": "Required rear child-seat spaces",
+          "type": "integer",
+          "required": false,
+          "minimum": 0,
+          "match": {
+            "attribute": "child_seat_spaces",
+            "operator": "gte",
+            "importance": "required"
+          }
+        }
+      ]
+    },
+    "values": {
+      "budget": 1200000,
+      "item_state": "used",
+      "child_seat_spaces": 2
+    },
+    "answers": {
+      "body": null,
+      "gearbox": "automatic",
+      "fuel": null,
+      "max_drive": 45
+    },
+    "expected_setup_questions": ["body", "gearbox", "fuel", "max_drive"]
+  },
+  {
+    "id": "car-exact",
+    "brief": "A used Toyota Corolla Touring Sports hybrid automatic, 2019 or newer, under 60,000 miles, £16,000 total, within 45 minutes of Birmingham.",
+    "definition": {
+      "schema_version": 1,
+      "version": 1,
+      "category": "vehicle",
+      "title": "Corolla estate",
+      "description": "Agent-authored test brief; fictional requirements, not a live search.",
+      "price": {
+        "currency": "GBP",
+        "period": "once"
+      },
+      "comparison_attributes": [
+        "make",
+        "model",
+        "generation",
+        "trim",
+        "gearbox",
+        "fuel_type",
+        "year_band",
+        "mileage_band"
+      ],
+      "fields": [
+        {
+          "id": "make",
+          "label": "Any preferred make?",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "make",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "model",
+          "label": "Any particular model?",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "model",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "budget",
+          "label": "Maximum total asking price",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "display_divisor": 100,
+          "unit": "£",
+          "hint": "Full item price. Delivery, fees and finance payments are separate.",
+          "match": {
+            "attribute": "price_minor",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "gearbox",
+          "label": "Gearbox preference",
+          "type": "single_choice",
+          "required": false,
+          "question_stage": "setup",
+          "options": [
+            {
+              "value": "manual",
+              "label": "Manual"
+            },
+            {
+              "value": "automatic",
+              "label": "Automatic"
+            }
+          ],
+          "match": {
+            "attribute": "gearbox",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "fuel",
+          "label": "Fuel preference",
+          "type": "single_choice",
+          "required": false,
+          "question_stage": "setup",
+          "options": [
+            {
+              "value": "petrol",
+              "label": "Petrol"
+            },
+            {
+              "value": "diesel",
+              "label": "Diesel"
+            },
+            {
+              "value": "hybrid",
+              "label": "Hybrid"
+            },
+            {
+              "value": "electric",
+              "label": "Electric"
+            }
+          ],
+          "match": {
+            "attribute": "fuel_type",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "max_drive",
+          "label": "Maximum collection drive",
+          "type": "integer",
+          "required": false,
+          "minimum": 1,
+          "unit": "minutes",
+          "question_stage": "setup",
+          "match": {
+            "attribute": "drive_minutes",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "min_year",
+          "label": "Earliest registration year",
+          "type": "integer",
+          "required": false,
+          "minimum": 1900,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "year",
+            "operator": "gte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "max_mileage",
+          "label": "Maximum recorded mileage",
+          "type": "integer",
+          "required": false,
+          "minimum": 0,
+          "unit": "miles",
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "mileage_miles",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "colour",
+          "label": "Preferred colour",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "colour",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "history",
+          "label": "Required history details",
+          "type": "text",
+          "required": false,
+          "hint": "Record observable service/history facts; reliability is not a verified yes/no attribute.",
+          "question_stage": "refinement"
+        }
+      ]
+    },
+    "values": {
+      "make": "Toyota",
+      "model": "Corolla Touring Sports",
+      "budget": 1600000,
+      "gearbox": "automatic",
+      "fuel": "hybrid",
+      "max_drive": 45,
+      "min_year": 2019,
+      "max_mileage": 60000
+    },
+    "answers": {},
+    "expected_setup_questions": []
+  },
+  {
+    "id": "car-ev",
+    "brief": "Used electric car under £18,000, within 60 minutes of Birmingham; at least 200 miles realistic range. I can charge at home.",
+    "definition": {
+      "schema_version": 1,
+      "version": 1,
+      "category": "vehicle",
+      "title": "Electric car",
+      "description": "Agent-authored test brief; fictional requirements, not a live search.",
+      "price": {
+        "currency": "GBP",
+        "period": "once"
+      },
+      "comparison_attributes": [
+        "make",
+        "model",
+        "generation",
+        "battery_capacity_kwh",
+        "year_band",
+        "mileage_band"
+      ],
+      "fields": [
+        {
+          "id": "fuel",
+          "label": "Fuel type",
+          "type": "single_choice",
+          "required": false,
+          "options": [
+            {
+              "value": "electric",
+              "label": "Electric"
+            },
+            {
+              "value": "petrol",
+              "label": "Petrol"
+            }
+          ],
+          "match": {
+            "attribute": "fuel_type",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "budget",
+          "label": "Maximum total asking price",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "display_divisor": 100,
+          "unit": "£",
+          "hint": "Full item price. Delivery, fees and finance payments are separate.",
+          "match": {
+            "attribute": "price_minor",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "max_drive",
+          "label": "Maximum collection drive",
+          "type": "integer",
+          "required": false,
+          "minimum": 1,
+          "unit": "minutes",
+          "question_stage": "setup",
+          "match": {
+            "attribute": "drive_minutes",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "range",
+          "label": "Minimum real-world range",
+          "type": "integer",
+          "required": false,
+          "minimum": 1,
+          "unit": "miles",
+          "visible_when": {
+            "field": "fuel",
+            "one_of": ["electric"]
+          },
+          "hint": "Keep the range basis and conditions; a brochure figure is not a measured real-world result.",
+          "match": {
+            "attribute": "real_world_range_miles",
+            "operator": "gte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "charging",
+          "label": "Usual charging access",
+          "type": "single_choice",
+          "required": false,
+          "visible_when": {
+            "field": "fuel",
+            "one_of": ["electric"]
+          },
+          "question_stage": "setup",
+          "options": [
+            {
+              "value": "home",
+              "label": "Home charging"
+            },
+            {
+              "value": "public",
+              "label": "Public charging"
+            }
+          ]
+        },
+        {
+          "id": "body",
+          "label": "Preferred vehicle shape",
+          "type": "single_choice",
+          "required": false,
+          "question_stage": "setup",
+          "options": [
+            {
+              "value": "hatchback",
+              "label": "Hatchback"
+            },
+            {
+              "value": "estate",
+              "label": "Estate"
+            },
+            {
+              "value": "suv",
+              "label": "SUV"
+            }
+          ],
+          "match": {
+            "attribute": "body_type",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "battery",
+          "label": "Minimum evidenced battery health",
+          "type": "integer",
+          "required": false,
+          "minimum": 0,
+          "maximum": 100,
+          "unit": "%",
+          "visible_when": {
+            "field": "fuel",
+            "one_of": ["electric"]
+          },
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "battery_health_percent",
+            "operator": "gte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "colour",
+          "label": "Preferred colour",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "colour",
+            "operator": "eq",
+            "importance": "required"
+          }
+        }
+      ]
+    },
+    "values": {
+      "fuel": "electric",
+      "budget": 1800000,
+      "max_drive": 60,
+      "range": 200,
+      "charging": "home"
+    },
+    "answers": {
+      "body": null
+    },
+    "expected_setup_questions": ["body"]
+  },
+  {
+    "id": "shirt-detail",
+    "brief": "A men’s white linen granddad-collar shirt, size M, under £35. No brand preference.",
+    "definition": {
+      "schema_version": 1,
+      "version": 1,
+      "category": "clothing",
+      "title": "Linen shirt",
+      "description": "Agent-authored test brief; fictional requirements, not a live search.",
+      "price": {
+        "currency": "GBP",
+        "period": "once"
+      },
+      "comparison_attributes": ["garment_type", "brand_tier", "material", "condition"],
+      "fields": [
+        {
+          "id": "garment",
+          "label": "Garment type",
+          "type": "text",
+          "required": true,
+          "match": {
+            "attribute": "garment_type",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "size",
+          "label": "Labelled size and sizing system",
+          "type": "text",
+          "required": true,
+          "hint": "For example men’s M, UK 12, or a 16-inch collar. Preserve the user’s sizing system.",
+          "match": {
+            "attribute": "size_label",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "budget",
+          "label": "Maximum total asking price",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "display_divisor": 100,
+          "unit": "£",
+          "hint": "Full item price. Delivery, fees and finance payments are separate.",
+          "match": {
+            "attribute": "price_minor",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "colour",
+          "label": "Preferred colour",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "colour",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "material",
+          "label": "Preferred fabric",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "material",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "brand",
+          "label": "Preferred brand",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "brand",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "fit",
+          "label": "Preferred fit",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "fit",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "condition",
+          "label": "Acceptable condition",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "condition",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "collar",
+          "label": "Collar style",
+          "type": "text",
+          "required": false,
+          "match": {
+            "attribute": "collar_style",
+            "operator": "eq",
+            "importance": "required"
+          }
+        }
+      ]
+    },
+    "values": {
+      "garment": "shirt",
+      "size": "men’s M",
+      "budget": 3500,
+      "colour": "white",
+      "material": "linen",
+      "brand": null,
+      "collar": "granddad"
+    },
+    "answers": {},
+    "expected_setup_questions": []
+  },
+  {
+    "id": "clothes-vague",
+    "brief": "A second-hand jacket for everyday wear, under £60.",
+    "definition": {
+      "schema_version": 1,
+      "version": 1,
+      "category": "clothing",
+      "title": "Everyday jacket",
+      "description": "Agent-authored test brief; fictional requirements, not a live search.",
+      "price": {
+        "currency": "GBP",
+        "period": "once"
+      },
+      "comparison_attributes": ["garment_type", "brand_tier", "material", "condition"],
+      "fields": [
+        {
+          "id": "garment",
+          "label": "Garment type",
+          "type": "text",
+          "required": true,
+          "match": {
+            "attribute": "garment_type",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "size",
+          "label": "Labelled size and sizing system",
+          "type": "text",
+          "required": true,
+          "hint": "For example men’s M, UK 12, or a 16-inch collar. Preserve the user’s sizing system.",
+          "match": {
+            "attribute": "size_label",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "budget",
+          "label": "Maximum total asking price",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "display_divisor": 100,
+          "unit": "£",
+          "hint": "Full item price. Delivery, fees and finance payments are separate.",
+          "match": {
+            "attribute": "price_minor",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "colour",
+          "label": "Preferred colour",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "colour",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "material",
+          "label": "Preferred fabric",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "material",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "brand",
+          "label": "Preferred brand",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "brand",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "fit",
+          "label": "Preferred fit",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "fit",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "condition",
+          "label": "Acceptable condition",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "condition",
+            "operator": "eq",
+            "importance": "required"
+          }
+        }
+      ]
+    },
+    "values": {
+      "garment": "jacket",
+      "budget": 6000
+    },
+    "answers": {
+      "size": "women’s UK 12"
+    },
+    "expected_setup_questions": ["size"]
+  },
+  {
+    "id": "sofa-fit",
+    "brief": "A two-seat sofa under £250, maximum 160 cm wide. Can collect within 30 minutes.",
+    "definition": {
+      "schema_version": 1,
+      "version": 1,
+      "category": "furniture",
+      "title": "Small sofa",
+      "description": "Agent-authored test brief; fictional requirements, not a live search.",
+      "price": {
+        "currency": "GBP",
+        "period": "once"
+      },
+      "comparison_attributes": ["furniture_type", "seats", "brand_tier", "material", "condition"],
+      "fields": [
+        {
+          "id": "item",
+          "label": "Furniture type",
+          "type": "text",
+          "required": true,
+          "match": {
+            "attribute": "furniture_type",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "budget",
+          "label": "Maximum total asking price",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "display_divisor": 100,
+          "unit": "£",
+          "hint": "Full item price. Delivery, fees and finance payments are separate.",
+          "match": {
+            "attribute": "price_minor",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "max_width",
+          "label": "Maximum width",
+          "type": "integer",
+          "required": false,
+          "minimum": 1,
+          "unit": "cm",
+          "question_stage": "setup",
+          "match": {
+            "attribute": "width_cm",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "max_drive",
+          "label": "Maximum collection drive",
+          "type": "integer",
+          "required": false,
+          "minimum": 1,
+          "unit": "minutes",
+          "question_stage": "setup",
+          "match": {
+            "attribute": "drive_minutes",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "material",
+          "label": "Preferred upholstery",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "material",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "colour",
+          "label": "Preferred colour",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "colour",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "brand",
+          "label": "Preferred brand",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "brand",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "depth",
+          "label": "Maximum depth",
+          "type": "integer",
+          "required": false,
+          "minimum": 1,
+          "unit": "cm",
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "depth_cm",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "seats",
+          "label": "Seat count",
+          "type": "integer",
+          "required": false,
+          "minimum": 1,
+          "match": {
+            "attribute": "seats",
+            "operator": "eq",
+            "importance": "required"
+          }
+        }
+      ]
+    },
+    "values": {
+      "item": "sofa",
+      "budget": 25000,
+      "max_width": 160,
+      "max_drive": 30,
+      "seats": 2
+    },
+    "answers": {},
+    "expected_setup_questions": []
+  },
+  {
+    "id": "bike-commute",
+    "brief": "A commuter bicycle under £300, near Birmingham. I’m 178 cm tall.",
+    "definition": {
+      "schema_version": 1,
+      "version": 1,
+      "category": "bicycle",
+      "title": "Commuter bicycle",
+      "description": "Agent-authored test brief; fictional requirements, not a live search.",
+      "price": {
+        "currency": "GBP",
+        "period": "once"
+      },
+      "comparison_attributes": ["bike_type", "brand_tier", "frame_size", "electric", "condition"],
+      "fields": [
+        {
+          "id": "use",
+          "label": "Bike type",
+          "type": "single_choice",
+          "required": true,
+          "options": [
+            {
+              "value": "commuter",
+              "label": "Commuter"
+            },
+            {
+              "value": "road",
+              "label": "Road"
+            },
+            {
+              "value": "mountain",
+              "label": "Mountain"
+            }
+          ],
+          "match": {
+            "attribute": "bike_type",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "budget",
+          "label": "Maximum total asking price",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "display_divisor": 100,
+          "unit": "£",
+          "hint": "Full item price. Delivery, fees and finance payments are separate.",
+          "match": {
+            "attribute": "price_minor",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "rider_height",
+          "label": "Rider height or known frame size",
+          "type": "text",
+          "required": true,
+          "hint": "Use the manufacturer’s geometry. Rider height, frame size and wheel diameter are distinct."
+        },
+        {
+          "id": "max_drive",
+          "label": "Maximum collection drive",
+          "type": "integer",
+          "required": false,
+          "minimum": 1,
+          "unit": "minutes",
+          "question_stage": "setup",
+          "match": {
+            "attribute": "drive_minutes",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "brand",
+          "label": "Preferred brand",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "brand",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "electric",
+          "label": "Electric assistance",
+          "type": "boolean",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "electric",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "range",
+          "label": "Minimum evidenced assisted range",
+          "type": "integer",
+          "required": false,
+          "minimum": 0,
+          "unit": "miles",
+          "visible_when": {
+            "field": "electric",
+            "one_of": [true]
+          },
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "assisted_range_miles",
+            "operator": "gte",
+            "importance": "required"
+          }
+        }
+      ]
+    },
+    "values": {
+      "use": "commuter",
+      "budget": 30000,
+      "rider_height": "178 cm"
+    },
+    "answers": {
+      "max_drive": 30
+    },
+    "expected_setup_questions": ["max_drive"]
+  },
+  {
+    "id": "camera-lens",
+    "brief": "A Sony FE 35mm f/1.8 lens for E mount, under £300.",
+    "definition": {
+      "schema_version": 1,
+      "version": 1,
+      "category": "camera",
+      "title": "Sony lens",
+      "description": "Agent-authored test brief; fictional requirements, not a live search.",
+      "price": {
+        "currency": "GBP",
+        "period": "once"
+      },
+      "comparison_attributes": ["scope", "model", "mount", "condition"],
+      "fields": [
+        {
+          "id": "scope",
+          "label": "Body, lens or kit?",
+          "type": "single_choice",
+          "required": true,
+          "options": [
+            {
+              "value": "body",
+              "label": "Body only"
+            },
+            {
+              "value": "lens",
+              "label": "Lens only"
+            },
+            {
+              "value": "kit",
+              "label": "Body and lens kit"
+            }
+          ],
+          "match": {
+            "attribute": "scope",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "model",
+          "label": "Model",
+          "type": "text",
+          "required": true,
+          "match": {
+            "attribute": "model",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "mount",
+          "label": "Lens mount",
+          "type": "text",
+          "required": true,
+          "visible_when": {
+            "field": "scope",
+            "one_of": ["lens"]
+          },
+          "match": {
+            "attribute": "mount",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "budget",
+          "label": "Maximum total asking price",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "display_divisor": 100,
+          "unit": "£",
+          "hint": "Full item price. Delivery, fees and finance payments are separate.",
+          "match": {
+            "attribute": "price_minor",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "condition",
+          "label": "Acceptable cosmetic condition",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "condition",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "shutter_count",
+          "label": "Maximum shutter count",
+          "type": "integer",
+          "required": false,
+          "minimum": 0,
+          "visible_when": {
+            "field": "scope",
+            "one_of": ["body", "kit"]
+          },
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "shutter_count",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "accessories",
+          "label": "Required accessories",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement"
+        }
+      ]
+    },
+    "values": {
+      "scope": "lens",
+      "model": "Sony FE 35mm f/1.8",
+      "mount": "Sony E",
+      "budget": 30000
+    },
+    "answers": {},
+    "expected_setup_questions": []
+  },
+  {
+    "id": "phone-specific",
+    "brief": "An unlocked iPhone 14 with at least 128 GB storage, under £300.",
+    "definition": {
+      "schema_version": 1,
+      "version": 1,
+      "category": "phone",
+      "title": "iPhone 14",
+      "description": "Agent-authored test brief; fictional requirements, not a live search.",
+      "price": {
+        "currency": "GBP",
+        "period": "once"
+      },
+      "comparison_attributes": ["model", "storage_gb", "condition"],
+      "fields": [
+        {
+          "id": "model",
+          "label": "Phone model",
+          "type": "text",
+          "required": true,
+          "match": {
+            "attribute": "model",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "budget",
+          "label": "Maximum total asking price",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "display_divisor": 100,
+          "unit": "£",
+          "hint": "Full item price. Delivery, fees and finance payments are separate.",
+          "match": {
+            "attribute": "price_minor",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "network",
+          "label": "Network requirement",
+          "type": "single_choice",
+          "required": false,
+          "question_stage": "setup",
+          "options": [
+            {
+              "value": "unlocked",
+              "label": "Unlocked"
+            }
+          ],
+          "match": {
+            "attribute": "network_lock",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "storage",
+          "label": "Minimum storage",
+          "type": "integer",
+          "required": false,
+          "minimum": 1,
+          "unit": "GB",
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "storage_gb",
+            "operator": "gte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "battery",
+          "label": "Minimum evidenced battery health",
+          "type": "integer",
+          "required": false,
+          "minimum": 0,
+          "maximum": 100,
+          "unit": "%",
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "battery_health_percent",
+            "operator": "gte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "colour",
+          "label": "Preferred colour",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "colour",
+            "operator": "eq",
+            "importance": "required"
+          }
+        }
+      ]
+    },
+    "values": {
+      "model": "iPhone 14",
+      "budget": 30000,
+      "network": "unlocked",
+      "storage": 128
+    },
+    "answers": {},
+    "expected_setup_questions": []
+  },
+  {
+    "id": "shoes-detail",
+    "brief": "Black ankle boots, women’s UK 6, heel no higher than 3 cm, under £50.",
+    "definition": {
+      "schema_version": 1,
+      "version": 1,
+      "category": "clothing",
+      "title": "Low-heel boots",
+      "description": "Agent-authored test brief; fictional requirements, not a live search.",
+      "price": {
+        "currency": "GBP",
+        "period": "once"
+      },
+      "comparison_attributes": ["garment_type", "brand_tier", "material", "condition"],
+      "fields": [
+        {
+          "id": "garment",
+          "label": "Item type",
+          "type": "text",
+          "required": true,
+          "match": {
+            "attribute": "garment_type",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "size",
+          "label": "Size and sizing system",
+          "type": "text",
+          "required": true,
+          "match": {
+            "attribute": "size_label",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "budget",
+          "label": "Maximum total asking price",
+          "type": "integer",
+          "required": true,
+          "minimum": 1,
+          "display_divisor": 100,
+          "unit": "£",
+          "hint": "Full item price. Delivery, fees and finance payments are separate.",
+          "match": {
+            "attribute": "price_minor",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "heel_max",
+          "label": "Maximum heel height",
+          "type": "number",
+          "required": false,
+          "minimum": 0,
+          "unit": "cm",
+          "match": {
+            "attribute": "heel_height_cm",
+            "operator": "lte",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "colour",
+          "label": "Preferred colour",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "colour",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "brand",
+          "label": "Preferred brand",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "brand",
+            "operator": "eq",
+            "importance": "required"
+          }
+        },
+        {
+          "id": "material",
+          "label": "Preferred material",
+          "type": "text",
+          "required": false,
+          "question_stage": "refinement",
+          "match": {
+            "attribute": "material",
+            "operator": "eq",
+            "importance": "required"
+          }
+        }
+      ]
+    },
+    "values": {
+      "garment": "ankle boots",
+      "size": "women’s UK 6",
+      "budget": 5000,
+      "heel_max": 3,
+      "colour": "black"
+    },
+    "answers": {},
+    "expected_setup_questions": []
+  }
+]

@@ -1,0 +1,54 @@
+.listing-detail {
+  --dialog-width: 896px;
+}
+
+.listing-detail-overview {
+  display: grid;
+  align-items: start;
+  gap: 24px;
+}
+
+.listing-detail-summary {
+  display: grid;
+  min-width: 0;
+  gap: 20px;
+}
+
+.listing-detail-section {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.listing-detail-section-heading {
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.listing-detail-comparison + .listing-detail-comparison {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.listing-detail [data-slot="dialog-footer"] a,
+.listing-detail [data-slot="dialog-footer"] button {
+  min-height: 40px;
+  white-space: normal;
+}
+
+@media (min-width: 768px) {
+  .listing-detail-overview {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 639px) {
+  .listing-detail [data-slot="dialog-footer"] a,
+  .listing-detail [data-slot="dialog-footer"] button {
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
+}

@@ -1,0 +1,71 @@
+.ui-switch {
+  appearance: none;
+  width: 28px;
+  height: 17px;
+  flex-shrink: 0;
+  border-radius: 100px;
+  border: 1px solid black;
+  background-color: white;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 150ms ease;
+}
+.ui-switch::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: black;
+  transition: transform 150ms ease;
+}
+.ui-switch:checked {
+  background: black;
+}
+.ui-switch:checked::before {
+  background: white;
+  transform: translateX(11px);
+}
+.ui-switch:focus-visible {
+  outline: 2px solid black;
+  outline-offset: 3px;
+}
+.ui-switch:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+@media (max-width: 639px) {
+  [data-slot="input"],
+  [data-slot="native-select"],
+  [data-slot="select-trigger"],
+  [data-slot="textarea"] {
+    font-size: 16px;
+  }
+}
+@media (pointer: coarse) {
+  .responsive-overlay-popup [data-slot="button"],
+  .responsive-overlay-popup [data-slot="input"],
+  .responsive-overlay-popup [data-slot="native-select"],
+  .responsive-overlay-popup [data-slot="select-trigger"] {
+    min-height: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-switch,
+  .ui-switch::before {
+    transition: none;
+  }
+}
+
+@media (pointer: coarse) {
+  [data-slot="menu-trigger"],
+  [data-slot="menu-item"] {
+    min-height: 44px;
+  }
+  [data-slot="menu-trigger"] {
+    min-width: 44px;
+  }
+}

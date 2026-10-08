@@ -1,0 +1,49 @@
+{
+  "name": "@goodfinds/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./version": "./src/version.ts",
+    "./search-timing": "./src/search-timing.ts",
+    "./listing-query": "./src/listing-query.ts",
+    "./connection-checks": "./src/connection-checks.ts",
+    "./monitoring": "./src/monitoring.ts",
+    "./scheduled-dispatch": "./src/scheduled-dispatch.ts",
+    "./buying-next-steps": "./src/buying-next-steps.ts",
+    "./host-request": "./src/host-request.ts",
+    "./verification": "./src/verification.ts",
+    "./search-workflow": "./src/search-workflow.ts",
+    "./marketplace-actions": "./src/marketplace-actions.ts",
+    "./seller-conversation": "./src/seller-conversation.ts",
+    "./state": "./src/state.ts",
+    "./search-definition": "./src/search-definition.ts",
+    "./search-cover": "./src/search-cover.ts",
+    "./search-cover-presets": "./src/search-cover-presets.ts",
+    "./rental-cover": "./src/rental-cover.ts",
+    "./data/*": "./data/*",
+    "./integrations": "./src/integrations.ts",
+    "./discovery": "./src/discovery.ts",
+    "./revisions": "./src/revisions.ts",
+    "./operations": "./src/operations.ts",
+    "./listing-media": "./src/listing-media.ts",
+    "./workflow": "./src/workflow.ts",
+    "./tool-names": "./src/tool-names.ts",
+    "./external-tools": "./src/external-tools.ts",
+    "./search-run-model": "./src/search-run-model.ts",
+    "./seller-action-model": "./src/seller-action-model.ts",
+    "./listing-model": "./src/listing-model.ts",
+    "./workflow-model": "./src/workflow-model.ts",
+    "./workflow-schema": "./src/workflow-schema.ts",
+    "./worker-execution": "./src/worker-execution.ts",
+    "./journeys": "./src/journeys.ts",
+    "./listing-discovery": "./src/listing-discovery.ts",
+    "./listing-reading": "./src/listing-reading.ts"
+  },
+  "scripts": {
+    "typecheck": "bun --bun tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  }
+}

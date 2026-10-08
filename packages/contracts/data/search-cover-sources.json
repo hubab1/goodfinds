@@ -1,0 +1,227 @@
+{
+  "rental": {
+    "media_id": "574cbcd1a4a05b99e3d9e9ec5f5991194df6b0e8549ca27ce25d3a3bdc146913",
+    "kind": "generated",
+    "alt": "Monochrome illustration of a simple home and contemporary apartment building",
+    "source_name": "AI illustration",
+    "prompt": "Use case: stylized-concept. Asset type: cover for a rental-property search card in a minimal monochrome UI. Create one finished raster architectural-model illustration, compact isometric grouping of a modest home and small apartment building. Use a simple unornamented home with a low roof and a plain contemporary apartment building with clean rectangular windows; keep the architecture broadly neutral, with no regional ornaments, chimney, British terrace detailing or distinctive country cues. These are fictional buildings representing a rental search, not a photograph, specific address or available property. Refined miniature architectural model, crisp simple geometry, soft neutral shadows, only white, black and neutral gray. Pure white background and generous whitespace. Centered grouping occupies roughly the middle two thirds of a wide 16:9 composition, clearly readable at small card size. No text, labels, flags, maps, logos, watermarks, people, addresses, real landmarks, vehicles, props or furniture.",
+    "generated_at": "2026-10-04",
+    "file": "rental-neutral.webp",
+    "label": "Neutral"
+  },
+  "rental_presets": {
+    "gb": {
+      "media_id": "5b1b1fa7f8e7a91d0704d707540193c68b3f5430bdcd451308e18513707a27ae",
+      "kind": "generated",
+      "alt": "Grayscale illustration of a generic house and apartment building",
+      "source_name": "AI illustration",
+      "prompt": "Create one finished raster illustration for the cover of a rental-property search card in a minimal monochrome interface. A compact isometric miniature grouping of a modest British two-storey house and a simple small apartment building, recognizable roof, doors and windows. The grouping represents the broad category of houses and flats to rent; it is an illustration, not a photograph of a real building or a specific listing. Style: refined architectural model illustration with crisp simple geometry, soft neutral shadows, only white, black and neutral gray. Clean pure white background, generous whitespace, centered grouping occupying roughly the middle two thirds, wide landscape composition suitable for a 16:9 card. No people, labels, logos, watermarks, signs, addresses, or text. Do not add furniture or arbitrary props.",
+      "generated_at": "2026-10-04",
+      "file": "rental.webp",
+      "label": "United Kingdom"
+    },
+    "us": {
+      "media_id": "b02337e149bfe4bc8325ee2e89709464bace100a0be12322509f7601344c8bec",
+      "kind": "generated",
+      "alt": "Monochrome illustration of a US-style house and apartment building",
+      "source_name": "AI illustration",
+      "prompt": "Use case: stylized-concept. Asset type: cover for a rental-property search card in a minimal monochrome UI. Create one finished raster architectural-model illustration, compact isometric grouping of a modest home and small apartment building. An illustrative United States housing style: a modest detached two-storey house with horizontal siding, gabled roof and a small front porch, beside a simple contemporary three-storey apartment building. Use everyday domestic scale. These are fictional buildings representing a rental search, not a photograph, specific address or available property. Refined miniature architectural model, crisp simple geometry, soft neutral shadows, only white, black and neutral gray. Pure white background and generous whitespace. Centered grouping occupies roughly the middle two thirds of a wide 16:9 composition, clearly readable at small card size. No text, labels, flags, maps, logos, watermarks, people, addresses, real landmarks, vehicles, props or furniture.",
+      "generated_at": "2026-10-04",
+      "file": "rental-us.webp",
+      "label": "United States"
+    },
+    "ca": {
+      "media_id": "2cd3fe77f4ce2c63935033e7d3d1dadcd304270f9af308854bdd7ab16d2d00cd",
+      "kind": "generated",
+      "alt": "Monochrome illustration of a Canadian-style house and apartment building",
+      "source_name": "AI illustration",
+      "prompt": "Use case: stylized-concept. Asset type: cover for a rental-property search card in a minimal monochrome UI. Create one finished raster architectural-model illustration, compact isometric grouping of a modest home and small apartment building. An illustrative Canadian housing style: a modest compact detached home with a steep gabled roof, restrained horizontal siding and a small raised entrance porch, beside a simple brick-faced three-storey apartment building with broad windows. Keep the scene season-neutral. These are fictional buildings representing a rental search, not a photograph, specific address or available property. Refined miniature architectural model, crisp simple geometry, soft neutral shadows, only white, black and neutral gray. Pure white background and generous whitespace. Centered grouping occupies roughly the middle two thirds of a wide 16:9 composition, clearly readable at small card size. No text, labels, flags, maps, logos, watermarks, people, addresses, real landmarks, vehicles, props or furniture.",
+      "generated_at": "2026-10-04",
+      "file": "rental-canada.webp",
+      "label": "Canada"
+    },
+    "au": {
+      "media_id": "793948d938c022d93b375d17fc84b98b9a0495368f48726facf3497484a96201",
+      "kind": "generated",
+      "alt": "Monochrome illustration of an Australian-style house and apartment building",
+      "source_name": "AI illustration",
+      "prompt": "Use case: stylized-concept. Asset type: cover for a rental-property search card in a minimal monochrome UI. Create one finished raster architectural-model illustration, compact isometric grouping of a modest home and small apartment building. An illustrative Australian housing style: a modest single-storey bungalow with a broad shaded verandah and shallow corrugated hip roof, beside a low-rise contemporary apartment building with generous balconies. Keep the scene restrained and everyday. These are fictional buildings representing a rental search, not a photograph, specific address or available property. Refined miniature architectural model, crisp simple geometry, soft neutral shadows, only white, black and neutral gray. Pure white background and generous whitespace. Centered grouping occupies roughly the middle two thirds of a wide 16:9 composition, clearly readable at small card size. No text, labels, flags, maps, logos, watermarks, people, addresses, real landmarks, vehicles, props or furniture.",
+      "generated_at": "2026-10-04",
+      "file": "rental-australia.webp",
+      "label": "Australia"
+    },
+    "fr": {
+      "media_id": "5fc4cbfb8d06e9eed5e5c1bea36a6fdd7a4c73a7eeb440819010d94bbf97a21b",
+      "kind": "generated",
+      "alt": "Monochrome illustration of a French-style house and apartment building",
+      "source_name": "AI illustration",
+      "prompt": "Use case: stylized-concept. Asset type: cover for a rental-property search card in a minimal monochrome UI. Create one finished raster architectural-model illustration, compact isometric grouping of a modest home and small apartment building. An illustrative French housing style: a modest stucco house with a sloping tiled roof, beside a small four-storey urban apartment building with tall regularly spaced windows and restrained balcony railings. Simple everyday housing rather than a palace or landmark. These are fictional buildings representing a rental search, not a photograph, specific address or available property. Refined miniature architectural model, crisp simple geometry, soft neutral shadows, only white, black and neutral gray. Pure white background and generous whitespace. Centered grouping occupies roughly the middle two thirds of a wide 16:9 composition, clearly readable at small card size. No text, labels, flags, maps, logos, watermarks, people, addresses, real landmarks, vehicles, props or furniture.",
+      "generated_at": "2026-10-04",
+      "file": "rental-france.webp",
+      "label": "France"
+    },
+    "de": {
+      "media_id": "1c863b7be240b32755a2b4555b9e3a271f12f2ecd8a0e7552ab7efc7f6caa2cf",
+      "kind": "generated",
+      "alt": "Monochrome illustration of a German-style house and apartment building",
+      "source_name": "AI illustration",
+      "prompt": "Use case: stylized-concept. Asset type: cover for a rental-property search card in a minimal monochrome UI. Create one finished raster architectural-model illustration, compact isometric grouping of a modest home and small apartment building. An illustrative German housing style: a compact plaster-faced detached home with a steep tiled gable roof and clean rectangular windows, beside a simple contemporary three-storey plaster-faced apartment block with small balconies. Everyday housing, not a chalet or historic landmark. These are fictional buildings representing a rental search, not a photograph, specific address or available property. Refined miniature architectural model, crisp simple geometry, soft neutral shadows, only white, black and neutral gray. Pure white background and generous whitespace. Centered grouping occupies roughly the middle two thirds of a wide 16:9 composition, clearly readable at small card size. No text, labels, flags, maps, logos, watermarks, people, addresses, real landmarks, vehicles, props or furniture.",
+      "generated_at": "2026-10-04",
+      "file": "rental-germany.webp",
+      "label": "Germany"
+    }
+  },
+  "vehicle_presets": {
+    "sedan": {
+      "media_id": "f844ddf6344af3279f6dbb788a4462f014e730af06631bdcb86787932aa83e5f",
+      "kind": "generated",
+      "alt": "Monochrome miniature illustration of a generic sedan",
+      "source_name": "AI illustration",
+      "prompt": "Use case: stylized-concept. Asset type: generic vehicle search-card cover in the Goodfinds interface. The referenced rental-cover image is a STYLE REFERENCE ONLY. Generate a NEW standalone illustration of one generic four-door sedan car, a clearly readable three-box saloon silhouette, modest everyday proportions; include no buildings from the reference. Match the rental image's refined miniature architectural-model design language: crisp simplified geometry, matte white and neutral gray surfaces, dark-gray windows or mechanical details, restrained isometric three-quarter view, soft neutral contact shadow, pure white seamless background. Fictional unbranded model, clearly an illustration rather than a photograph or an available listing. Center the complete object at roughly the middle two thirds of a wide landscape 16:9 composition, all of it visible with generous whitespace, legible as a small search thumbnail. No text, labels, logos, brand-specific design cues, license plate lettering, watermark, people, street, landscape, scenery, buildings, flags, props or extra vehicles. For the boat, show the model resting visually against white with a subtle shadow; no water or trailer. Use only white, black and neutral grays. Produce one finished raster cover, not a collage.",
+      "generated_at": "2026-10-07",
+      "file": "vehicle-sedan.webp",
+      "label": "Sedan"
+    },
+    "4x4": {
+      "media_id": "d8672ade198f4aff87c1bdc816fe493fe1f202b09d7bb7dd6d770ea1a4bfbc95",
+      "kind": "generated",
+      "alt": "Monochrome miniature illustration of a generic 4×4",
+      "source_name": "AI illustration",
+      "prompt": "Use case: stylized-concept. Asset type: generic vehicle search-card cover in the Goodfinds interface. The referenced rental-cover image is a STYLE REFERENCE ONLY. Generate a NEW standalone illustration of one generic boxy four-wheel-drive SUV, raised ride height and simple large tyres, modest everyday off-road proportions; include no buildings from the reference. Match the rental image's refined miniature architectural-model design language: crisp simplified geometry, matte white and neutral gray surfaces, dark-gray windows or mechanical details, restrained isometric three-quarter view, soft neutral contact shadow, pure white seamless background. Fictional unbranded model, clearly an illustration rather than a photograph or an available listing. Center the complete object at roughly the middle two thirds of a wide landscape 16:9 composition, all of it visible with generous whitespace, legible as a small search thumbnail. No text, labels, logos, brand-specific design cues, license plate lettering, watermark, people, street, landscape, scenery, buildings, flags, props or extra vehicles. For the boat, show the model resting visually against white with a subtle shadow; no water or trailer. Use only white, black and neutral grays. Produce one finished raster cover, not a collage.",
+      "generated_at": "2026-10-07",
+      "file": "vehicle-4x4.webp",
+      "label": "4×4"
+    },
+    "motorbike": {
+      "media_id": "9a4246da46dd9c0c38f8b54e813a3ef4e8a4bbda3665a891b7ea5b016125f6a5",
+      "kind": "generated",
+      "alt": "Monochrome miniature illustration of a generic motorbike",
+      "source_name": "AI illustration",
+      "prompt": "Use case: stylized-concept. Asset type: generic vehicle search-card cover in the Goodfinds interface. The referenced rental-cover image is a STYLE REFERENCE ONLY. Generate a NEW standalone illustration of one generic road motorcycle, two wheels with plausible frame, engine and handlebar geometry, a simple everyday naked-bike silhouette; include no buildings from the reference. Match the rental image's refined miniature architectural-model design language: crisp simplified geometry, matte white and neutral gray surfaces, dark-gray windows or mechanical details, restrained isometric three-quarter view, soft neutral contact shadow, pure white seamless background. Fictional unbranded model, clearly an illustration rather than a photograph or an available listing. Center the complete object at roughly the middle two thirds of a wide landscape 16:9 composition, all of it visible with generous whitespace, legible as a small search thumbnail. No text, labels, logos, brand-specific design cues, license plate lettering, watermark, people, street, landscape, scenery, buildings, flags, props or extra vehicles. For the boat, show the model resting visually against white with a subtle shadow; no water or trailer. Use only white, black and neutral grays. Produce one finished raster cover, not a collage.",
+      "generated_at": "2026-10-07",
+      "file": "vehicle-motorbike.webp",
+      "label": "Motorbike"
+    },
+    "boat": {
+      "media_id": "748374fcfe060600d4599506e900190bbaa3723b099a67aa3dbcd439969bac04",
+      "kind": "generated",
+      "alt": "Monochrome miniature illustration of a generic boat",
+      "source_name": "AI illustration",
+      "prompt": "Use case: stylized-concept. Asset type: generic vehicle search-card cover in the Goodfinds interface. The referenced rental-cover image is a STYLE REFERENCE ONLY. Generate a NEW standalone illustration of one generic small cabin motorboat, simple hull and compact cabin, a modest everyday recreational boat; include no buildings from the reference. Match the rental image's refined miniature architectural-model design language: crisp simplified geometry, matte white and neutral gray surfaces, dark-gray windows or mechanical details, restrained isometric three-quarter view, soft neutral contact shadow, pure white seamless background. Fictional unbranded model, clearly an illustration rather than a photograph or an available listing. Center the complete object at roughly the middle two thirds of a wide landscape 16:9 composition, all of it visible with generous whitespace, legible as a small search thumbnail. No text, labels, logos, brand-specific design cues, license plate lettering, watermark, people, street, landscape, scenery, buildings, flags, props or extra vehicles. For the boat, show the model resting visually against white with a subtle shadow; no water or trailer. Use only white, black and neutral grays. Produce one finished raster cover, not a collage.",
+      "generated_at": "2026-10-07",
+      "file": "vehicle-boat.webp",
+      "label": "Boat"
+    }
+  },
+  "marketplace_presets": {
+    "sofa": {
+      "category": "furniture",
+      "media_id": "c1ad3fbc3ebce04c28f29ba961ba24fac8acbd95fd8942647e4eedee4faa5d21",
+      "kind": "generated",
+      "alt": "Monochrome miniature illustration of a generic sofa",
+      "source_name": "AI illustration",
+      "prompt": "Use case: stylized-concept. Asset type: generic marketplace search-card cover in the Goodfinds interface. Input image: STYLE REFERENCE ONLY, the existing rental-cover artwork; do not reproduce its buildings. Primary request: a NEW standalone illustration of one generic three-seat sofa, simple cushioned seat and back, two armrests and short legs, modest everyday proportions. Style: match the reference's refined miniature architectural-model design language, crisp simplified geometry, matte white and neutral gray surfaces, restrained isometric three-quarter view, soft neutral contact shadow, pure white seamless background. Fictional unbranded model, visibly an illustration rather than a photograph or an available listing. Center the complete subject in a wide landscape 16:9 composition, occupying roughly the middle two thirds with generous whitespace; all parts visible and readable at thumbnail size. Use only white, black and neutral grays. No people, baby, text, labels, logos, brand-specific design cues, watermark, scenery, buildings, decorative props or extra objects. Produce one finished raster cover, not a collage.",
+      "generated_at": "2026-10-07",
+      "file": "category-sofa.webp",
+      "label": "Sofa"
+    },
+    "dining_set": {
+      "category": "furniture",
+      "media_id": "ee129a06cf88920ed980075bfe0e4cd26658b288e061e0db60055c773a1e39ec",
+      "kind": "generated",
+      "alt": "Monochrome miniature illustration of a generic dining table and chairs",
+      "source_name": "AI illustration",
+      "prompt": "Use case: stylized-concept. Asset type: generic marketplace search-card cover in the Goodfinds interface. Input image: STYLE REFERENCE ONLY, the existing rental-cover artwork; do not reproduce its buildings. Primary request: a NEW standalone illustration of one modest rectangular dining table with four simple matching chairs, an uncluttered compact arrangement with plausible table and chair geometry. Style: match the reference's refined miniature architectural-model design language, crisp simplified geometry, matte white and neutral gray surfaces, restrained isometric three-quarter view, soft neutral contact shadow, pure white seamless background. Fictional unbranded model, visibly an illustration rather than a photograph or an available listing. Center the complete subject in a wide landscape 16:9 composition, occupying roughly the middle two thirds with generous whitespace; all parts visible and readable at thumbnail size. Use only white, black and neutral grays. No people, baby, text, labels, logos, brand-specific design cues, watermark, scenery, buildings, decorative props or extra objects. Produce one finished raster cover, not a collage.",
+      "generated_at": "2026-10-07",
+      "file": "category-dining-set.webp",
+      "label": "Dining table and chairs"
+    },
+    "wardrobe": {
+      "category": "furniture",
+      "media_id": "d587e6e6b5a8642d643c9e691e0e138ab7d2c796750a99ea3121a60c44a2e290",
+      "kind": "generated",
+      "alt": "Monochrome miniature illustration of a generic wardrobe",
+      "source_name": "AI illustration",
+      "prompt": "Use case: stylized-concept. Asset type: generic marketplace search-card cover in the Goodfinds interface. Input image: STYLE REFERENCE ONLY, the existing rental-cover artwork; do not reproduce its buildings. Primary request: a NEW standalone illustration of one freestanding two-door wardrobe, simple tall rectangular cabinet, closed doors with two small handles and short feet, no mirror. Style: match the reference's refined miniature architectural-model design language, crisp simplified geometry, matte white and neutral gray surfaces, restrained isometric three-quarter view, soft neutral contact shadow, pure white seamless background. Fictional unbranded model, visibly an illustration rather than a photograph or an available listing. Center the complete subject in a wide landscape 16:9 composition, occupying roughly the middle two thirds with generous whitespace; all parts visible and readable at thumbnail size. Use only white, black and neutral grays. No people, baby, text, labels, logos, brand-specific design cues, watermark, scenery, buildings, decorative props or extra objects. Produce one finished raster cover, not a collage.",
+      "generated_at": "2026-10-07",
+      "file": "category-wardrobe.webp",
+      "label": "Wardrobe"
+    },
+    "chest_of_drawers": {
+      "category": "furniture",
+      "media_id": "7761ec33e097728456b1b78529da4d19e4e7ebb8e3107a40db23dcaa77d27023",
+      "kind": "generated",
+      "alt": "Monochrome miniature illustration of a generic chest of drawers",
+      "source_name": "AI illustration",
+      "prompt": "Use case: stylized-concept. Asset type: generic marketplace search-card cover in the Goodfinds interface. Input image: STYLE REFERENCE ONLY, the existing rental-cover artwork; do not reproduce its buildings. Primary request: a NEW standalone illustration of one freestanding chest of four drawers, modest wide rectangular body, visible drawer seams and simple small handles, all drawers closed. Style: match the reference's refined miniature architectural-model design language, crisp simplified geometry, matte white and neutral gray surfaces, restrained isometric three-quarter view, soft neutral contact shadow, pure white seamless background. Fictional unbranded model, visibly an illustration rather than a photograph or an available listing. Center the complete subject in a wide landscape 16:9 composition, occupying roughly the middle two thirds with generous whitespace; all parts visible and readable at thumbnail size. Use only white, black and neutral grays. No people, baby, text, labels, logos, brand-specific design cues, watermark, scenery, buildings, decorative props or extra objects. Produce one finished raster cover, not a collage.",
+      "generated_at": "2026-10-07",
+      "file": "category-chest-of-drawers.webp",
+      "label": "Chest of drawers"
+    },
+    "sideboard": {
+      "category": "furniture",
+      "media_id": "4c7a7222376761b663545a621cab19ece07c45b8247292e3260c3cc4e0397d71",
+      "kind": "generated",
+      "alt": "Monochrome miniature illustration of a generic sideboard",
+      "source_name": "AI illustration",
+      "prompt": "Use case: stylized-concept. Asset type: generic marketplace search-card cover in the Goodfinds interface. Input image: STYLE REFERENCE ONLY, the existing rental-cover artwork; do not reproduce its buildings. Primary request: a NEW standalone illustration of one low wide freestanding sideboard cabinet, two closed cupboard doors and a small central stack of drawers on short legs, simple everyday proportions. Style: match the reference's refined miniature architectural-model design language, crisp simplified geometry, matte white and neutral gray surfaces, restrained isometric three-quarter view, soft neutral contact shadow, pure white seamless background. Fictional unbranded model, visibly an illustration rather than a photograph or an available listing. Center the complete subject in a wide landscape 16:9 composition, occupying roughly the middle two thirds with generous whitespace; all parts visible and readable at thumbnail size. Use only white, black and neutral grays. No people, baby, text, labels, logos, brand-specific design cues, watermark, scenery, buildings, decorative props or extra objects. Produce one finished raster cover, not a collage.",
+      "generated_at": "2026-10-07",
+      "file": "category-sideboard.webp",
+      "label": "Sideboard"
+    },
+    "bicycle": {
+      "category": "cycling",
+      "media_id": "4934ef0cf900c55ef870449d33c112b8db3f19e470c63d8e8dc1c656cfb9e431",
+      "kind": "generated",
+      "alt": "Monochrome miniature illustration of a generic bicycle",
+      "source_name": "AI illustration",
+      "prompt": "Use case: stylized-concept. Asset type: generic marketplace search-card cover in the Goodfinds interface. Input image: STYLE REFERENCE ONLY, the existing rental-cover artwork; do not reproduce its buildings. Primary request: a NEW standalone illustration of one generic everyday hybrid bicycle, two complete wheels, a plausible diamond frame, flat handlebar, saddle, pedals and simple drivetrain, no motor and no racing drop bars. Style: match the reference's refined miniature architectural-model design language, crisp simplified geometry, matte white and neutral gray surfaces, restrained isometric three-quarter view, soft neutral contact shadow, pure white seamless background. Fictional unbranded model, visibly an illustration rather than a photograph or an available listing. Center the complete subject in a wide landscape 16:9 composition, occupying roughly the middle two thirds with generous whitespace; all parts visible and readable at thumbnail size. Use only white, black and neutral grays. No people, baby, text, labels, logos, brand-specific design cues, watermark, scenery, buildings, decorative props or extra objects. Produce one finished raster cover, not a collage.",
+      "generated_at": "2026-10-07",
+      "file": "category-bicycle.webp",
+      "label": "Bicycle"
+    },
+    "garden_furniture": {
+      "category": "garden",
+      "media_id": "b55621baa0a67d38d4959fa1f1d5de6015b81d5c8b90bfe7d83ee3aae79bf669",
+      "kind": "generated",
+      "alt": "Monochrome miniature illustration of a generic garden furniture",
+      "source_name": "AI illustration",
+      "prompt": "Use case: stylized-concept. Asset type: generic marketplace search-card cover in the Goodfinds interface. Input image: STYLE REFERENCE ONLY, the existing rental-cover artwork; do not reproduce its buildings. Primary request: a NEW standalone illustration of one small generic outdoor patio furniture set: a simple round table and two outdoor chairs, modest compact forms with subtly slatted surfaces. Style: match the reference's refined miniature architectural-model design language, crisp simplified geometry, matte white and neutral gray surfaces, restrained isometric three-quarter view, soft neutral contact shadow, pure white seamless background. Fictional unbranded model, visibly an illustration rather than a photograph or an available listing. Center the complete subject in a wide landscape 16:9 composition, occupying roughly the middle two thirds with generous whitespace; all parts visible and readable at thumbnail size. Use only white, black and neutral grays. No people, baby, text, labels, logos, brand-specific design cues, watermark, scenery, buildings, decorative props or extra objects. Produce one finished raster cover, not a collage.",
+      "generated_at": "2026-10-07",
+      "file": "category-garden-furniture.webp",
+      "label": "Garden furniture"
+    },
+    "pram": {
+      "category": "baby",
+      "media_id": "4c8fe645acb0daad721547b00ed10b78b769d3477b0be019339a8d37662d324a",
+      "kind": "generated",
+      "alt": "Monochrome miniature illustration of a generic pram",
+      "source_name": "AI illustration",
+      "prompt": "Use case: stylized-concept. Asset type: generic marketplace search-card cover in the Goodfinds interface. Input image: STYLE REFERENCE ONLY, the existing rental-cover artwork; do not reproduce its buildings. Primary request: a NEW standalone illustration of one generic baby pushchair stroller, a simple curved canopy over an empty seat, plausible handlebar and four-wheel chassis, compact everyday silhouette. Style: match the reference's refined miniature architectural-model design language, crisp simplified geometry, matte white and neutral gray surfaces, restrained isometric three-quarter view, soft neutral contact shadow, pure white seamless background. Fictional unbranded model, visibly an illustration rather than a photograph or an available listing. Center the complete subject in a wide landscape 16:9 composition, occupying roughly the middle two thirds with generous whitespace; all parts visible and readable at thumbnail size. Use only white, black and neutral grays. No people, baby, text, labels, logos, brand-specific design cues, watermark, scenery, buildings, decorative props or extra objects. Produce one finished raster cover, not a collage.",
+      "generated_at": "2026-10-07",
+      "file": "category-pram.webp",
+      "label": "Pram"
+    }
+  },
+  "media_id_aliases": {
+    "47f12e437a46b419d11952506ee68d022e6ddc970ce22eb3cec46b41728fccb4": "574cbcd1a4a05b99e3d9e9ec5f5991194df6b0e8549ca27ce25d3a3bdc146913",
+    "4f02a65f025553542687731957d4f06c714ca3da7bd2e2de3093299fdb4dddaf": "5b1b1fa7f8e7a91d0704d707540193c68b3f5430bdcd451308e18513707a27ae",
+    "867d117baa713166fa19f054a93477df711967079bf4e51e8cb395b732331a27": "b02337e149bfe4bc8325ee2e89709464bace100a0be12322509f7601344c8bec",
+    "a889b3bc3c7dcf0e36c27cabf115dfbcf87146d1d15f1155bd57e926550f36a3": "2cd3fe77f4ce2c63935033e7d3d1dadcd304270f9af308854bdd7ab16d2d00cd",
+    "23b0260018efea36426801a8db83774fa360fe31449576a99d1893f148dd5583": "793948d938c022d93b375d17fc84b98b9a0495368f48726facf3497484a96201",
+    "f03c73b5db95f7d970c36b3ba6914b4780e0f6e3720a5dad1f4a15ac7266415b": "5fc4cbfb8d06e9eed5e5c1bea36a6fdd7a4c73a7eeb440819010d94bbf97a21b",
+    "b0aeb6427d718e1ed655637a6481b1d3ec7fa70343c56565ffeff6aa1238b631": "1c863b7be240b32755a2b4555b9e3a271f12f2ecd8a0e7552ab7efc7f6caa2cf",
+    "3e0237c3c87d6c35382aea9232ef6e4c1c212ea3770961a81c474490c1b7125a": "f844ddf6344af3279f6dbb788a4462f014e730af06631bdcb86787932aa83e5f",
+    "68b6439cfa5ab41070cedc54b56c77dff315b74e044d6686ba8aeea4345dfb65": "d8672ade198f4aff87c1bdc816fe493fe1f202b09d7bb7dd6d770ea1a4bfbc95",
+    "df4e7b1c1b0c7ddaad0ffbb49dec44df2fd42ef8229da828b76aa52a9551f275": "9a4246da46dd9c0c38f8b54e813a3ef4e8a4bbda3665a891b7ea5b016125f6a5",
+    "7537c9a7f457997d573216f51230bba4aae737e95ddf3571f21d0c882f7bab2b": "748374fcfe060600d4599506e900190bbaa3723b099a67aa3dbcd439969bac04",
+    "b7daaab112ab96dab43c3a2797621767770feb5944ca985d8cc2fc3799beceab": "c1ad3fbc3ebce04c28f29ba961ba24fac8acbd95fd8942647e4eedee4faa5d21",
+    "e80fbbd865bd1e3d24e2ef60cb41ccf639bfb1e75d3d0bd4f7905fdaf8cf5909": "ee129a06cf88920ed980075bfe0e4cd26658b288e061e0db60055c773a1e39ec",
+    "d2d653f9c9b025a8ec5671b86bb68eec34efb199ce50767f668d4bedd86fd3a6": "d587e6e6b5a8642d643c9e691e0e138ab7d2c796750a99ea3121a60c44a2e290",
+    "c1da41d06e1c11b27e4c755aae666cb79de3ac06d0f08dfba3ed769b51f8687c": "7761ec33e097728456b1b78529da4d19e4e7ebb8e3107a40db23dcaa77d27023",
+    "a60b0ae5f752dcca0f96566a164918f254b00147910b4b1446d51faa394d6381": "4c7a7222376761b663545a621cab19ece07c45b8247292e3260c3cc4e0397d71",
+    "e7899b4067ee5ffa91d9fed48b7cff0fb45a1ac9f858905385c046641039ce89": "4934ef0cf900c55ef870449d33c112b8db3f19e470c63d8e8dc1c656cfb9e431",
+    "8fb126f86f2e6124d39fde9714b084463d0fde3c897633feb5aef670f9bf17a4": "b55621baa0a67d38d4959fa1f1d5de6015b81d5c8b90bfe7d83ee3aae79bf669",
+    "488107e287c5337344bd90aca9bcfb925f888486f460b4f8c241607aa7be6e61": "4c8fe645acb0daad721547b00ed10b78b769d3477b0be019339a8d37662d324a"
+  }
+}

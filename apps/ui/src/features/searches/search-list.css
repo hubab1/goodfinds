@@ -1,0 +1,88 @@
+.search-list-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 12px;
+  padding: 20px 0;
+}
+
+.search-thumbnail {
+  display: flex;
+  width: 52px;
+  height: 52px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  overflow: hidden;
+  border: 1px solid #eeeeee;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.search-thumbnail svg {
+  width: 30px;
+  height: 30px;
+}
+
+.search-row-summary,
+.search-name-button {
+  overflow-wrap: anywhere;
+}
+
+.search-name-button:hover {
+  text-decoration: underline;
+}
+
+.search-name-button:focus-visible {
+  outline: 2px solid #000000;
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+.search-row-actions {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.search-row-metrics {
+  grid-column: 2;
+  max-width: 260px;
+}
+
+@container (min-width: 48rem) {
+  .search-list-row {
+    grid-template-columns: 60px minmax(0, 1fr) 170px 138px;
+    column-gap: 16px;
+  }
+
+  .search-thumbnail {
+    width: 60px;
+    height: 60px;
+  }
+
+  .search-row-metrics {
+    grid-column: auto;
+    width: 170px;
+  }
+
+  .search-row-actions {
+    grid-column: auto;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .search-row-budget {
+    text-align: right;
+  }
+}
+
+@media (pointer: coarse) {
+  .search-details-button {
+    min-height: 44px;
+  }
+}

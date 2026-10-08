@@ -1,0 +1,491 @@
+{
+  "version": 1,
+  "browser_preference": "in_app",
+  "origin": "Example origin",
+  "origin_confirmed": true,
+  "schedule": {
+    "interval_minutes": 60,
+    "requires_awake_device": true,
+    "enabled": false
+  },
+  "alert_policy": "first_qualification_and_lower_price",
+  "baseline_days": 30,
+  "minimum_peer_listings": 3,
+  "searches": [
+    {
+      "id": "demo-laptop",
+      "name": "Demo laptop",
+      "product": "macbook_pro",
+      "definition": {
+        "schema_version": 1,
+        "version": 2,
+        "category": "macbook_pro",
+        "title": "Demo laptop",
+        "description": "Fictional demonstration search. These example preferences do not describe a real buyer.",
+        "price": {
+          "currency": "GBP",
+          "period": "once"
+        },
+        "comparison_attributes": [
+          "chip",
+          "ram_gb",
+          "ssd_gb",
+          "screen_inches",
+          "item_state",
+          "condition"
+        ],
+        "fields": [
+          {
+            "id": "min_chip_generation",
+            "label": "Minimum M chip generation",
+            "type": "integer",
+            "required": true,
+            "minimum": 1,
+            "maximum": 20,
+            "options": [
+              {
+                "value": 1,
+                "label": "M1 or newer"
+              },
+              {
+                "value": 2,
+                "label": "M2 or newer"
+              },
+              {
+                "value": 3,
+                "label": "M3 or newer"
+              },
+              {
+                "value": 4,
+                "label": "M4 or newer"
+              },
+              {
+                "value": 5,
+                "label": "M5 or newer"
+              },
+              {
+                "value": 6,
+                "label": "M6 or newer"
+              }
+            ],
+            "match": {
+              "attribute": "chip_generation",
+              "operator": "gte",
+              "importance": "required"
+            }
+          },
+          {
+            "id": "min_ram_gb",
+            "label": "Minimum memory",
+            "type": "integer",
+            "required": true,
+            "minimum": 1,
+            "maximum": 2048,
+            "unit": "GB",
+            "options": [
+              {
+                "value": 8,
+                "label": "8"
+              },
+              {
+                "value": 16,
+                "label": "16"
+              },
+              {
+                "value": 24,
+                "label": "24"
+              },
+              {
+                "value": 32,
+                "label": "32"
+              },
+              {
+                "value": 64,
+                "label": "64"
+              },
+              {
+                "value": 128,
+                "label": "128"
+              }
+            ],
+            "match": {
+              "attribute": "ram_gb",
+              "operator": "gte",
+              "importance": "required"
+            }
+          },
+          {
+            "id": "min_ssd_gb",
+            "label": "Minimum SSD storage",
+            "type": "integer",
+            "required": true,
+            "minimum": 1,
+            "maximum": 100000,
+            "unit": "GB",
+            "options": [
+              {
+                "value": 256,
+                "label": "256 GB"
+              },
+              {
+                "value": 512,
+                "label": "512 GB"
+              },
+              {
+                "value": 1000,
+                "label": "1 TB"
+              },
+              {
+                "value": 2000,
+                "label": "2 TB"
+              },
+              {
+                "value": 4000,
+                "label": "4 TB"
+              }
+            ],
+            "match": {
+              "attribute": "ssd_gb",
+              "operator": "gte",
+              "importance": "required"
+            }
+          },
+          {
+            "id": "allowed_conditions",
+            "label": "Acceptable condition",
+            "type": "multiple_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "good",
+                "label": "Good"
+              },
+              {
+                "value": "excellent",
+                "label": "Excellent"
+              },
+              {
+                "value": "like_new",
+                "label": "Like new"
+              }
+            ],
+            "match": {
+              "attribute": "condition",
+              "operator": "in",
+              "importance": "required"
+            }
+          },
+          {
+            "id": "max_price_minor",
+            "label": "Maximum price",
+            "type": "integer",
+            "required": true,
+            "minimum": 1,
+            "maximum": 100000000,
+            "display_divisor": 100,
+            "unit": "£",
+            "match": {
+              "attribute": "price_minor",
+              "operator": "lte",
+              "importance": "required"
+            }
+          },
+          {
+            "id": "max_drive_minutes",
+            "label": "Maximum drive",
+            "type": "integer",
+            "required": true,
+            "minimum": 1,
+            "maximum": 1440,
+            "unit": "minutes",
+            "options": [
+              {
+                "value": 15,
+                "label": "15"
+              },
+              {
+                "value": 30,
+                "label": "30"
+              },
+              {
+                "value": 45,
+                "label": "45"
+              },
+              {
+                "value": 60,
+                "label": "60"
+              },
+              {
+                "value": 90,
+                "label": "90"
+              }
+            ],
+            "hint": "One-way driving time from your saved starting location.",
+            "match": {
+              "attribute": "drive_minutes",
+              "operator": "lte",
+              "importance": "required"
+            }
+          },
+          {
+            "id": "seller_listing_count",
+            "label": "Seller listing count",
+            "type": "range",
+            "required": false,
+            "question_stage": "refinement",
+            "minimum": 0,
+            "hint": "Optional · number of current Marketplace listings. Leave either limit blank. Unavailable counts need checking.",
+            "match": {
+              "attribute": "seller_listing_count",
+              "operator": "range",
+              "importance": "required"
+            }
+          }
+        ]
+      },
+      "values": {
+        "min_chip_generation": 3,
+        "min_ram_gb": 32,
+        "min_ssd_gb": 1000,
+        "max_price_minor": 125000,
+        "max_drive_minutes": 50,
+        "allowed_conditions": ["good", "excellent", "like_new"]
+      },
+      "enabled": true
+    },
+    {
+      "id": "demo-desktop",
+      "name": "Demo desktop",
+      "product": "mac_mini",
+      "definition": {
+        "schema_version": 1,
+        "version": 2,
+        "category": "mac_mini",
+        "title": "Demo desktop",
+        "description": "Fictional demonstration search. These example preferences do not describe a real buyer.",
+        "price": {
+          "currency": "GBP",
+          "period": "once"
+        },
+        "comparison_attributes": ["chip", "ram_gb", "ssd_gb", "item_state", "condition"],
+        "fields": [
+          {
+            "id": "min_chip_generation",
+            "label": "Minimum M chip generation",
+            "type": "integer",
+            "required": true,
+            "minimum": 1,
+            "maximum": 20,
+            "options": [
+              {
+                "value": 1,
+                "label": "M1 or newer"
+              },
+              {
+                "value": 2,
+                "label": "M2 or newer"
+              },
+              {
+                "value": 3,
+                "label": "M3 or newer"
+              },
+              {
+                "value": 4,
+                "label": "M4 or newer"
+              },
+              {
+                "value": 5,
+                "label": "M5 or newer"
+              },
+              {
+                "value": 6,
+                "label": "M6 or newer"
+              }
+            ],
+            "match": {
+              "attribute": "chip_generation",
+              "operator": "gte",
+              "importance": "required"
+            }
+          },
+          {
+            "id": "min_ram_gb",
+            "label": "Minimum memory",
+            "type": "integer",
+            "required": true,
+            "minimum": 1,
+            "maximum": 2048,
+            "unit": "GB",
+            "options": [
+              {
+                "value": 8,
+                "label": "8"
+              },
+              {
+                "value": 16,
+                "label": "16"
+              },
+              {
+                "value": 24,
+                "label": "24"
+              },
+              {
+                "value": 32,
+                "label": "32"
+              },
+              {
+                "value": 64,
+                "label": "64"
+              },
+              {
+                "value": 128,
+                "label": "128"
+              }
+            ],
+            "match": {
+              "attribute": "ram_gb",
+              "operator": "gte",
+              "importance": "required"
+            }
+          },
+          {
+            "id": "min_ssd_gb",
+            "label": "Minimum SSD storage",
+            "type": "integer",
+            "required": true,
+            "minimum": 1,
+            "maximum": 100000,
+            "unit": "GB",
+            "options": [
+              {
+                "value": 256,
+                "label": "256 GB"
+              },
+              {
+                "value": 512,
+                "label": "512 GB"
+              },
+              {
+                "value": 1000,
+                "label": "1 TB"
+              },
+              {
+                "value": 2000,
+                "label": "2 TB"
+              },
+              {
+                "value": 4000,
+                "label": "4 TB"
+              }
+            ],
+            "match": {
+              "attribute": "ssd_gb",
+              "operator": "gte",
+              "importance": "required"
+            }
+          },
+          {
+            "id": "allowed_conditions",
+            "label": "Acceptable condition",
+            "type": "multiple_choice",
+            "required": true,
+            "options": [
+              {
+                "value": "good",
+                "label": "Good"
+              },
+              {
+                "value": "excellent",
+                "label": "Excellent"
+              },
+              {
+                "value": "like_new",
+                "label": "Like new"
+              }
+            ],
+            "match": {
+              "attribute": "condition",
+              "operator": "in",
+              "importance": "required"
+            }
+          },
+          {
+            "id": "max_price_minor",
+            "label": "Maximum price",
+            "type": "integer",
+            "required": true,
+            "minimum": 1,
+            "maximum": 100000000,
+            "display_divisor": 100,
+            "unit": "£",
+            "match": {
+              "attribute": "price_minor",
+              "operator": "lte",
+              "importance": "required"
+            }
+          },
+          {
+            "id": "max_drive_minutes",
+            "label": "Maximum drive",
+            "type": "integer",
+            "required": true,
+            "minimum": 1,
+            "maximum": 1440,
+            "unit": "minutes",
+            "options": [
+              {
+                "value": 15,
+                "label": "15"
+              },
+              {
+                "value": 30,
+                "label": "30"
+              },
+              {
+                "value": 45,
+                "label": "45"
+              },
+              {
+                "value": 60,
+                "label": "60"
+              },
+              {
+                "value": 90,
+                "label": "90"
+              }
+            ],
+            "hint": "One-way driving time from your saved starting location.",
+            "match": {
+              "attribute": "drive_minutes",
+              "operator": "lte",
+              "importance": "required"
+            }
+          },
+          {
+            "id": "seller_listing_count",
+            "label": "Seller listing count",
+            "type": "range",
+            "required": false,
+            "question_stage": "refinement",
+            "minimum": 0,
+            "hint": "Optional · number of current Marketplace listings. Leave either limit blank. Unavailable counts need checking.",
+            "match": {
+              "attribute": "seller_listing_count",
+              "operator": "range",
+              "importance": "required"
+            }
+          }
+        ]
+      },
+      "values": {
+        "min_chip_generation": 3,
+        "min_ram_gb": 32,
+        "min_ssd_gb": 1000,
+        "max_price_minor": 125000,
+        "max_drive_minutes": 50,
+        "allowed_conditions": ["good", "excellent", "like_new"]
+      },
+      "enabled": true
+    }
+  ]
+}

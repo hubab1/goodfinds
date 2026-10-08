@@ -1,0 +1,10 @@
+name = "goodfindsFormal"
+version = "0.1.0"
+defaultTargets = ["Goodfinds", "seller_action_oracle"]
+
+[[lean_lib]]
+name = "Goodfinds"
+
+[[lean_exe]]
+name = "seller_action_oracle"
+root = "Main"

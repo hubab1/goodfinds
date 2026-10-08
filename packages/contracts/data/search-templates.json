@@ -1,0 +1,616 @@
+[
+  {
+    "schema_version": 1,
+    "version": 2,
+    "category": "macbook_pro",
+    "title": "MacBook Pro",
+    "description": "Choose your specifications and buying limits. Working items only.",
+    "price": {
+      "currency": "GBP",
+      "period": "once"
+    },
+    "comparison_attributes": [
+      "chip",
+      "ram_gb",
+      "ssd_gb",
+      "screen_inches",
+      "item_state",
+      "condition"
+    ],
+    "fields": [
+      {
+        "id": "min_chip_generation",
+        "label": "Minimum M chip generation",
+        "type": "integer",
+        "required": true,
+        "minimum": 1,
+        "maximum": 20,
+        "options": [
+          {
+            "value": 1,
+            "label": "M1 or newer"
+          },
+          {
+            "value": 2,
+            "label": "M2 or newer"
+          },
+          {
+            "value": 3,
+            "label": "M3 or newer"
+          },
+          {
+            "value": 4,
+            "label": "M4 or newer"
+          },
+          {
+            "value": 5,
+            "label": "M5 or newer"
+          },
+          {
+            "value": 6,
+            "label": "M6 or newer"
+          }
+        ],
+        "match": {
+          "attribute": "chip_generation",
+          "operator": "gte",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "min_ram_gb",
+        "label": "Minimum memory",
+        "type": "integer",
+        "required": true,
+        "minimum": 1,
+        "maximum": 2048,
+        "unit": "GB",
+        "options": [
+          {
+            "value": 8,
+            "label": "8"
+          },
+          {
+            "value": 16,
+            "label": "16"
+          },
+          {
+            "value": 24,
+            "label": "24"
+          },
+          {
+            "value": 32,
+            "label": "32"
+          },
+          {
+            "value": 64,
+            "label": "64"
+          },
+          {
+            "value": 128,
+            "label": "128"
+          }
+        ],
+        "match": {
+          "attribute": "ram_gb",
+          "operator": "gte",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "min_ssd_gb",
+        "label": "Minimum SSD storage",
+        "type": "integer",
+        "required": true,
+        "minimum": 1,
+        "maximum": 100000,
+        "unit": "GB",
+        "options": [
+          {
+            "value": 256,
+            "label": "256 GB"
+          },
+          {
+            "value": 512,
+            "label": "512 GB"
+          },
+          {
+            "value": 1000,
+            "label": "1 TB"
+          },
+          {
+            "value": 2000,
+            "label": "2 TB"
+          },
+          {
+            "value": 4000,
+            "label": "4 TB"
+          }
+        ],
+        "match": {
+          "attribute": "ssd_gb",
+          "operator": "gte",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "allowed_conditions",
+        "label": "Acceptable condition",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "value": "good",
+            "label": "Good"
+          },
+          {
+            "value": "excellent",
+            "label": "Excellent"
+          },
+          {
+            "value": "like_new",
+            "label": "Like new"
+          }
+        ],
+        "match": {
+          "attribute": "condition",
+          "operator": "in",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "max_price_minor",
+        "label": "Maximum price",
+        "type": "integer",
+        "required": true,
+        "minimum": 1,
+        "maximum": 100000000,
+        "display_divisor": 100,
+        "unit": "\u00a3",
+        "match": {
+          "attribute": "price_minor",
+          "operator": "lte",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "max_drive_minutes",
+        "label": "Maximum drive",
+        "type": "integer",
+        "required": true,
+        "minimum": 1,
+        "maximum": 1440,
+        "unit": "minutes",
+        "options": [
+          {
+            "value": 15,
+            "label": "15"
+          },
+          {
+            "value": 30,
+            "label": "30"
+          },
+          {
+            "value": 45,
+            "label": "45"
+          },
+          {
+            "value": 60,
+            "label": "60"
+          },
+          {
+            "value": 90,
+            "label": "90"
+          }
+        ],
+        "hint": "One-way driving time from your saved starting location.",
+        "match": {
+          "attribute": "drive_minutes",
+          "operator": "lte",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "seller_listing_count",
+        "label": "Seller listing count",
+        "type": "range",
+        "required": false,
+        "question_stage": "refinement",
+        "minimum": 0,
+        "hint": "Optional \u00b7 number of current Marketplace listings. Leave either limit blank. Unavailable counts need checking.",
+        "match": {
+          "attribute": "seller_listing_count",
+          "operator": "range",
+          "importance": "required"
+        }
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "version": 2,
+    "category": "mac_mini",
+    "title": "Mac mini",
+    "description": "Choose your specifications and buying limits. Working items only.",
+    "price": {
+      "currency": "GBP",
+      "period": "once"
+    },
+    "comparison_attributes": ["chip", "ram_gb", "ssd_gb", "item_state", "condition"],
+    "fields": [
+      {
+        "id": "min_chip_generation",
+        "label": "Minimum M chip generation",
+        "type": "integer",
+        "required": true,
+        "minimum": 1,
+        "maximum": 20,
+        "options": [
+          {
+            "value": 1,
+            "label": "M1 or newer"
+          },
+          {
+            "value": 2,
+            "label": "M2 or newer"
+          },
+          {
+            "value": 3,
+            "label": "M3 or newer"
+          },
+          {
+            "value": 4,
+            "label": "M4 or newer"
+          },
+          {
+            "value": 5,
+            "label": "M5 or newer"
+          },
+          {
+            "value": 6,
+            "label": "M6 or newer"
+          }
+        ],
+        "match": {
+          "attribute": "chip_generation",
+          "operator": "gte",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "min_ram_gb",
+        "label": "Minimum memory",
+        "type": "integer",
+        "required": true,
+        "minimum": 1,
+        "maximum": 2048,
+        "unit": "GB",
+        "options": [
+          {
+            "value": 8,
+            "label": "8"
+          },
+          {
+            "value": 16,
+            "label": "16"
+          },
+          {
+            "value": 24,
+            "label": "24"
+          },
+          {
+            "value": 32,
+            "label": "32"
+          },
+          {
+            "value": 64,
+            "label": "64"
+          },
+          {
+            "value": 128,
+            "label": "128"
+          }
+        ],
+        "match": {
+          "attribute": "ram_gb",
+          "operator": "gte",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "min_ssd_gb",
+        "label": "Minimum SSD storage",
+        "type": "integer",
+        "required": true,
+        "minimum": 1,
+        "maximum": 100000,
+        "unit": "GB",
+        "options": [
+          {
+            "value": 256,
+            "label": "256 GB"
+          },
+          {
+            "value": 512,
+            "label": "512 GB"
+          },
+          {
+            "value": 1000,
+            "label": "1 TB"
+          },
+          {
+            "value": 2000,
+            "label": "2 TB"
+          },
+          {
+            "value": 4000,
+            "label": "4 TB"
+          }
+        ],
+        "match": {
+          "attribute": "ssd_gb",
+          "operator": "gte",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "allowed_conditions",
+        "label": "Acceptable condition",
+        "type": "multiple_choice",
+        "required": true,
+        "options": [
+          {
+            "value": "good",
+            "label": "Good"
+          },
+          {
+            "value": "excellent",
+            "label": "Excellent"
+          },
+          {
+            "value": "like_new",
+            "label": "Like new"
+          }
+        ],
+        "match": {
+          "attribute": "condition",
+          "operator": "in",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "max_price_minor",
+        "label": "Maximum price",
+        "type": "integer",
+        "required": true,
+        "minimum": 1,
+        "maximum": 100000000,
+        "display_divisor": 100,
+        "unit": "\u00a3",
+        "match": {
+          "attribute": "price_minor",
+          "operator": "lte",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "max_drive_minutes",
+        "label": "Maximum drive",
+        "type": "integer",
+        "required": true,
+        "minimum": 1,
+        "maximum": 1440,
+        "unit": "minutes",
+        "options": [
+          {
+            "value": 15,
+            "label": "15"
+          },
+          {
+            "value": 30,
+            "label": "30"
+          },
+          {
+            "value": 45,
+            "label": "45"
+          },
+          {
+            "value": 60,
+            "label": "60"
+          },
+          {
+            "value": 90,
+            "label": "90"
+          }
+        ],
+        "hint": "One-way driving time from your saved starting location.",
+        "match": {
+          "attribute": "drive_minutes",
+          "operator": "lte",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "seller_listing_count",
+        "label": "Seller listing count",
+        "type": "range",
+        "required": false,
+        "question_stage": "refinement",
+        "minimum": 0,
+        "hint": "Optional \u00b7 number of current Marketplace listings. Leave either limit blank. Unavailable counts need checking.",
+        "match": {
+          "attribute": "seller_listing_count",
+          "operator": "range",
+          "importance": "required"
+        }
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "version": 3,
+    "category": "rental",
+    "title": "Property to rent",
+    "description": "Choose the place and living arrangement that suit you.",
+    "price": {
+      "currency": "GBP",
+      "period": "month"
+    },
+    "comparison_attributes": ["area", "accommodation", "property_type", "bedrooms"],
+    "fields": [
+      {
+        "id": "area",
+        "label": "Area or neighbourhood",
+        "type": "location",
+        "required": true,
+        "hint": "Use the same area name when recording listing evidence.",
+        "match": {
+          "attribute": "area",
+          "operator": "eq",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "accommodation",
+        "label": "What would you like to rent?",
+        "type": "single_choice",
+        "required": true,
+        "options": [
+          {
+            "value": "whole_property",
+            "label": "Whole property"
+          },
+          {
+            "value": "private_room",
+            "label": "Private room"
+          },
+          {
+            "value": "shared_room",
+            "label": "Shared room"
+          }
+        ],
+        "match": {
+          "attribute": "accommodation",
+          "operator": "eq",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "property_type",
+        "label": "Property type",
+        "type": "multiple_choice",
+        "required": false,
+        "options": [
+          {
+            "value": "house",
+            "label": "House"
+          },
+          {
+            "value": "flat",
+            "label": "Flat"
+          }
+        ],
+        "match": {
+          "attribute": "property_type",
+          "operator": "in",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "min_bedrooms",
+        "label": "Minimum bedrooms",
+        "type": "integer",
+        "required": false,
+        "minimum": 0,
+        "maximum": 50,
+        "unit": "bedrooms",
+        "options": [
+          {
+            "value": 0,
+            "label": "0"
+          },
+          {
+            "value": 1,
+            "label": "1"
+          },
+          {
+            "value": 2,
+            "label": "2"
+          },
+          {
+            "value": 3,
+            "label": "3"
+          },
+          {
+            "value": 4,
+            "label": "4"
+          },
+          {
+            "value": 5,
+            "label": "5"
+          }
+        ],
+        "visible_when": {
+          "field": "accommodation",
+          "one_of": ["whole_property"]
+        },
+        "match": {
+          "attribute": "bedrooms",
+          "operator": "gte",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "floor",
+        "label": "Floor preference",
+        "type": "single_choice",
+        "required": false,
+        "options": [
+          {
+            "value": "ground",
+            "label": "Ground floor"
+          },
+          {
+            "value": "above_ground",
+            "label": "Above ground floor"
+          }
+        ],
+        "match": {
+          "attribute": "floor",
+          "operator": "eq",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "max_price_minor",
+        "label": "Maximum monthly rent",
+        "type": "integer",
+        "required": true,
+        "minimum": 1,
+        "maximum": 100000000,
+        "display_divisor": 100,
+        "unit": "\u00a3 / month",
+        "hint": "Full monthly rent, excluding separately quoted bills and deposits.",
+        "match": {
+          "attribute": "price_minor",
+          "operator": "lte",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "seller_listing_count",
+        "label": "Seller listing count",
+        "type": "range",
+        "required": false,
+        "question_stage": "refinement",
+        "minimum": 0,
+        "hint": "Optional \u00b7 number of current Marketplace listings. Leave either limit blank. Unavailable counts need checking.",
+        "match": {
+          "attribute": "seller_listing_count",
+          "operator": "range",
+          "importance": "required"
+        }
+      }
+    ]
+  }
+]

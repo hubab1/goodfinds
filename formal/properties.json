@@ -1,0 +1,36 @@
+{
+  "models": [
+    {
+      "name": "Seller actions",
+      "namespace": "Goodfinds.SellerAction",
+      "source": "Goodfinds/SellerActionProofs.lean",
+      "properties": [
+        {
+          "id": "valid-states",
+          "meaning": "Accepted histories preserve the permit count and the relationship between execution phase and permission.",
+          "theorems": ["reachable_valid"]
+        },
+        {
+          "id": "single-use-permit",
+          "meaning": "An immutable action receives at most one send permit over its entire accepted history.",
+          "theorems": ["at_most_one_permit"]
+        },
+        {
+          "id": "uncertain-send",
+          "meaning": "An uncertain action rejects both another permit and cancellation.",
+          "theorems": ["uncertain_rejects_prepare", "uncertain_rejects_cancel"]
+        },
+        {
+          "id": "seller-fencing",
+          "meaning": "Wrong or expired lease tokens reject preparation and result recording.",
+          "theorems": ["wrong_token_rejects", "expired_token_rejects"]
+        },
+        {
+          "id": "approved-text",
+          "meaning": "Accepted action histories preserve the exact draft; recording sent requires matching-evidence, identity and route validation facts.",
+          "theorems": ["history_preserves_draft", "sent_requires_exact_evidence"]
+        }
+      ]
+    }
+  ]
+}

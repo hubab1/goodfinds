@@ -1,0 +1,37 @@
+.detail-facts {
+  margin: 0;
+  min-width: 0;
+}
+
+.detail-fact {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  align-items: baseline;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.detail-fact:first-child {
+  padding-top: 0;
+}
+
+.detail-fact:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.detail-fact dt {
+  min-width: 0;
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
+}
+
+.detail-fact dd {
+  min-width: 0;
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}

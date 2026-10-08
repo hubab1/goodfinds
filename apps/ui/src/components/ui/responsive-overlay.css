@@ -1,0 +1,209 @@
+:root {
+  --dialog-width: 560px;
+  --dialog-space: 24px;
+  --dialog-radius: 16px;
+  --dialog-motion: 160ms;
+}
+
+.responsive-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgb(0 0 0 / 45%);
+  transition: opacity var(--dialog-motion) ease;
+
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+  }
+}
+
+.responsive-overlay-popup {
+  display: flex;
+  flex-direction: column;
+  color: var(--foreground, #000);
+  background: var(--background, #fff);
+  border: 1px solid var(--border, #e5e5e5);
+  box-shadow: 0 20px 60px rgb(0 0 0 / 15%);
+  outline: none;
+  overflow: hidden;
+  max-width: calc(100vw - 32px);
+  transition:
+    opacity var(--dialog-motion) ease,
+    scale var(--dialog-motion) ease;
+
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+    scale: 0.98;
+  }
+}
+
+.responsive-overlay-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 60;
+  width: min(var(--dialog-width), calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  transform: translate(-50%, -50%);
+  border-radius: var(--dialog-radius);
+}
+
+.responsive-overlay-viewport {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  bottom: var(--drawer-keyboard-inset, 0px);
+}
+
+.responsive-overlay-sheet {
+  width: 100%;
+  max-width: none;
+  max-height: min(92dvh, calc(100dvh - var(--drawer-keyboard-inset, 0px) - 8px));
+  border-radius: 20px 20px 0 0;
+  transform: translateY(var(--drawer-swipe-movement-y, 0px));
+  transition:
+    transform var(--dialog-motion) ease,
+    opacity var(--dialog-motion) ease;
+
+  &[data-starting-style],
+  &[data-ending-style] {
+    transform: translateY(100%);
+    scale: 1;
+  }
+}
+
+.responsive-overlay-handle-area {
+  display: grid;
+  min-height: 28px;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.responsive-overlay-handle {
+  width: 36px;
+  height: 4px;
+  background: #c8c8c8;
+  border-radius: 4px;
+}
+
+.responsive-overlay-header {
+  position: relative;
+  flex-shrink: 0;
+  padding: var(--dialog-space);
+  padding-right: calc(var(--dialog-space) + 48px);
+  border-bottom: 1px solid var(--border, #e5e5e5);
+  text-align: left;
+}
+
+.responsive-overlay-sheet .responsive-overlay-header {
+  padding-top: 0;
+  padding-bottom: 20px;
+}
+
+.responsive-overlay-title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+.responsive-overlay-description {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.responsive-overlay-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  background: #000;
+  cursor: pointer;
+}
+
+.responsive-overlay-sheet .responsive-overlay-close {
+  top: -8px;
+}
+
+.responsive-overlay-close:hover {
+  background: #262626;
+}
+
+.responsive-overlay-close:focus-visible {
+  outline: 2px solid #000;
+  outline-offset: 2px;
+}
+
+.responsive-overlay-body {
+  min-height: 0;
+  flex: 1;
+  padding: var(--dialog-space);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.responsive-overlay-footer {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px var(--dialog-space);
+  border-top: 1px solid var(--border, #e5e5e5);
+}
+
+.responsive-overlay-sheet .responsive-overlay-footer {
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+
+@media (pointer: coarse) {
+  .responsive-overlay-close {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.responsive-overlay-popup [data-slot="native-select-wrapper"] {
+  width: 100%;
+}
+
+@media (max-width: 639px) {
+  :root {
+    --dialog-space: 20px;
+  }
+
+  .responsive-overlay-dialog {
+    max-height: calc(100dvh - 24px);
+  }
+
+  .responsive-overlay-footer > button {
+    flex: 1 1 auto;
+    min-height: 44px;
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .responsive-overlay-popup,
+  .responsive-overlay-backdrop {
+    transition: none;
+  }
+}

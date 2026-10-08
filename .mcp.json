@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "goodfinds": {
+      "command": "./dist/build/server/goodfinds",
+      "args": [],
+      "cwd": ".",
+      "env_vars": [
+        "PATH",
+        "CODEX_HOME",
+        "GOODFINDS_WORKSPACE_DIR",
+        "GOODFINDS_EBAY_CLIENT_ID",
+        "GOODFINDS_EBAY_CLIENT_SECRET"
+      ]
+    }
+  }
+}

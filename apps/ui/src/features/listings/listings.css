@@ -1,0 +1,164 @@
+.listing-photo-arrow {
+  opacity: 0;
+}
+
+.photo-edge-background {
+  --photo-overscan: 24px;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.photo-edge-background::before,
+.photo-edge-background::after {
+  content: "";
+  position: absolute;
+  background-image: var(--photo-source);
+  background-repeat: no-repeat;
+  filter: blur(12px);
+  opacity: 0.55;
+}
+
+.photo-edge-background[data-fill="sides"]::before,
+.photo-edge-background[data-fill="sides"]::after {
+  top: 0;
+  width: calc(var(--photo-gap) + 2 * var(--photo-overscan));
+  height: 100%;
+  /* Each layer displays the outer 4% while preserving its along-edge alignment. */
+  background-size: 2500% 100%;
+}
+
+.photo-edge-background[data-fill="sides"]::before {
+  left: calc(-1 * var(--photo-overscan));
+  background-position: left center;
+}
+.photo-edge-background[data-fill="sides"]::after {
+  right: calc(-1 * var(--photo-overscan));
+  background-position: right center;
+}
+.photo-edge-background[data-fill="top-bottom"]::before,
+.photo-edge-background[data-fill="top-bottom"]::after {
+  left: 0;
+  width: 100%;
+  height: calc(var(--photo-gap) + 2 * var(--photo-overscan));
+  background-size: 100% 2500%;
+}
+.photo-edge-background[data-fill="top-bottom"]::before {
+  top: calc(-1 * var(--photo-overscan));
+  background-position: center top;
+}
+.photo-edge-background[data-fill="top-bottom"]::after {
+  bottom: calc(-1 * var(--photo-overscan));
+  background-position: center bottom;
+}
+
+.filter-field-clear {
+  position: absolute;
+  top: 50%;
+  right: 28px;
+  display: flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%);
+  border-radius: 4px;
+  color: white;
+  background: black;
+}
+.filter-field-clear:focus-visible {
+  outline: 2px solid black;
+  outline-offset: 2px;
+}
+
+.listing-card {
+  display: grid;
+  gap: 20px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.listing-card-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.listing-card-price {
+  text-align: left;
+}
+@container (min-width: 32rem) {
+  .listing-card {
+    grid-template-columns: 168px minmax(0, 1fr);
+  }
+  .listing-photo-carousel {
+    aspect-ratio: 1;
+  }
+}
+@container (min-width: 48rem) {
+  .listing-card {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+  .listing-card-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 20px;
+  }
+  .listing-card-price {
+    text-align: right;
+  }
+}
+
+.listing-photo-carousel:hover .listing-photo-arrow,
+.listing-photo-carousel:focus-within .listing-photo-arrow {
+  opacity: 1;
+}
+
+.listing-photo-carousel:hover .listing-photo-arrow:disabled,
+.listing-photo-carousel:focus-within .listing-photo-arrow:disabled {
+  opacity: 0.45;
+}
+
+@media (pointer: coarse) {
+  .listing-photo-arrow {
+    width: 44px;
+    height: 44px;
+    opacity: 1;
+  }
+
+  .search-details-button,
+  .search-options button {
+    min-height: 44px;
+  }
+}
+
+@media (hover: none) {
+  .listing-photo-arrow {
+    opacity: 1;
+  }
+
+  .listing-photo-arrow:disabled {
+    opacity: 0.45;
+  }
+}
+
+.seller-filter-panel {
+  animation: seller-panel-in 180ms ease-out;
+}
+
+@keyframes seller-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seller-filter-panel {
+    animation: none !important;
+  }
+}

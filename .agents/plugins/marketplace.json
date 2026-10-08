@@ -1,0 +1,12 @@
+{
+  "name": "local-goodfinds",
+  "interface": { "displayName": "Goodfinds development" },
+  "plugins": [
+    {
+      "name": "goodfinds-marketplace",
+      "source": { "source": "local", "path": "./dist/goodfinds-marketplace" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
+}

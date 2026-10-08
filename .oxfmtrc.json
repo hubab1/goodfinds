@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": false,
+  "trailingComma": "all",
+  "ignorePatterns": [
+    "node_modules/**",
+    "dist/**",
+    "output/**",
+    ".local/**",
+    "formal/.lake/**",
+    ".mcp.json",
+    ".codex-plugin/plugin.json"
+  ]
+}
