@@ -1,5 +1,5 @@
 import { seedWorkspace } from "./helpers/workspace.ts";
-import { createEbayClient } from "../apps/server/src/platform/ebay.ts";
+import { createEbayClient } from "./reference-server/src/platform/ebay.ts";
 import { revisionFor } from "./helpers/revisions.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -7,7 +7,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Effect } from "effect";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
 import {
   searchDefinitionSchema,
   savedSearchSchema,
@@ -15,20 +15,20 @@ import {
 } from "@goodfinds/contracts/search-definition";
 import { locationSchema, accessAvailable, postalLabel } from "@goodfinds/contracts/integrations";
 import { feedbackEventSchema } from "@goodfinds/contracts/discovery";
-import { learnedCriteria } from "../apps/server/src/searches/learning.ts";
+import { learnedCriteria } from "./reference-server/src/searches/learning.ts";
 import {
   workspaceConfigurationSchema,
   listingObservationSchema,
-} from "../apps/server/src/workspace/model.ts";
-import { searchCohort } from "../apps/server/src/searches/definition.ts";
-import { ebayEvidence, priceMinor } from "../apps/server/src/connections/ebay.ts";
+} from "./reference-server/src/workspace/model.ts";
+import { searchCohort } from "./reference-server/src/searches/definition.ts";
+import { ebayEvidence, priceMinor } from "./reference-server/src/connections/ebay.ts";
 import { deviceLocation, estimateIP, lookupPostal } from "../apps/ui/src/lib/location.ts";
-import { createGoodfindsServer } from "@goodfinds/server/mcp";
+import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { ElicitRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
-import { NOT_SURE } from "../apps/server/src/searches/interview.ts";
+import { NOT_SURE } from "./reference-server/src/searches/interview.ts";
 import { money } from "../apps/ui/src/lib/presentation.ts";
 import { z } from "zod";
 

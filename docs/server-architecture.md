@@ -1,24 +1,28 @@
 # Server architecture
 
-Goodfinds runs an Effect 4 backend on Bun. Pure domain calculations and shared Zod contracts remain ordinary TypeScript. Effect owns I/O failures, resources, cancellation and shutdown; the standard MCP SDK owns transport. Read [CONTEXT.md](../CONTEXT.md) for domain meanings and the [README](../README.md#run-locally) for building and packaging.
+Goodfinds runs a native Rust server with bundled SQLite. The React UI and shared Zod contracts remain TypeScript. Read [CONTEXT.md](../CONTEXT.md) for domain meanings and [packaging](packaging.md) for build dependencies, targets and distribution limits.
 
-## Module boundaries
+## Runtime and contracts
 
-Domain modules under `apps/server/src` own searches, listings, sellers, connections and workspace behavior. They depend on domain-owned repository interfaces, never platform adapters, SQLite handles, filesystem/process APIs or environment reads. `platform/` implements those adapters; `entrypoints/` composes them. `bun run architecture:check` enforces the boundary.
+[workspace.rs](../apps/server/src/workspace.rs) owns command transactions, optimistic revisions and retry receipts. Listing, search, seller and connection modules operate on its `Workspace`; they do not start another database connection or asynchronous task inside a command. Network operations and host transport live outside that synchronous boundary. `bun run architecture:check` checks this separation and rejects production dependencies on the development reference server.
 
-[backend.ts](../apps/server/src/entrypoints/backend.ts) supplies the application Layer for MCP and preview. [workspace-layer.ts](../apps/server/src/entrypoints/workspace-layer.ts) assembles transaction-local services around one scoped SQLite connection before entering a writer transaction. Services capture their dependencies during construction, so callers do not supply storage repeatedly.
+[storage.rs](../apps/server/src/storage.rs) opens databases and loads configuration. MCP, CLI and the loopback preview call the same native application. [media.rs](../apps/server/src/media.rs) owns private, content-addressed files; [ebay.rs](../apps/server/src/ebay.rs) uses the official HTTP API with application credentials. Neither module delegates execution to a JavaScript runtime.
 
-`packages/contracts` is the shared source of validated transport schemas, pure lifecycle definitions and domain meanings. The panel consumes those contracts and workflow projections; the server rechecks every command under its writer lock. A displayed available action is not authorization to execute it later. Research-generated forms remain declarative data rendered by fixed controls, never executable UI code.
+[packages/contracts](../packages/contracts/package.json) supplies the UI's types, schemas, lifecycle descriptions and tool names. The build exports JSON schemas and tool metadata to `apps/server/data/contracts.json`; [contracts.rs](../apps/server/src/contracts.rs) embeds and validates them. Rust also enforces semantic guards that JSON Schema cannot express, such as matching an observed listing URL to its ID. Update both those guards and their contract tests when changing an interface.
+
+Run `bun run contracts:generate` after editing shared contracts, and `bun run contracts:check` to verify the committed export. Generation uses UTC regardless of the developer's local timezone, so schema defaults and the packaged contracts remain reproducible.
+
+[tests/reference-server](../tests/reference-server/README.md) retains the prior TypeScript implementation for regression comparisons and contract export. It is a development fixture, excluded from plugin packages. UI development starts the native MCP executable. Rust tests compare key outcomes with reference fixtures; the packaged smoke test exercises the actual executable with an empty `PATH`.
 
 ## Domain and storage
 
-`workspace.sqlite` stores buyer configuration, evidence and workflow state; `connections.sqlite` stores connection checks. [database-schema.ts](../apps/server/src/platform/database-schema.ts) owns schema initialization and supported additive upgrades; unsupported schemas are rejected. New live workspaces have no searches or confirmed location. New sample workspaces initialize independent databases from bundled fictional data without reading live data. Existing saved workspaces are preserved.
+`workspace.sqlite` stores buyer configuration, evidence and workflow state; `connections.sqlite` stores connection checks. [storage.rs](../apps/server/src/storage.rs) owns schema initialization and supported additive upgrades; unsupported schemas are rejected. New live workspaces have no searches or confirmed location. New sample workspaces initialize independent databases from bundled fictional data without reading live data. Existing saved workspaces are preserved.
 
 The workspace writer transaction commits related configuration changes, alert withdrawals, workflow updates, leases and operation receipts together. Reads use deferred transactions after initial configuration has been saved. Querying status projects expired work without persisting reconciliation; lifecycle commands reconcile under the writer lock.
 
 Entity revisions advance only for changed entities. Retained deletion records prevent optimistic-lock tokens from resetting. Search runs and seller conversations have independent versions. An operation receipt stores the request ID, argument hash and result in the mutation transaction: an exact retry returns the original resource result and a fresh panel snapshot; conflicting reuse fails.
 
-[sqlite.ts](../apps/server/src/platform/sqlite.ts) is the synchronous Effect adapter for Bun transactions. It rejects suspended asynchronous work and interrupts that fiber before rollback so it cannot write later. One managed runtime per server releases resources on cancellation and shutdown.
+SQLite commands run synchronously under one writer lock. The request checks cancellation before committing; failed or cancelled commands roll back their changes and receipts together. Asynchronous HTTP calls do not hold that transaction. Shutdown closes native transports and their tasks.
 
 Backups capture committed SQLite data, immutable media and connection checks, verify checksums and integrity, and publish a new directory atomically. Restore accepts the supported workspace format; it does not import arbitrary legacy data. Credentials and host schedules stay with their host. See [backup and restore commands](../README.md#your-data).
 
@@ -26,7 +30,7 @@ Backups capture committed SQLite data, immutable media and connection checks, ve
 
 [operations.ts](../packages/contracts/src/operations.ts) owns input/output schemas and annotations; [tool-names.ts](../packages/contracts/src/tool-names.ts) maps operations to MCP tools. MCP, preview and backend use these definitions. Model results contain compact changed resources and prerequisites; full panel snapshots use app metadata. Listing summaries are paginated and full evidence is fetched on demand. Encoded video payloads do not belong in model output.
 
-Use the vocabulary in [CONTEXT.md](../CONTEXT.md). Goodfinds is the product, `goodfinds-marketplace` the plugin, `marketplace-shopping` the skill and `goodfinds` the MCP namespace. Modules use kebab-case filenames and `*.test.ts`; SQL uses plural tables and snake_case columns. Resource IDs name their target, timestamps end in `_at`, millisecond deadlines identify `_ms`, and JSON columns name their contents.
+Use the vocabulary in [CONTEXT.md](../CONTEXT.md). Goodfinds is the product, `goodfinds-marketplace` the plugin, `marketplace-shopping` the skill and `goodfinds` the MCP namespace. Rust modules use snake_case filenames; shared TypeScript modules use kebab-case filenames. SQL uses plural tables and snake_case columns. Resource IDs name their target, timestamps end in `_at`, millisecond deadlines identify `_ms`, and JSON columns name their contents.
 
 Tools follow `<verb>_goodfinds_<resource>`. `get` and `list` read; `save` and `set` edit state; `record` and `report` persist observations. `request` records intent, `claim` acquires ownership, `renew` extends a lease, `prepare` creates reviewable work and `issue` grants a checked permit. Keep intent, ownership, permission and observed completion distinct.
 
@@ -56,4 +60,4 @@ Shared lifecycle definitions own meanings, invariants, events, guards and recove
 
 `bun run docs:generate` produces the packaged [state reference](../skills/marketplace-shopping/references/state-model.md). `bun run docs:check` validates references and freshness; packaging also requires it. Edit shared definitions rather than the generated file. Tests check guard parity, transaction behavior and recovery; generated prose does not establish correctness.
 
-The [Lean specification](../formal/README.md) proves properties of an abstract seller protocol. TypeScript comparisons sample implementation agreement; they do not formally verify the server or host browser. Keep consequential boundaries and invariants here, host procedures in skill references, interface rules in [UI design](ui-design.md), and unfinished requirements in the [roadmap](roadmap.md).
+The [Lean specification](../formal/README.md) proves properties of an abstract seller protocol. Reference comparisons and native tests sample implementation agreement; they do not formally verify the Rust server or host browser. Keep consequential boundaries and invariants here, host procedures in skill references, interface rules in [UI design](ui-design.md), and unfinished requirements in the [roadmap](roadmap.md).

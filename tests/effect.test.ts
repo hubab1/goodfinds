@@ -4,19 +4,19 @@ import { mkdtempSync, existsSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Cause, Clock, Effect, Exit, Layer } from "effect";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
 import {
   all,
   close,
   execute,
   openDatabase,
   transaction,
-} from "../apps/server/src/platform/sqlite.ts";
-import { atomicJson } from "../apps/server/src/platform/files.ts";
-import { RevisionConflict, StorageError } from "../apps/server/src/workspace/errors.ts";
-import { Backend } from "../apps/server/src/entrypoints/backend.ts";
-import { createGoodfindsServer } from "@goodfinds/server/mcp";
-import { startPreview } from "@goodfinds/server/preview";
+} from "./reference-server/src/platform/sqlite.ts";
+import { atomicJson } from "./reference-server/src/platform/files.ts";
+import { RevisionConflict, StorageError } from "./reference-server/src/workspace/errors.ts";
+import { Backend } from "./reference-server/src/entrypoints/backend.ts";
+import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
+import { startPreview } from "@goodfinds/reference-server/preview";
 
 const fixedTime = Date.parse("2026-10-04T12:00:00Z");
 const clock: Clock.Clock = {

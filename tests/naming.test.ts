@@ -4,9 +4,9 @@ import { resolve } from "node:path";
 import assert from "node:assert/strict";
 import { Database } from "bun:sqlite";
 import { Effect } from "effect";
-import { createGoodfindsServer } from "../apps/server/src/entrypoints/mcp.ts";
-import { initializeWorkspaceDatabase } from "../apps/server/src/platform/database-schema.ts";
-import { ruleHash, validateConfiguration } from "../apps/server/src/listings/evaluation.ts";
+import { createGoodfindsServer } from "./reference-server/src/entrypoints/mcp.ts";
+import { initializeWorkspaceDatabase } from "./reference-server/src/platform/database-schema.ts";
+import { ruleHash, validateConfiguration } from "./reference-server/src/listings/evaluation.ts";
 import exampleWorkspace from "../skills/marketplace-shopping/assets/example-workspace.json";
 import { operations } from "@goodfinds/contracts/operations";
 

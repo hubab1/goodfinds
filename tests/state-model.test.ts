@@ -24,11 +24,11 @@ import { conversationSchema, sellerActionSchema } from "@goodfinds/contracts/sel
 import { operations } from "@goodfinds/contracts/operations";
 import { listingSchema } from "@goodfinds/contracts/state";
 import { listingWorkflow, mediaState } from "@goodfinds/contracts/listing-model";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
-import { errorDetails } from "../apps/server/src/workspace/errors.ts";
-import { repairQueue } from "../apps/server/src/listings/media.ts";
-import { createGoodfindsServer } from "../apps/server/src/entrypoints/mcp.ts";
-import { backendLayer } from "../apps/server/src/entrypoints/backend.ts";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
+import { errorDetails } from "./reference-server/src/workspace/errors.ts";
+import { repairQueue } from "./reference-server/src/listings/media.ts";
+import { createGoodfindsServer } from "./reference-server/src/entrypoints/mcp.ts";
+import { backendLayer } from "./reference-server/src/entrypoints/backend.ts";
 import {
   executionPolicy,
   executionPolicySchema,

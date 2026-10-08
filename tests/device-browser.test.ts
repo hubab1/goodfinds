@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   createDeviceBrowserReader,
   parseDeviceBrowser,
-} from "../apps/server/src/platform/device-browser.ts";
+} from "./reference-server/src/platform/device-browser.ts";
 
 void test("device browser metadata accepts the actual handler without assuming Chrome", () => {
   assert.deepEqual(parseDeviceBrowser('{"id":"com.apple.Safari","name":"Safari"}'), {

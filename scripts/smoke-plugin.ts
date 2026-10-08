@@ -48,11 +48,20 @@ if (reference !== sourceReference) throw new Error("Packaged state reference dif
 const launch = Object.values(codex.mcpServers)[0];
 if (!launch) throw new Error("Packaged MCP server missing");
 const data = await mkdtemp(resolve(tmpdir(), "goodfinds-package-smoke-"));
-const environment = { PATH: "", HOME: data, GOODFINDS_WORKSPACE_DIR: resolve(data, "workspace") };
+const environment = {
+  PATH: "",
+  HOME: data,
+  USERPROFILE: data,
+  ...(process.env["SystemRoot"] ? { SystemRoot: process.env["SystemRoot"] } : {}),
+  GOODFINDS_WORKSPACE_DIR: resolve(data, "workspace"),
+};
 const client = new Client({ name: "Goodfinds package smoke", version: "1.0.0" });
 try {
   // Copy only the executable, so neither repository files nor adjacent assets can rescue it.
-  const isolated = resolve(data, "standalone executable/goodfinds");
+  const isolated = resolve(
+    data,
+    `standalone executable/${process.platform === "win32" ? "goodfinds.exe" : "goodfinds"}`,
+  );
   await mkdir(resolve(data, "standalone executable"));
   await copyFile(resolve(root, launch.command), isolated);
   const doctor = z

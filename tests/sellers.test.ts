@@ -7,8 +7,8 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import type { Listing } from "@goodfinds/contracts/state";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
-import { normalize } from "../apps/server/src/listings/tracking.ts";
-import { createGoodfindsServer } from "@goodfinds/server/mcp";
+import { normalize } from "./reference-server/src/listings/tracking.ts";
+import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
 import { SEARCH_TEMPLATES, validateAnswers } from "@goodfinds/contracts/search-definition";
 import {
   joinedLabel,

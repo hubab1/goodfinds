@@ -7,11 +7,11 @@ import { Effect } from "effect";
 import { SEARCH_TEMPLATES } from "@goodfinds/contracts/search-definition";
 import { listingSchema, savedSearchSchema, stateSchema } from "@goodfinds/contracts/state";
 import type { Listing, MarketHistory } from "@goodfinds/contracts/state";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
 import {
   connect,
   evaluateObservations,
-} from "../apps/server/src/platform/listing-evaluation-sqlite.ts";
+} from "./reference-server/src/platform/listing-evaluation-sqlite.ts";
 import sampleRows from "../skills/marketplace-shopping/assets/demo-listings.json" with { type: "json" };
 import {
   clusterPoints,

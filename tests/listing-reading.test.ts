@@ -9,14 +9,14 @@ import { randomUUID } from "node:crypto";
 import { Database } from "bun:sqlite";
 import { Clock, Effect } from "effect";
 import { z } from "zod";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
 import {
   initializeWorkspaceDatabase,
   WORKSPACE_SCHEMA_VERSION,
-} from "../apps/server/src/platform/database-schema.ts";
-import { discoverySummary } from "../apps/server/src/platform/listing-discovery-sqlite.ts";
-import { createGoodfindsServer } from "@goodfinds/server/mcp";
-import { backendLayer } from "../apps/server/src/entrypoints/backend.ts";
+} from "./reference-server/src/platform/database-schema.ts";
+import { discoverySummary } from "./reference-server/src/platform/listing-discovery-sqlite.ts";
+import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
+import { backendLayer } from "./reference-server/src/entrypoints/backend.ts";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 import { operations } from "@goodfinds/contracts/operations";
 import { revisionFor } from "./helpers/revisions.ts";

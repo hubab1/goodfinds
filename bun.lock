@@ -6,7 +6,7 @@
       "name": "goodfinds-development",
       "devDependencies": {
         "@goodfinds/contracts": "workspace:*",
-        "@goodfinds/server": "workspace:*",
+        "@goodfinds/reference-server": "workspace:*",
         "@modelcontextprotocol/ext-apps": "1.7.5",
         "@modelcontextprotocol/sdk": "1.32.0",
         "@types/bun": "1.4.2",
@@ -37,7 +37,7 @@
         "zod": "4.6.5",
       },
       "devDependencies": {
-        "@goodfinds/server": "workspace:*",
+        "@modelcontextprotocol/sdk": "1.32.0",
         "@tailwindcss/vite": "4.3.3",
         "@types/node": "26.6.4",
         "@types/react": "19.3.0",
@@ -47,8 +47,15 @@
         "vite": "8.3.2",
       },
     },
-    "apps/server": {
-      "name": "@goodfinds/server",
+    "packages/contracts": {
+      "name": "@goodfinds/contracts",
+      "version": "0.1.0",
+      "dependencies": {
+        "zod": "4.6.5",
+      },
+    },
+    "tests/reference-server": {
+      "name": "@goodfinds/reference-server",
       "version": "0.1.0",
       "dependencies": {
         "@effect/platform-bun": "4.0.0",
@@ -60,13 +67,6 @@
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
-      },
-    },
-    "packages/contracts": {
-      "name": "@goodfinds/contracts",
-      "version": "0.1.0",
-      "dependencies": {
-        "zod": "4.6.5",
       },
     },
   },
@@ -109,9 +109,9 @@
 
     "@goodfinds/contracts": ["@goodfinds/contracts@workspace:packages/contracts"],
 
-    "@goodfinds/ui": ["@goodfinds/ui@workspace:apps/ui"],
+    "@goodfinds/reference-server": ["@goodfinds/reference-server@workspace:tests/reference-server"],
 
-    "@goodfinds/server": ["@goodfinds/server@workspace:apps/server"],
+    "@goodfinds/ui": ["@goodfinds/ui@workspace:apps/ui"],
 
     "@hono/node-server": ["@hono/node-server@2.1.3", "", { "peerDependencies": { "hono": "^4" } }, "sha512-TA//nWMqPhbfdfneACk6t5a9eqbS9lABEPyKn0/xZTah3H3U2XaVg85rJFl0/Fyit0I552YDHgXGVSf3GwqbUw=="],
 

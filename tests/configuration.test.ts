@@ -8,9 +8,9 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Effect } from "effect";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
-import { runCli } from "../apps/server/src/entrypoints/cli.ts";
-import { workspaceConfigurationSchema, hash } from "../apps/server/src/workspace/model.ts";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
+import { runCli } from "./reference-server/src/entrypoints/cli.ts";
+import { workspaceConfigurationSchema, hash } from "./reference-server/src/workspace/model.ts";
 
 function fixture(t: TestContext) {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-config-"));

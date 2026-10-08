@@ -14,7 +14,7 @@ Goodfinds recognizes Facebook Marketplace, eBay, Vinted, Gumtree, UK Auto Trader
 
 ## Run locally
 
-Development requires Bun 1.4.2 or later on macOS or Linux.
+Source builds require Rust 1.92 or later, a C compiler, and Bun 1.4.2 or later for the UI and shared contracts. Installed plugins need none of these tools.
 
 ```sh
 bun install
@@ -31,9 +31,9 @@ bun run package
 bun scripts/smoke-plugin.ts dist/goodfinds-marketplace
 ```
 
-The package contains a standalone executable, the panel and the [marketplace-shopping skill](skills/marketplace-shopping/SKILL.md). Installed plugins need no Bun or Node installation. Load `dist/goodfinds-marketplace` through your MCP host's local plugin support; `plugin.json` and `mcp.json` define the plugin and server. Browser actions require compatible host tools. Recurring checks require a host schedule, an awake device and a running host app.
+The package contains a native Rust executable with SQLite and the UI embedded, plus the [marketplace-shopping skill](skills/marketplace-shopping/SKILL.md). Load `dist/goodfinds-marketplace` through your MCP host's local plugin support; `plugin.json` and `mcp.json` define the plugin and server. Browser actions require compatible host tools. Recurring checks require a host schedule, an awake device and a running host app.
 
-Each package targets one operating system and CPU, recorded in its ZIP filename. Packaging defaults to the build machine. For example, `GOODFINDS_BUILD_TARGET=bun-linux-x64 bun run package` builds for Linux x64. Supported targets are macOS and Linux on ARM64/x64, including Linux musl variants. Validate each package on its target platform before distribution.
+Each package targets one operating system and CPU, recorded in its ZIP filename. Packaging defaults to the build machine. macOS, Windows and Linux targets are configured for ARM64 and x64; cross-compilation requires the target linker and SDK. See [packaging](docs/packaging.md) for target selection and platform requirements. Validate each package on its target platform before distribution.
 
 ## Your data
 
@@ -48,12 +48,13 @@ Backups include committed databases, cached media and connection checks, with in
 
 ## Development
 
-The panel and server share validated contracts in `packages/contracts`. Start with [server architecture](docs/server-architecture.md), [interface design](docs/ui-design.md) and [domain vocabulary](CONTEXT.md). The [roadmap](docs/roadmap.md) tracks open work.
+The TypeScript UI and Rust server share validated JSON contracts generated from `packages/contracts`. A contract change is checked on both sides of the MCP interface. Start with [server architecture](docs/server-architecture.md), [interface design](docs/ui-design.md) and [domain vocabulary](CONTEXT.md). The [roadmap](docs/roadmap.md) tracks open work.
 
 ```sh
 bun run docs:generate # after changing shared state definitions
 bun run check
 bun test ./tests/*.ts
+bun run test:native
 ```
 
 Validation includes a focused seller-send specification using a pinned Lean toolchain. Install [elan](https://lean-lang.org/install/) and follow the [formal model guide](formal/README.md). The model checks permission and reconciliation guarantees; live browser integrations require separate validation.

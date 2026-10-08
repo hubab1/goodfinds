@@ -17,7 +17,7 @@ import {
   expiredSellerAction,
 } from "@goodfinds/contracts/seller-action-model";
 import type { Conversation, SellerAction } from "@goodfinds/contracts/seller-conversation";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
 import { auditFormalProbe, evaluateSellerCases, formalDirectory } from "../scripts/formal-model.ts";
 import properties from "../formal/properties.json" with { type: "json" };
 import { revisionFor } from "./helpers/revisions.ts";

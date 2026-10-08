@@ -5,7 +5,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Effect } from "effect";
-import { WorkspaceStore } from "../../apps/server/src/platform/workspace-sqlite.ts";
+import { WorkspaceStore } from "../reference-server/src/platform/workspace-sqlite.ts";
 import type { Action } from "../../apps/ui/src/lib/actions.ts";
 
 const dom = new Window({ url: "https://panel.example", width: 1200 });

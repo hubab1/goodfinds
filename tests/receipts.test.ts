@@ -9,9 +9,9 @@ import { resolve } from "node:path";
 import { Database } from "bun:sqlite";
 import { Effect, Exit } from "effect";
 import { receiptSchema } from "@goodfinds/contracts/operations";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
-import { withReceipt } from "../apps/server/src/platform/receipts.ts";
-import { execute, transaction } from "../apps/server/src/platform/sqlite.ts";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
+import { withReceipt } from "./reference-server/src/platform/receipts.ts";
+import { execute, transaction } from "./reference-server/src/platform/sqlite.ts";
 
 function fixture(t: TestContext) {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-receipts-"));

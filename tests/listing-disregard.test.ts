@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { createGoodfindsServer } from "@goodfinds/server/mcp";
+import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 import { listingIsDismissed, DISREGARD_REASONS } from "../apps/ui/src/lib/listing-feedback.ts";
 

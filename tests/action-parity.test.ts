@@ -9,7 +9,7 @@ import { z } from "zod";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { isToolVisibilityAppOnly } from "@modelcontextprotocol/ext-apps/app-bridge";
-import { createGoodfindsServer } from "@goodfinds/server/mcp";
+import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 import {
   selectListings,

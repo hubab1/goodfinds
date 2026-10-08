@@ -4,18 +4,19 @@
   "private": true,
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "tests/reference-server"
   ],
   "type": "module",
   "scripts": {
     "dev": "bun run --filter @goodfinds/ui dev",
-    "build": "bun run typecheck && bun run --filter @goodfinds/ui build && bun scripts/build-server.ts",
+    "build": "bun run typecheck && bun scripts/build-server.ts",
     "start": "./dist/build/server/goodfinds --preview",
     "typecheck": "bun --bun tsc --noEmit && bun run --workspaces typecheck",
     "lint": "bun --bun oxlint --type-aware --max-warnings 0",
     "format": "bun --bun oxfmt .",
     "format:check": "bun --bun oxfmt --check .",
-    "check": "bun run architecture:check && bun run docs:check && bun run formal:check && bun run format:check && bun run lint && bun run typecheck",
+    "check": "bun run architecture:check && bun run docs:check && bun run contracts:check && bun run formal:check && bun run format:check && bun run lint && bun run typecheck && bun run check:native",
     "architecture:check": "bun scripts/check-server-architecture.ts && bun scripts/check-panel-architecture.ts",
     "formal:check": "bun scripts/check-formal-model.ts",
     "deps:check": "bun outdated --recursive --no-cache",
@@ -23,11 +24,15 @@
     "package": "bun run build && bun scripts/package-plugin.ts",
     "demo": "bun skills/marketplace-shopping/scripts/goodfinds.ts demo --output output/demo",
     "docs:generate": "bun scripts/generate-state-model.ts",
-    "docs:check": "bun scripts/generate-state-model.ts --check"
+    "docs:check": "bun scripts/generate-state-model.ts --check",
+    "test:native": "bun run --filter @goodfinds/ui build && cargo test --manifest-path apps/server/Cargo.toml",
+    "check:native": "bun run --filter @goodfinds/ui build && cargo fmt --manifest-path apps/server/Cargo.toml -- --check && cargo clippy --manifest-path apps/server/Cargo.toml --all-targets -- -D warnings",
+    "contracts:generate": "bun scripts/generate-native-contracts.ts",
+    "contracts:check": "bun scripts/generate-native-contracts.ts --check"
   },
   "devDependencies": {
     "@goodfinds/contracts": "workspace:*",
-    "@goodfinds/server": "workspace:*",
+    "@goodfinds/reference-server": "workspace:*",
     "@modelcontextprotocol/ext-apps": "1.7.5",
     "@modelcontextprotocol/sdk": "1.32.0",
     "@types/bun": "1.4.2",

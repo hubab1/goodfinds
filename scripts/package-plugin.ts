@@ -1,5 +1,5 @@
 import { checkStateModelDocs } from "./state-model-docs.ts";
-import { buildTarget } from "./build-target.ts";
+import { buildTarget, executableName } from "./build-target.ts";
 
 import {
   existsSync,
@@ -28,15 +28,16 @@ const manifest = z
   })
   .loose()
   .parse(JSON.parse(readFileSync(resolve(root, "plugin.json"), "utf8")) as unknown);
-for (const file of ["dist/build/server/goodfinds", "dist/build/server/build.json"])
+const executable = executableName(buildTarget);
+for (const file of [`dist/build/server/${executable}`, "dist/build/server/build.json"])
   if (!existsSync(resolve(root, file)))
     throw new Error("Build Goodfinds with bun run build before packaging");
 const built = z
-  .object({ target: z.string() })
+  .object({ target: z.string(), runtime: z.literal("native-rust"), executable: z.string() })
   .parse(
     JSON.parse(readFileSync(resolve(root, "dist/build/server/build.json"), "utf8")) as unknown,
   );
-if (built.target !== buildTarget)
+if (built.target !== buildTarget || built.executable !== executable)
   throw new Error(`Build Goodfinds for ${buildTarget} before packaging (found ${built.target})`);
 const mcp = z
   .object({ mcpServers: z.record(z.string(), z.record(z.string(), z.unknown())) })
@@ -64,7 +65,23 @@ function codexServers(servers: Record<string, Record<string, unknown>>) {
 }
 writeFileSync(
   resolve(root, ".mcp.json"),
-  `${JSON.stringify({ mcpServers: codexServers(mcp.mcpServers) }, null, 2)}\n`,
+  `${JSON.stringify(
+    {
+      mcpServers: codexServers(
+        Object.fromEntries(
+          Object.entries(mcp.mcpServers).map(([name, server]) => [
+            name,
+            {
+              ...server,
+              command: `./dist/build/server/${executable}`,
+            },
+          ]),
+        ),
+      ),
+    },
+    null,
+    2,
+  )}\n`,
 );
 mkdirSync(resolve(root, ".codex-plugin"), { recursive: true });
 writeFileSync(
@@ -78,7 +95,7 @@ mkdirSync(local, { recursive: true });
 const files: { source: string; target: string }[] = [
   { source: "plugin.json", target: "plugin.json" },
   { source: ".codex-plugin/plugin.json", target: ".codex-plugin/plugin.json" },
-  { source: "dist/build/server/goodfinds", target: "server/goodfinds" },
+  { source: `dist/build/server/${executable}`, target: `server/${executable}` },
   { source: "dist/build/server/build.json", target: "server/build.json" },
   {
     source: "packages/contracts/data/search-templates.json",
@@ -106,14 +123,14 @@ for (const file of files) {
   mkdirSync(dirname(target), { recursive: true });
   copyFileSync(resolve(root, file.source), target);
 }
-chmodSync(resolve(local, "server/goodfinds"), 0o755);
+chmodSync(resolve(local, "server", executable), 0o755);
 // Installed plugins have a self-contained layout independent of workspace source paths.
 const packagedServers = Object.fromEntries(
   Object.entries(mcp.mcpServers).map(([name, server]) => [
     name,
     {
       ...server,
-      command: z.string().parse(server["command"]).replace("./dist/build/", "./"),
+      command: `./server/${executable}`,
     },
   ]),
 );
@@ -126,12 +143,22 @@ writeFileSync(
   `${JSON.stringify({ mcpServers: codexServers(packagedServers) }, null, 2)}\n`,
 );
 rmSync(archive, { force: true });
-const zip = Bun.spawn(["zip", "-q", "-r", archive, "."], {
+const zipCommand =
+  process.platform === "win32"
+    ? [
+        "powershell.exe",
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        `Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory('${local.replaceAll("'", "''")}', '${archive.replaceAll("'", "''")}', [System.IO.Compression.CompressionLevel]::Optimal, $false)`,
+      ]
+    : ["zip", "-q", "-r", archive, "."];
+const zip = Bun.spawn(zipCommand, {
   cwd: local,
   stdout: "inherit",
   stderr: "inherit",
 });
 if ((await zip.exited) !== 0) throw new Error("Could not create the local plugin ZIP");
 process.stdout.write(
-  `${JSON.stringify({ archive, local_package: local, target: buildTarget, executable_bytes: statSync(resolve(local, "server/goodfinds")).size, files: files.length, status: "local prototype; not submitted or publicly approved", path: relative(root, archive) }, null, 2)}\n`,
+  `${JSON.stringify({ archive, local_package: local, target: buildTarget, runtime: "native-rust", executable_bytes: statSync(resolve(local, "server", executable)).size, files: files.length, status: "local prototype; not submitted or publicly approved", path: relative(root, archive) }, null, 2)}\n`,
 );

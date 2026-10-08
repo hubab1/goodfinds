@@ -1,5 +1,5 @@
 import { seedWorkspace } from "./helpers/workspace.ts";
-import { errorDetails } from "../apps/server/src/workspace/errors.ts";
+import { errorDetails } from "./reference-server/src/workspace/errors.ts";
 import { revisionFor } from "./helpers/revisions.ts";
 import { sellerActions } from "@goodfinds/contracts/tool-names";
 import test from "node:test";
@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { Clock, Effect } from "effect";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
 import {
   collectionExpired,
   EMPTY_FACETS,
@@ -20,7 +20,7 @@ import {
 } from "@goodfinds/contracts/seller-conversation";
 import type { SellerMessageDraft } from "@goodfinds/contracts/seller-conversation";
 import { sellerRequest, offerDefaults } from "../apps/ui/src/lib/seller-conversation.ts";
-import { createGoodfindsServer } from "@goodfinds/server/mcp";
+import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
 import { stateFromToolResult, stateSchema } from "@goodfinds/contracts/state";
 import { QUIET_BROWSING_GUIDANCE } from "@goodfinds/contracts/host-request";
 

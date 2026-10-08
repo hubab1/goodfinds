@@ -1,8 +1,9 @@
 # Checked seller-send specification
 
-Lean checks a focused model of seller permission and reconciliation. TypeScript runs
-the server. Proofs establish properties of the model; comparison tests sample whether
-production behavior agrees. This does not formally verify the TypeScript server.
+Lean checks a focused model of seller permission and reconciliation. Rust runs the
+production server. Proofs establish properties of the model; the existing comparison
+tests exercise the retained TypeScript reference implementation. Native tests separately
+check the Rust implementation. Neither test suite formally verifies the production server.
 
 ## Scope
 
@@ -11,8 +12,8 @@ The same immutable action must never receive another permission to send. This sa
 rule spans claiming, expiry and reconciliation, so checking all modeled finite histories
 adds value beyond individual recovery examples.
 
-Search runs, connection checks and command receipts use TypeScript guards and integration
-tests. Extend the formal specification only for a precise, consequential guarantee that
+Search runs, connection checks and command receipts use native guards and integration
+tests, with shared TypeScript contracts and reference tests. Extend the formal specification only for a precise, consequential guarantee that
 justifies a separately maintained model.
 
 ## Run the checks
@@ -50,16 +51,16 @@ fencing, and the validation facts required to record a sent result. `Audit.lean`
 transitive theorem dependencies, rejecting admitted proofs and custom axioms. Only Lean's
 standard logical axioms are allowed; negative tests check that the audit rejects failures.
 
-## How TypeScript and Lean connect
+## How the reference implementation and Lean connect
 
 The [development bridge](../scripts/formal-model.ts) builds the model into the native
 `seller_action_oracle` executable. The [comparison tests](../tests/formal-seller-action.test.ts)
-project TypeScript records into model states, send arrays of state/context/event cases
+project records from the [TypeScript reference server](../tests/reference-server/README.md) into model states, send arrays of state/context/event cases
 as JSON on standard input, and compare the JSON next states or rejections on standard
 output. They exercise seller guard boundaries and an actual stored history through
 permission, expiry, replacement ownership and reconciliation.
 
-The model and TypeScript implementation are written separately. No TypeScript is
+The model and reference implementation are written separately. No TypeScript is
 translated into Lean, and Lean generates no production TypeScript. The proofs cover
 all modeled histories; the implementation comparisons cover only the cases exercised.
 An agreement test cannot establish general equivalence or validate a shared assumption.
@@ -84,7 +85,7 @@ represented because they share the executor protocol, but never receive send per
 ## Abstraction and trusted boundaries
 
 Route, identity, draft readiness and evidence quality become Boolean facts supplied by
-TypeScript validators and the host. A proof that sent requires matching evidence proves
+validators and the host. A proof that sent requires matching evidence proves
 that those facts must be true; it does not prove the validators, truthful observations,
 or a real browser send. Draft identity is scoped to one immutable action. Creating a new
 action and recording manual history remain outside that history.
@@ -92,12 +93,13 @@ action and recording manual history remain outside that history.
 The server reconciles expiry before applicable writes; model histories expose that as
 an explicit expiry event. Times are integer milliseconds; comparisons use JavaScript-safe
 integers and valid ISO timestamps. Storage transactions, faithful serialization, UUID and
-lease-token freshness, clocks, host review, browser evidence, Bun and SQLite remain
+lease-token freshness, clocks, host review, browser evidence and SQLite remain
 trusted boundaries or separately tested behavior.
 
 ## Documentation and maintenance
 
-TypeScript contracts and services own runtime schemas, guards, persistence and responses.
+Shared TypeScript contracts own wire schemas; Rust services own runtime guards, persistence
+and responses.
 Lean owns the abstract seller protocol and its safety obligations. Markdown explains
 meanings, rationale, examples and recovery. Shared TypeScript definitions generate state
 meanings and diagrams; the proof inventory generates the seller claims.
@@ -105,12 +107,12 @@ meanings and diagrams; the proof inventory generates the seller claims.
 When seller permission or reconciliation semantics change, update the implementation,
 model and explanation together. Preserve proof obligations unless the intended requirement
 changes. An agent keeping files synchronized does not replace review of whether the
-requirement and abstraction are correct. Other lifecycle changes require their TypeScript
+requirement and abstraction are correct. Other lifecycle changes require native and reference
 tests and generated explanations, with no Lean update.
 
 Run `bun run docs:generate`, then `bun run check` and affected domain tests. Keep successful
 execution and recovery examples so an overly restrictive model cannot pass by rejecting
-all work. Direct TypeScript tests cover search recovery, connection cancellation during
+all work. Native and reference tests cover search recovery, connection cancellation during
 persistence, receipt replay after later edits and transaction rollback.
 
 See the official [proof validation guide](https://lean-lang.org/doc/reference/latest/ValidatingProofs/)

@@ -15,4 +15,4 @@ export const SEARCH_COVERS_DIRECTORY = resolve(
 );
 export const SERVER_ARGUMENTS = Bun.isStandaloneExecutable
   ? []
-  : [resolve(root, "apps/server/src/main.ts")];
+  : [resolve(root, "tests/reference-server/src/main.ts")];

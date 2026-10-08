@@ -8,7 +8,7 @@ import { Database } from "bun:sqlite";
 import { Effect } from "effect";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
 import {
   journeyQueue,
   journeyOriginKey,
@@ -17,12 +17,12 @@ import {
   journeyLifetime,
 } from "@goodfinds/contracts/journeys";
 import { savedSearchSchema } from "@goodfinds/contracts/search-definition";
-import { criteria } from "../apps/server/src/searches/definition.ts";
-import { listingObservationSchema } from "../apps/server/src/workspace/model.ts";
+import { criteria } from "./reference-server/src/searches/definition.ts";
+import { listingObservationSchema } from "./reference-server/src/workspace/model.ts";
 import { stateFromToolResult, listingSchema } from "@goodfinds/contracts/state";
-import { createGoodfindsServer } from "@goodfinds/server/mcp";
+import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
 import { revisionFor } from "./helpers/revisions.ts";
-import { initializeWorkspaceDatabase } from "../apps/server/src/platform/database-schema.ts";
+import { initializeWorkspaceDatabase } from "./reference-server/src/platform/database-schema.ts";
 const search = savedSearchSchema.parse({
   id: "coffee",
   name: "Coffee",

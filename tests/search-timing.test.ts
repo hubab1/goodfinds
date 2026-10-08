@@ -12,9 +12,9 @@ import { rrulestr } from "rrule";
 import { z } from "zod";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
-import { createGoodfindsServer } from "../apps/server/src/entrypoints/mcp.ts";
-import { backendLayer } from "../apps/server/src/entrypoints/backend.ts";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
+import { createGoodfindsServer } from "./reference-server/src/entrypoints/mcp.ts";
+import { backendLayer } from "./reference-server/src/entrypoints/backend.ts";
 import {
   schedulePlan,
   inQuietHours,

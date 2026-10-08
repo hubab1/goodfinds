@@ -7,11 +7,11 @@ import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { Database } from "bun:sqlite";
 import { Effect } from "effect";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
-import { initializeWorkspaceDatabase } from "../apps/server/src/platform/database-schema.ts";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
+import { initializeWorkspaceDatabase } from "./reference-server/src/platform/database-schema.ts";
 import { listingDiscoveryLabel } from "../apps/ui/src/lib/listing-presentation.ts";
 import { firstDiscovery } from "@goodfinds/contracts/listing-discovery";
-import { stateToolResult } from "../apps/server/src/entrypoints/mcp.ts";
+import { stateToolResult } from "./reference-server/src/entrypoints/mcp.ts";
 import { stateSummarySchema } from "@goodfinds/contracts/operations";
 import { revisionFor } from "./helpers/revisions.ts";
 

@@ -6,9 +6,9 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Effect } from "effect";
-import { createGoodfindsServer } from "@goodfinds/server/mcp";
-import { backendLayer } from "../../apps/server/src/entrypoints/backend.ts";
-import { WorkspaceStore } from "../../apps/server/src/platform/workspace-sqlite.ts";
+import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
+import { backendLayer } from "../reference-server/src/entrypoints/backend.ts";
+import { WorkspaceStore } from "../reference-server/src/platform/workspace-sqlite.ts";
 
 const dom = new Window({
   url: "https://panel.example",

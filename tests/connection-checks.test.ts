@@ -1,5 +1,5 @@
 import { seedWorkspace } from "./helpers/workspace.ts";
-import { connectionCheckStorage } from "../apps/server/src/platform/connection-checks-sqlite.ts";
+import { connectionCheckStorage } from "./reference-server/src/platform/connection-checks-sqlite.ts";
 import test from "node:test";
 import type { TestContext } from "node:test";
 import assert from "node:assert/strict";
@@ -10,10 +10,10 @@ import { resolve } from "node:path";
 import { Database } from "bun:sqlite";
 import { z } from "zod";
 import { Effect, Exit, Layer } from "effect";
-import { Backend, backendLayer } from "../apps/server/src/entrypoints/backend.ts";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
-import { createGoodfindsServer } from "../apps/server/src/entrypoints/mcp.ts";
-import { ConnectionChecks } from "../apps/server/src/connections/checks.ts";
+import { Backend, backendLayer } from "./reference-server/src/entrypoints/backend.ts";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
+import { createGoodfindsServer } from "./reference-server/src/entrypoints/mcp.ts";
+import { ConnectionChecks } from "./reference-server/src/connections/checks.ts";
 import type {
   ConnectionCheckRun,
   ConnectionCheckObservation,

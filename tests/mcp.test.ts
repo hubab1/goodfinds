@@ -1,8 +1,8 @@
 import { Effect } from "effect";
 import { seedWorkspace } from "./helpers/workspace.ts";
-import { validateConfiguration } from "../apps/server/src/listings/evaluation.ts";
-import { connect } from "../apps/server/src/platform/listing-evaluation-sqlite.ts";
-import { saveConfiguration } from "../apps/server/src/platform/configuration-sqlite.ts";
+import { validateConfiguration } from "./reference-server/src/listings/evaluation.ts";
+import { connect } from "./reference-server/src/platform/listing-evaluation-sqlite.ts";
+import { saveConfiguration } from "./reference-server/src/platform/configuration-sqlite.ts";
 import { revisionFor } from "./helpers/revisions.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -12,7 +12,7 @@ import { resolve } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { z } from "zod";
-import { startPreview } from "@goodfinds/server/preview";
+import { startPreview } from "@goodfinds/reference-server/preview";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 
 void test("the packaged protocol helper preserves the chosen workspace in its nested server", async (t) => {

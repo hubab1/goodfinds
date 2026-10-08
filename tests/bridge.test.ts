@@ -10,7 +10,7 @@ import { AppBridge, isToolVisibilityAppOnly } from "@modelcontextprotocol/ext-ap
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
-import { createGoodfindsServer } from "@goodfinds/server/mcp";
+import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
 import {
   SEARCH_REQUEST,
   interviewRequest,

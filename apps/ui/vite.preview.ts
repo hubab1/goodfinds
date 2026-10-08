@@ -2,12 +2,15 @@ import { randomBytes } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Plugin } from "vite";
 import { z } from "zod";
-import { createGoodfindsServer } from "@goodfinds/server/mcp";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
-// Development uses the same local tools as the packaged panel, with a token and origin checks.
+// Development calls the native MCP executable, with the same local token and origin checks.
 export function localTools(): Plugin {
   const token = randomBytes(32).toString("hex");
-  let application: ReturnType<typeof createGoodfindsServer> | undefined;
+  const client = new Client({ name: "Goodfinds UI development", version: "0.1.0" });
   return {
     name: "goodfinds-local-tools",
     apply: "serve",
@@ -21,11 +24,29 @@ export function localTools(): Plugin {
       ];
     },
     async closeBundle() {
-      await application?.server.close();
+      await client.close();
     },
-    configureServer(server) {
-      application = createGoodfindsServer();
-      const { calls } = application;
+    async configureServer(server) {
+      const executable = resolve(
+        import.meta.dir,
+        "../../dist/build/server",
+        process.platform === "win32" ? "goodfinds.exe" : "goodfinds",
+      );
+      if (!existsSync(executable))
+        throw new Error("Build the native server first with bun run build.");
+      await client.connect(
+        new StdioClientTransport({
+          command: executable,
+          args: [],
+          stderr: "inherit",
+          env: Object.fromEntries(
+            Object.entries(process.env).filter(
+              (entry): entry is [string, string] => entry[1] !== undefined,
+            ),
+          ),
+        }),
+      );
+      const tools = new Set((await client.listTools()).tools.map((tool) => tool.name));
       async function respond(req: IncomingMessage, res: ServerResponse): Promise<void> {
         const address = server.httpServer?.address();
         if (!address || typeof address === "string")
@@ -51,10 +72,9 @@ export function localTools(): Plugin {
           }
         }
         const input = z
-          .object({ name: z.string(), arguments: z.unknown().optional() })
+          .object({ name: z.string(), arguments: z.record(z.string(), z.unknown()).optional() })
           .parse(JSON.parse(body) as unknown);
-        const call = calls.get(input.name);
-        if (!call) {
+        if (!tools.has(input.name)) {
           res.writeHead(400);
           res.end("Unknown action");
           return;
@@ -66,7 +86,11 @@ export function localTools(): Plugin {
         res.once("close", cancel);
         let result;
         try {
-          result = await call(input.arguments ?? {}, controller.signal);
+          result = await client.callTool(
+            { name: input.name, arguments: input.arguments ?? {} },
+            undefined,
+            { signal: controller.signal },
+          );
         } finally {
           res.off("close", cancel);
         }

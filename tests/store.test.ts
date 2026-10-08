@@ -7,22 +7,22 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { z } from "zod";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
 import {
   rationalRound,
   validateConfiguration,
   comparisonPool,
   historyCohort,
-} from "../apps/server/src/listings/evaluation.ts";
+} from "./reference-server/src/listings/evaluation.ts";
 import {
   acknowledge,
   connect,
   evaluateObservations,
-} from "../apps/server/src/platform/listing-evaluation-sqlite.ts";
-import { load, insights } from "../apps/server/src/platform/tracking-sqlite.ts";
-import { DAY, iso } from "../apps/server/src/workspace/model.ts";
-import { all } from "../apps/server/src/platform/sqlite.ts";
-import { runDemo, renderReport } from "../apps/server/src/entrypoints/cli.ts";
+} from "./reference-server/src/platform/listing-evaluation-sqlite.ts";
+import { load, insights } from "./reference-server/src/platform/tracking-sqlite.ts";
+import { DAY, iso } from "./reference-server/src/workspace/model.ts";
+import { all } from "./reference-server/src/platform/sqlite.ts";
+import { runDemo, renderReport } from "./reference-server/src/entrypoints/cli.ts";
 import exampleConfig from "../skills/marketplace-shopping/assets/example-workspace.json" with { type: "json" };
 import sampleRows from "../skills/marketplace-shopping/assets/demo-listings.json" with { type: "json" };
 
@@ -107,7 +107,7 @@ void test("separate Bun processes serialize revision checks and prevent lost edi
   const before = Effect.runSync(
     new WorkspaceStore(seedWorkspace(folder)).request("get_workspace"),
   ).state;
-  const code = `import {Effect} from "effect"; import {WorkspaceStore} from ${JSON.stringify(resolve("apps/server/src/platform/workspace-sqlite.ts"))}; try { Effect.runSync(new WorkspaceStore(process.env.GOODFINDS_TEST_DATA).request("save_settings",{expected_entity_revision:process.env.GOODFINDS_TEST_REVISION,settings:{origin:process.env.GOODFINDS_TEST_ORIGIN}})); process.stdout.write("saved"); } catch (error) {process.stdout.write(error.message); process.exitCode=2;}`;
+  const code = `import {Effect} from "effect"; import {WorkspaceStore} from ${JSON.stringify(resolve("tests/reference-server/src/platform/workspace-sqlite.ts"))}; try { Effect.runSync(new WorkspaceStore(process.env.GOODFINDS_TEST_DATA).request("save_settings",{expected_entity_revision:process.env.GOODFINDS_TEST_REVISION,settings:{origin:process.env.GOODFINDS_TEST_ORIGIN}})); process.stdout.write("saved"); } catch (error) {process.stdout.write(error.message); process.exitCode=2;}`;
   const children = ["First town", "Second town"].map((origin) =>
     Bun.spawn([process.execPath, "-e", code], {
       env: {

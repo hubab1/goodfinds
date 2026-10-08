@@ -6,7 +6,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { createGoodfindsServer } from "@goodfinds/server/mcp";
+import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 import { rentalCoverFor, rentalCovers } from "@goodfinds/contracts/rental-cover";
 import { SEARCH_TEMPLATES } from "@goodfinds/contracts/search-definition";

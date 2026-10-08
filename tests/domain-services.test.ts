@@ -4,15 +4,15 @@ import { randomUUID } from "node:crypto";
 import { Effect, Layer } from "effect";
 import type { SearchRun } from "@goodfinds/contracts/search-workflow";
 import type { Conversation, SellerMessageDraft } from "@goodfinds/contracts/seller-conversation";
-import { SearchRuns } from "../apps/server/src/searches/runs.ts";
-import { SearchRunRepository } from "../apps/server/src/searches/repository.ts";
-import type { SearchRunStorage } from "../apps/server/src/searches/repository.ts";
-import { SellerConversations } from "../apps/server/src/sellers/conversations.ts";
-import { SellerConversationRepository } from "../apps/server/src/sellers/repository.ts";
+import { SearchRuns } from "./reference-server/src/searches/runs.ts";
+import { SearchRunRepository } from "./reference-server/src/searches/repository.ts";
+import type { SearchRunStorage } from "./reference-server/src/searches/repository.ts";
+import { SellerConversations } from "./reference-server/src/sellers/conversations.ts";
+import { SellerConversationRepository } from "./reference-server/src/sellers/repository.ts";
 import {
   normalizeObservations,
   validateConfiguration,
-} from "../apps/server/src/listings/evaluation.ts";
+} from "./reference-server/src/listings/evaluation.ts";
 import exampleConfig from "../skills/marketplace-shopping/assets/example-workspace.json" with { type: "json" };
 import sampleRows from "../skills/marketplace-shopping/assets/demo-listings.json" with { type: "json" };
 

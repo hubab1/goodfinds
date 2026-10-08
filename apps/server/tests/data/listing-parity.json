@@ -1,0 +1,4129 @@
+{
+  "now": 1791460800000,
+  "config": {
+    "platforms": {},
+    "browser_access": [],
+    "platform_sessions": [],
+    "location": null,
+    "feedback": [],
+    "monitoring": [],
+    "dispatchers": [],
+    "origin": "Example origin",
+    "origin_confirmed": true,
+    "browser_preference": "in_app",
+    "journey_checks_enabled": true,
+    "baseline_days": 30,
+    "minimum_peer_listings": 3,
+    "alert_policy": "first_qualification_and_lower_price",
+    "searches": [
+      {
+        "id": "demo-laptop",
+        "name": "Demo laptop",
+        "product": "macbook_pro",
+        "enabled": true,
+        "definition": {
+          "schema_version": 1,
+          "version": 2,
+          "category": "macbook_pro",
+          "title": "Demo laptop",
+          "description": "Fictional demonstration search. These example preferences do not describe a real buyer.",
+          "price": {
+            "currency": "GBP",
+            "period": "once"
+          },
+          "comparison_attributes": [
+            "chip",
+            "ram_gb",
+            "ssd_gb",
+            "screen_inches",
+            "item_state",
+            "condition"
+          ],
+          "fields": [
+            {
+              "id": "min_chip_generation",
+              "label": "Minimum M chip generation",
+              "type": "integer",
+              "required": true,
+              "minimum": 1,
+              "maximum": 20,
+              "options": [
+                {
+                  "value": 1,
+                  "label": "M1 or newer"
+                },
+                {
+                  "value": 2,
+                  "label": "M2 or newer"
+                },
+                {
+                  "value": 3,
+                  "label": "M3 or newer"
+                },
+                {
+                  "value": 4,
+                  "label": "M4 or newer"
+                },
+                {
+                  "value": 5,
+                  "label": "M5 or newer"
+                },
+                {
+                  "value": 6,
+                  "label": "M6 or newer"
+                }
+              ],
+              "match": {
+                "attribute": "chip_generation",
+                "operator": "gte",
+                "importance": "required"
+              }
+            },
+            {
+              "id": "min_ram_gb",
+              "label": "Minimum memory",
+              "type": "integer",
+              "required": true,
+              "unit": "GB",
+              "minimum": 1,
+              "maximum": 2048,
+              "options": [
+                {
+                  "value": 8,
+                  "label": "8"
+                },
+                {
+                  "value": 16,
+                  "label": "16"
+                },
+                {
+                  "value": 24,
+                  "label": "24"
+                },
+                {
+                  "value": 32,
+                  "label": "32"
+                },
+                {
+                  "value": 64,
+                  "label": "64"
+                },
+                {
+                  "value": 128,
+                  "label": "128"
+                }
+              ],
+              "match": {
+                "attribute": "ram_gb",
+                "operator": "gte",
+                "importance": "required"
+              }
+            },
+            {
+              "id": "min_ssd_gb",
+              "label": "Minimum SSD storage",
+              "type": "integer",
+              "required": true,
+              "unit": "GB",
+              "minimum": 1,
+              "maximum": 100000,
+              "options": [
+                {
+                  "value": 256,
+                  "label": "256 GB"
+                },
+                {
+                  "value": 512,
+                  "label": "512 GB"
+                },
+                {
+                  "value": 1000,
+                  "label": "1 TB"
+                },
+                {
+                  "value": 2000,
+                  "label": "2 TB"
+                },
+                {
+                  "value": 4000,
+                  "label": "4 TB"
+                }
+              ],
+              "match": {
+                "attribute": "ssd_gb",
+                "operator": "gte",
+                "importance": "required"
+              }
+            },
+            {
+              "id": "allowed_conditions",
+              "label": "Acceptable condition",
+              "type": "multiple_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "good",
+                  "label": "Good"
+                },
+                {
+                  "value": "excellent",
+                  "label": "Excellent"
+                },
+                {
+                  "value": "like_new",
+                  "label": "Like new"
+                }
+              ],
+              "match": {
+                "attribute": "condition",
+                "operator": "in",
+                "importance": "required"
+              }
+            },
+            {
+              "id": "max_price_minor",
+              "label": "Maximum price",
+              "type": "integer",
+              "required": true,
+              "unit": "£",
+              "minimum": 1,
+              "maximum": 100000000,
+              "display_divisor": 100,
+              "match": {
+                "attribute": "price_minor",
+                "operator": "lte",
+                "importance": "required"
+              }
+            },
+            {
+              "id": "max_drive_minutes",
+              "label": "Maximum drive",
+              "type": "integer",
+              "required": true,
+              "hint": "One-way driving time from your saved starting location.",
+              "unit": "minutes",
+              "minimum": 1,
+              "maximum": 1440,
+              "options": [
+                {
+                  "value": 15,
+                  "label": "15"
+                },
+                {
+                  "value": 30,
+                  "label": "30"
+                },
+                {
+                  "value": 45,
+                  "label": "45"
+                },
+                {
+                  "value": 60,
+                  "label": "60"
+                },
+                {
+                  "value": 90,
+                  "label": "90"
+                }
+              ],
+              "match": {
+                "attribute": "drive_minutes",
+                "operator": "lte",
+                "importance": "required"
+              }
+            },
+            {
+              "id": "seller_listing_count",
+              "label": "Seller listing count",
+              "type": "range",
+              "required": false,
+              "question_stage": "refinement",
+              "hint": "Optional · number of current Marketplace listings. Leave either limit blank. Unavailable counts need checking.",
+              "minimum": 0,
+              "match": {
+                "attribute": "seller_listing_count",
+                "operator": "range",
+                "importance": "required"
+              }
+            }
+          ]
+        },
+        "values": {
+          "min_chip_generation": 3,
+          "min_ram_gb": 32,
+          "min_ssd_gb": 1000,
+          "allowed_conditions": [
+            "good",
+            "excellent",
+            "like_new"
+          ],
+          "max_price_minor": 125000,
+          "max_drive_minutes": 50
+        }
+      },
+      {
+        "id": "demo-desktop",
+        "name": "Demo desktop",
+        "product": "mac_mini",
+        "enabled": true,
+        "definition": {
+          "schema_version": 1,
+          "version": 2,
+          "category": "mac_mini",
+          "title": "Demo desktop",
+          "description": "Fictional demonstration search. These example preferences do not describe a real buyer.",
+          "price": {
+            "currency": "GBP",
+            "period": "once"
+          },
+          "comparison_attributes": [
+            "chip",
+            "ram_gb",
+            "ssd_gb",
+            "item_state",
+            "condition"
+          ],
+          "fields": [
+            {
+              "id": "min_chip_generation",
+              "label": "Minimum M chip generation",
+              "type": "integer",
+              "required": true,
+              "minimum": 1,
+              "maximum": 20,
+              "options": [
+                {
+                  "value": 1,
+                  "label": "M1 or newer"
+                },
+                {
+                  "value": 2,
+                  "label": "M2 or newer"
+                },
+                {
+                  "value": 3,
+                  "label": "M3 or newer"
+                },
+                {
+                  "value": 4,
+                  "label": "M4 or newer"
+                },
+                {
+                  "value": 5,
+                  "label": "M5 or newer"
+                },
+                {
+                  "value": 6,
+                  "label": "M6 or newer"
+                }
+              ],
+              "match": {
+                "attribute": "chip_generation",
+                "operator": "gte",
+                "importance": "required"
+              }
+            },
+            {
+              "id": "min_ram_gb",
+              "label": "Minimum memory",
+              "type": "integer",
+              "required": true,
+              "unit": "GB",
+              "minimum": 1,
+              "maximum": 2048,
+              "options": [
+                {
+                  "value": 8,
+                  "label": "8"
+                },
+                {
+                  "value": 16,
+                  "label": "16"
+                },
+                {
+                  "value": 24,
+                  "label": "24"
+                },
+                {
+                  "value": 32,
+                  "label": "32"
+                },
+                {
+                  "value": 64,
+                  "label": "64"
+                },
+                {
+                  "value": 128,
+                  "label": "128"
+                }
+              ],
+              "match": {
+                "attribute": "ram_gb",
+                "operator": "gte",
+                "importance": "required"
+              }
+            },
+            {
+              "id": "min_ssd_gb",
+              "label": "Minimum SSD storage",
+              "type": "integer",
+              "required": true,
+              "unit": "GB",
+              "minimum": 1,
+              "maximum": 100000,
+              "options": [
+                {
+                  "value": 256,
+                  "label": "256 GB"
+                },
+                {
+                  "value": 512,
+                  "label": "512 GB"
+                },
+                {
+                  "value": 1000,
+                  "label": "1 TB"
+                },
+                {
+                  "value": 2000,
+                  "label": "2 TB"
+                },
+                {
+                  "value": 4000,
+                  "label": "4 TB"
+                }
+              ],
+              "match": {
+                "attribute": "ssd_gb",
+                "operator": "gte",
+                "importance": "required"
+              }
+            },
+            {
+              "id": "allowed_conditions",
+              "label": "Acceptable condition",
+              "type": "multiple_choice",
+              "required": true,
+              "options": [
+                {
+                  "value": "good",
+                  "label": "Good"
+                },
+                {
+                  "value": "excellent",
+                  "label": "Excellent"
+                },
+                {
+                  "value": "like_new",
+                  "label": "Like new"
+                }
+              ],
+              "match": {
+                "attribute": "condition",
+                "operator": "in",
+                "importance": "required"
+              }
+            },
+            {
+              "id": "max_price_minor",
+              "label": "Maximum price",
+              "type": "integer",
+              "required": true,
+              "unit": "£",
+              "minimum": 1,
+              "maximum": 100000000,
+              "display_divisor": 100,
+              "match": {
+                "attribute": "price_minor",
+                "operator": "lte",
+                "importance": "required"
+              }
+            },
+            {
+              "id": "max_drive_minutes",
+              "label": "Maximum drive",
+              "type": "integer",
+              "required": true,
+              "hint": "One-way driving time from your saved starting location.",
+              "unit": "minutes",
+              "minimum": 1,
+              "maximum": 1440,
+              "options": [
+                {
+                  "value": 15,
+                  "label": "15"
+                },
+                {
+                  "value": 30,
+                  "label": "30"
+                },
+                {
+                  "value": 45,
+                  "label": "45"
+                },
+                {
+                  "value": 60,
+                  "label": "60"
+                },
+                {
+                  "value": 90,
+                  "label": "90"
+                }
+              ],
+              "match": {
+                "attribute": "drive_minutes",
+                "operator": "lte",
+                "importance": "required"
+              }
+            },
+            {
+              "id": "seller_listing_count",
+              "label": "Seller listing count",
+              "type": "range",
+              "required": false,
+              "question_stage": "refinement",
+              "hint": "Optional · number of current Marketplace listings. Leave either limit blank. Unavailable counts need checking.",
+              "minimum": 0,
+              "match": {
+                "attribute": "seller_listing_count",
+                "operator": "range",
+                "importance": "required"
+              }
+            }
+          ]
+        },
+        "values": {
+          "min_chip_generation": 3,
+          "min_ram_gb": 32,
+          "min_ssd_gb": 1000,
+          "allowed_conditions": [
+            "good",
+            "excellent",
+            "like_new"
+          ],
+          "max_price_minor": 125000,
+          "max_drive_minutes": 50
+        }
+      }
+    ],
+    "drafts": [],
+    "schedule": {
+      "interval_minutes": 60,
+      "enabled": false,
+      "requires_awake_device": true,
+      "quiet_hours": {
+        "enabled": true,
+        "start": "22:00",
+        "end": "08:00",
+        "timezone": "Europe/London"
+      }
+    },
+    "version": 1
+  },
+  "input": [
+    {
+      "source": "facebook_marketplace",
+      "provenance": "synthetic",
+      "listing_id": "book-1",
+      "url": "https://example.invalid/marketplace/item/book-1",
+      "title": "16-inch MacBook Pro · example book-1",
+      "seller_name": "Example seller book-1",
+      "seller_profile_url": "https://example.invalid/seller/book-1",
+      "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+      "price_minor": 110000,
+      "currency": "GBP",
+      "price_kind": "asking",
+      "product": "macbook_pro",
+      "chip": "M3 Pro",
+      "ram_gb": 36,
+      "ssd_gb": 1000,
+      "screen_inches": 16,
+      "condition": "good",
+      "item_state": "used",
+      "functional": true,
+      "availability": "active",
+      "drive_minutes": 35,
+      "drive_origin": "Example origin",
+      "travel_source": "Synthetic journey estimate; no route was calculated",
+      "travel_checked_at": "2026-10-08T12:00:00.000Z",
+      "evidence": {
+        "chip": "M3 Pro",
+        "ram_gb": "36 GB memory",
+        "ssd_gb": "1 TB internal SSD",
+        "condition": "Good cosmetic condition",
+        "functional": "Fully working",
+        "screen_inches": "16-inch MacBook Pro"
+      }
+    },
+    {
+      "source": "facebook_marketplace",
+      "provenance": "synthetic",
+      "listing_id": "book-2",
+      "url": "https://example.invalid/marketplace/item/book-2",
+      "title": "16-inch MacBook Pro · example book-2",
+      "seller_name": "Example seller book-2",
+      "seller_profile_url": "https://example.invalid/seller/book-2",
+      "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+      "price_minor": 120000,
+      "currency": "GBP",
+      "price_kind": "asking",
+      "product": "macbook_pro",
+      "chip": "M3 Pro",
+      "ram_gb": 36,
+      "ssd_gb": 1000,
+      "screen_inches": 16,
+      "condition": "good",
+      "item_state": "used",
+      "functional": true,
+      "availability": "active",
+      "drive_minutes": 35,
+      "drive_origin": "Example origin",
+      "travel_source": "Synthetic journey estimate; no route was calculated",
+      "travel_checked_at": "2026-10-08T12:00:00.000Z",
+      "evidence": {
+        "chip": "M3 Pro",
+        "ram_gb": "36 GB memory",
+        "ssd_gb": "1 TB internal SSD",
+        "condition": "Good cosmetic condition",
+        "functional": "Fully working",
+        "screen_inches": "16-inch MacBook Pro"
+      }
+    },
+    {
+      "source": "facebook_marketplace",
+      "provenance": "synthetic",
+      "listing_id": "book-3",
+      "url": "https://example.invalid/marketplace/item/book-3",
+      "title": "16-inch MacBook Pro · example book-3",
+      "seller_name": "Example seller book-3",
+      "seller_profile_url": "https://example.invalid/seller/book-3",
+      "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+      "price_minor": 140000,
+      "currency": "GBP",
+      "price_kind": "asking",
+      "product": "macbook_pro",
+      "chip": "M3 Pro",
+      "ram_gb": 36,
+      "ssd_gb": 1000,
+      "screen_inches": 16,
+      "condition": "good",
+      "item_state": "used",
+      "functional": true,
+      "availability": "active",
+      "drive_minutes": 35,
+      "drive_origin": "Example origin",
+      "travel_source": "Synthetic journey estimate; no route was calculated",
+      "travel_checked_at": "2026-10-08T12:00:00.000Z",
+      "evidence": {
+        "chip": "M3 Pro",
+        "ram_gb": "36 GB memory",
+        "ssd_gb": "1 TB internal SSD",
+        "condition": "Good cosmetic condition",
+        "functional": "Fully working",
+        "screen_inches": "16-inch MacBook Pro"
+      }
+    },
+    {
+      "source": "facebook_marketplace",
+      "provenance": "synthetic",
+      "listing_id": "book-4",
+      "url": "https://example.invalid/marketplace/item/book-4",
+      "title": "16-inch MacBook Pro · example book-4",
+      "seller_name": "Example seller book-4",
+      "seller_profile_url": "https://example.invalid/seller/book-4",
+      "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+      "price_minor": 160000,
+      "currency": "GBP",
+      "price_kind": "asking",
+      "product": "macbook_pro",
+      "chip": "M3 Pro",
+      "ram_gb": 36,
+      "ssd_gb": 1000,
+      "screen_inches": 16,
+      "condition": "good",
+      "item_state": "used",
+      "functional": true,
+      "availability": "active",
+      "drive_minutes": 35,
+      "drive_origin": "Example origin",
+      "travel_source": "Synthetic journey estimate; no route was calculated",
+      "travel_checked_at": "2026-10-08T12:00:00.000Z",
+      "evidence": {
+        "chip": "M3 Pro",
+        "ram_gb": "36 GB memory",
+        "ssd_gb": "1 TB internal SSD",
+        "condition": "Good cosmetic condition",
+        "functional": "Fully working",
+        "screen_inches": "16-inch MacBook Pro"
+      }
+    },
+    {
+      "source": "facebook_marketplace",
+      "provenance": "synthetic",
+      "listing_id": "mini-1",
+      "url": "https://example.invalid/marketplace/item/mini-1",
+      "title": "Mac mini · example mini-1",
+      "seller_name": "Example seller mini-1",
+      "seller_profile_url": "https://example.invalid/seller/mini-1",
+      "description": "Synthetic example: M4, 32 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+      "price_minor": 70000,
+      "currency": "GBP",
+      "price_kind": "asking",
+      "product": "mac_mini",
+      "chip": "M4",
+      "ram_gb": 32,
+      "ssd_gb": 1000,
+      "screen_inches": null,
+      "condition": "good",
+      "item_state": "used",
+      "functional": true,
+      "availability": "active",
+      "drive_minutes": 35,
+      "drive_origin": "Example origin",
+      "travel_source": "Synthetic journey estimate; no route was calculated",
+      "travel_checked_at": "2026-10-08T12:00:00.000Z",
+      "evidence": {
+        "chip": "M4",
+        "ram_gb": "32 GB memory",
+        "ssd_gb": "1 TB internal SSD",
+        "condition": "Good cosmetic condition",
+        "functional": "Fully working"
+      }
+    },
+    {
+      "source": "facebook_marketplace",
+      "provenance": "synthetic",
+      "listing_id": "mini-2",
+      "url": "https://example.invalid/marketplace/item/mini-2",
+      "title": "Mac mini · example mini-2",
+      "seller_name": "Example seller mini-2",
+      "seller_profile_url": "https://example.invalid/seller/mini-2",
+      "description": "Synthetic example: M4, 32 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+      "price_minor": 85000,
+      "currency": "GBP",
+      "price_kind": "asking",
+      "product": "mac_mini",
+      "chip": "M4",
+      "ram_gb": 32,
+      "ssd_gb": 1000,
+      "screen_inches": null,
+      "condition": "good",
+      "item_state": "used",
+      "functional": true,
+      "availability": "active",
+      "drive_minutes": 35,
+      "drive_origin": "Example origin",
+      "travel_source": "Synthetic journey estimate; no route was calculated",
+      "travel_checked_at": "2026-10-08T12:00:00.000Z",
+      "evidence": {
+        "chip": "M4",
+        "ram_gb": "32 GB memory",
+        "ssd_gb": "1 TB internal SSD",
+        "condition": "Good cosmetic condition",
+        "functional": "Fully working"
+      }
+    }
+  ],
+  "normalized": [
+    {
+      "key": "synthetic:book-1",
+      "price_kind": "asking",
+      "listing_id": "book-1",
+      "title": "16-inch MacBook Pro · example book-1",
+      "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+      "url": "https://example.invalid/marketplace/item/book-1/",
+      "product": "macbook_pro",
+      "chip": "M3 Pro",
+      "ram_gb": 36,
+      "ssd_gb": 1000,
+      "price_minor": 110000,
+      "currency": "GBP",
+      "source": "facebook_marketplace",
+      "observed_at": "2026-10-08T12:00:00.000Z",
+      "check_outcome": "success",
+      "total_cash_cost_minor": null,
+      "condition": "good",
+      "item_state": "used",
+      "functional": true,
+      "availability": "active",
+      "seller_name": "Example seller book-1",
+      "seller_profile_url": "https://example.invalid/seller/book-1",
+      "drive_minutes": 35,
+      "travel_source": "Synthetic journey estimate; no route was calculated",
+      "travel_checked_at": "2026-10-08T12:00:00.000Z",
+      "evidence": {
+        "chip": "M3 Pro",
+        "ram_gb": "36 GB memory",
+        "ssd_gb": "1 TB internal SSD",
+        "condition": "Good cosmetic condition",
+        "functional": "Fully working",
+        "screen_inches": "16-inch MacBook Pro"
+      },
+      "provenance": "synthetic",
+      "screen_inches": 16,
+      "drive_origin": "Example origin",
+      "observation_time_precision": "import_time"
+    },
+    {
+      "key": "synthetic:book-2",
+      "price_kind": "asking",
+      "listing_id": "book-2",
+      "title": "16-inch MacBook Pro · example book-2",
+      "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+      "url": "https://example.invalid/marketplace/item/book-2/",
+      "product": "macbook_pro",
+      "chip": "M3 Pro",
+      "ram_gb": 36,
+      "ssd_gb": 1000,
+      "price_minor": 120000,
+      "currency": "GBP",
+      "source": "facebook_marketplace",
+      "observed_at": "2026-10-08T12:00:00.000Z",
+      "check_outcome": "success",
+      "total_cash_cost_minor": null,
+      "condition": "good",
+      "item_state": "used",
+      "functional": true,
+      "availability": "active",
+      "seller_name": "Example seller book-2",
+      "seller_profile_url": "https://example.invalid/seller/book-2",
+      "drive_minutes": 35,
+      "travel_source": "Synthetic journey estimate; no route was calculated",
+      "travel_checked_at": "2026-10-08T12:00:00.000Z",
+      "evidence": {
+        "chip": "M3 Pro",
+        "ram_gb": "36 GB memory",
+        "ssd_gb": "1 TB internal SSD",
+        "condition": "Good cosmetic condition",
+        "functional": "Fully working",
+        "screen_inches": "16-inch MacBook Pro"
+      },
+      "provenance": "synthetic",
+      "screen_inches": 16,
+      "drive_origin": "Example origin",
+      "observation_time_precision": "import_time"
+    },
+    {
+      "key": "synthetic:book-3",
+      "price_kind": "asking",
+      "listing_id": "book-3",
+      "title": "16-inch MacBook Pro · example book-3",
+      "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+      "url": "https://example.invalid/marketplace/item/book-3/",
+      "product": "macbook_pro",
+      "chip": "M3 Pro",
+      "ram_gb": 36,
+      "ssd_gb": 1000,
+      "price_minor": 140000,
+      "currency": "GBP",
+      "source": "facebook_marketplace",
+      "observed_at": "2026-10-08T12:00:00.000Z",
+      "check_outcome": "success",
+      "total_cash_cost_minor": null,
+      "condition": "good",
+      "item_state": "used",
+      "functional": true,
+      "availability": "active",
+      "seller_name": "Example seller book-3",
+      "seller_profile_url": "https://example.invalid/seller/book-3",
+      "drive_minutes": 35,
+      "travel_source": "Synthetic journey estimate; no route was calculated",
+      "travel_checked_at": "2026-10-08T12:00:00.000Z",
+      "evidence": {
+        "chip": "M3 Pro",
+        "ram_gb": "36 GB memory",
+        "ssd_gb": "1 TB internal SSD",
+        "condition": "Good cosmetic condition",
+        "functional": "Fully working",
+        "screen_inches": "16-inch MacBook Pro"
+      },
+      "provenance": "synthetic",
+      "screen_inches": 16,
+      "drive_origin": "Example origin",
+      "observation_time_precision": "import_time"
+    },
+    {
+      "key": "synthetic:book-4",
+      "price_kind": "asking",
+      "listing_id": "book-4",
+      "title": "16-inch MacBook Pro · example book-4",
+      "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+      "url": "https://example.invalid/marketplace/item/book-4/",
+      "product": "macbook_pro",
+      "chip": "M3 Pro",
+      "ram_gb": 36,
+      "ssd_gb": 1000,
+      "price_minor": 160000,
+      "currency": "GBP",
+      "source": "facebook_marketplace",
+      "observed_at": "2026-10-08T12:00:00.000Z",
+      "check_outcome": "success",
+      "total_cash_cost_minor": null,
+      "condition": "good",
+      "item_state": "used",
+      "functional": true,
+      "availability": "active",
+      "seller_name": "Example seller book-4",
+      "seller_profile_url": "https://example.invalid/seller/book-4",
+      "drive_minutes": 35,
+      "travel_source": "Synthetic journey estimate; no route was calculated",
+      "travel_checked_at": "2026-10-08T12:00:00.000Z",
+      "evidence": {
+        "chip": "M3 Pro",
+        "ram_gb": "36 GB memory",
+        "ssd_gb": "1 TB internal SSD",
+        "condition": "Good cosmetic condition",
+        "functional": "Fully working",
+        "screen_inches": "16-inch MacBook Pro"
+      },
+      "provenance": "synthetic",
+      "screen_inches": 16,
+      "drive_origin": "Example origin",
+      "observation_time_precision": "import_time"
+    },
+    {
+      "key": "synthetic:mini-1",
+      "price_kind": "asking",
+      "listing_id": "mini-1",
+      "title": "Mac mini · example mini-1",
+      "description": "Synthetic example: M4, 32 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+      "url": "https://example.invalid/marketplace/item/mini-1/",
+      "product": "mac_mini",
+      "chip": "M4",
+      "ram_gb": 32,
+      "ssd_gb": 1000,
+      "price_minor": 70000,
+      "currency": "GBP",
+      "source": "facebook_marketplace",
+      "observed_at": "2026-10-08T12:00:00.000Z",
+      "check_outcome": "success",
+      "total_cash_cost_minor": null,
+      "condition": "good",
+      "item_state": "used",
+      "functional": true,
+      "availability": "active",
+      "seller_name": "Example seller mini-1",
+      "seller_profile_url": "https://example.invalid/seller/mini-1",
+      "drive_minutes": 35,
+      "travel_source": "Synthetic journey estimate; no route was calculated",
+      "travel_checked_at": "2026-10-08T12:00:00.000Z",
+      "evidence": {
+        "chip": "M4",
+        "ram_gb": "32 GB memory",
+        "ssd_gb": "1 TB internal SSD",
+        "condition": "Good cosmetic condition",
+        "functional": "Fully working"
+      },
+      "provenance": "synthetic",
+      "screen_inches": null,
+      "drive_origin": "Example origin",
+      "observation_time_precision": "import_time"
+    },
+    {
+      "key": "synthetic:mini-2",
+      "price_kind": "asking",
+      "listing_id": "mini-2",
+      "title": "Mac mini · example mini-2",
+      "description": "Synthetic example: M4, 32 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+      "url": "https://example.invalid/marketplace/item/mini-2/",
+      "product": "mac_mini",
+      "chip": "M4",
+      "ram_gb": 32,
+      "ssd_gb": 1000,
+      "price_minor": 85000,
+      "currency": "GBP",
+      "source": "facebook_marketplace",
+      "observed_at": "2026-10-08T12:00:00.000Z",
+      "check_outcome": "success",
+      "total_cash_cost_minor": null,
+      "condition": "good",
+      "item_state": "used",
+      "functional": true,
+      "availability": "active",
+      "seller_name": "Example seller mini-2",
+      "seller_profile_url": "https://example.invalid/seller/mini-2",
+      "drive_minutes": 35,
+      "travel_source": "Synthetic journey estimate; no route was calculated",
+      "travel_checked_at": "2026-10-08T12:00:00.000Z",
+      "evidence": {
+        "chip": "M4",
+        "ram_gb": "32 GB memory",
+        "ssd_gb": "1 TB internal SSD",
+        "condition": "Good cosmetic condition",
+        "functional": "Fully working"
+      },
+      "provenance": "synthetic",
+      "screen_inches": null,
+      "drive_origin": "Example origin",
+      "observation_time_precision": "import_time"
+    }
+  ],
+  "decisions": [
+    {
+      "suitability": "suitable",
+      "verification": "complete",
+      "value": "below_average",
+      "setup_total_minor": 110000,
+      "setup_cost_basis": "observed",
+      "listing": {
+        "key": "synthetic:book-1",
+        "price_kind": "asking",
+        "listing_id": "book-1",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 110000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time"
+      },
+      "status": "qualifies",
+      "reasons": [
+        "Within budget and below the average of equivalent asking prices"
+      ],
+      "quality": {
+        "flags": [],
+        "eligibility": {
+          "arrival_rate": {
+            "eligible": false,
+            "reasons": [
+              "Original publication time is not established"
+            ]
+          },
+          "current_stock": {
+            "eligible": true,
+            "reasons": []
+          },
+          "price_baseline": {
+            "eligible": true,
+            "reasons": []
+          },
+          "duration_analysis": {
+            "eligible": false,
+            "reasons": [
+              "No confirmed active observation"
+            ]
+          },
+          "deal_alert": {
+            "eligible": true,
+            "reasons": []
+          }
+        },
+        "observed_active_days": null,
+        "advertised_age_minimum_days": null,
+        "peer_count": 3,
+        "median_cash_price_minor": null,
+        "mad_minor": null,
+        "modified_z_score": null
+      },
+      "preferences": [],
+      "credibility": {
+        "status": "insufficient_data",
+        "reasons": [
+          "Not enough equivalent listings for an unusual-price check"
+        ],
+        "peer_count": 3,
+        "reference_median_minor": null,
+        "reference_stddev_minor": null,
+        "stddevs_below_median": null,
+        "price_is_outlier": null,
+        "seller_account_recent": null,
+        "seller_has_profile_image": null,
+        "seller_friend_count": null,
+        "older_account_with_many_friends": null,
+        "supporting_signals": [],
+        "policy": {
+          "recent_account_months": 24,
+          "minimum_peer_listings": 10,
+          "stddev_threshold": 3,
+          "zero_variance_discount_fraction": 0.5,
+          "established_account_minimum_friends": 100
+        }
+      },
+      "peer_count": 3,
+      "reference_average_minor": 140000,
+      "reference_median_minor": 140000,
+      "peer_listing_ids": [
+        "book-2",
+        "book-3",
+        "book-4"
+      ],
+      "percent_below_average": 21.4
+    },
+    {
+      "suitability": "suitable",
+      "verification": "complete",
+      "value": "below_average",
+      "setup_total_minor": 120000,
+      "setup_cost_basis": "observed",
+      "listing": {
+        "key": "synthetic:book-2",
+        "price_kind": "asking",
+        "listing_id": "book-2",
+        "title": "16-inch MacBook Pro · example book-2",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-2/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 120000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-2",
+        "seller_profile_url": "https://example.invalid/seller/book-2",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time"
+      },
+      "status": "qualifies",
+      "reasons": [
+        "Within budget and below the average of equivalent asking prices"
+      ],
+      "quality": {
+        "flags": [],
+        "eligibility": {
+          "arrival_rate": {
+            "eligible": false,
+            "reasons": [
+              "Original publication time is not established"
+            ]
+          },
+          "current_stock": {
+            "eligible": true,
+            "reasons": []
+          },
+          "price_baseline": {
+            "eligible": true,
+            "reasons": []
+          },
+          "duration_analysis": {
+            "eligible": false,
+            "reasons": [
+              "No confirmed active observation"
+            ]
+          },
+          "deal_alert": {
+            "eligible": true,
+            "reasons": []
+          }
+        },
+        "observed_active_days": null,
+        "advertised_age_minimum_days": null,
+        "peer_count": 3,
+        "median_cash_price_minor": null,
+        "mad_minor": null,
+        "modified_z_score": null
+      },
+      "preferences": [],
+      "credibility": {
+        "status": "insufficient_data",
+        "reasons": [
+          "Not enough equivalent listings for an unusual-price check"
+        ],
+        "peer_count": 3,
+        "reference_median_minor": null,
+        "reference_stddev_minor": null,
+        "stddevs_below_median": null,
+        "price_is_outlier": null,
+        "seller_account_recent": null,
+        "seller_has_profile_image": null,
+        "seller_friend_count": null,
+        "older_account_with_many_friends": null,
+        "supporting_signals": [],
+        "policy": {
+          "recent_account_months": 24,
+          "minimum_peer_listings": 10,
+          "stddev_threshold": 3,
+          "zero_variance_discount_fraction": 0.5,
+          "established_account_minimum_friends": 100
+        }
+      },
+      "peer_count": 3,
+      "reference_average_minor": 136666.67,
+      "reference_median_minor": 140000,
+      "peer_listing_ids": [
+        "book-1",
+        "book-3",
+        "book-4"
+      ],
+      "percent_below_average": 12.2
+    },
+    {
+      "suitability": "unsuitable",
+      "verification": "needs_check",
+      "value": "unknown",
+      "setup_total_minor": 140000,
+      "setup_cost_basis": "observed",
+      "listing": {
+        "key": "synthetic:book-3",
+        "price_kind": "asking",
+        "listing_id": "book-3",
+        "title": "16-inch MacBook Pro · example book-3",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-3/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 140000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-3",
+        "seller_profile_url": "https://example.invalid/seller/book-3",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time"
+      },
+      "status": "not_matching",
+      "reasons": [
+        "Maximum price does not meet your requirement"
+      ],
+      "quality": {
+        "flags": [],
+        "eligibility": {
+          "arrival_rate": {
+            "eligible": false,
+            "reasons": [
+              "Original publication time is not established"
+            ]
+          },
+          "current_stock": {
+            "eligible": true,
+            "reasons": []
+          },
+          "price_baseline": {
+            "eligible": false,
+            "reasons": [
+              "Maximum price does not meet your requirement"
+            ]
+          },
+          "duration_analysis": {
+            "eligible": false,
+            "reasons": [
+              "No confirmed active observation"
+            ]
+          },
+          "deal_alert": {
+            "eligible": false,
+            "reasons": [
+              "Maximum price does not meet your requirement"
+            ]
+          }
+        },
+        "observed_active_days": null,
+        "advertised_age_minimum_days": null,
+        "peer_count": 3,
+        "median_cash_price_minor": null,
+        "mad_minor": null,
+        "modified_z_score": null
+      },
+      "preferences": [],
+      "credibility": {
+        "status": "insufficient_data",
+        "reasons": [
+          "Not enough equivalent listings for an unusual-price check"
+        ],
+        "peer_count": 3,
+        "reference_median_minor": null,
+        "reference_stddev_minor": null,
+        "stddevs_below_median": null,
+        "price_is_outlier": null,
+        "seller_account_recent": null,
+        "seller_has_profile_image": null,
+        "seller_friend_count": null,
+        "older_account_with_many_friends": null,
+        "supporting_signals": [],
+        "policy": {
+          "recent_account_months": 24,
+          "minimum_peer_listings": 10,
+          "stddev_threshold": 3,
+          "zero_variance_discount_fraction": 0.5,
+          "established_account_minimum_friends": 100
+        }
+      }
+    },
+    {
+      "suitability": "unsuitable",
+      "verification": "needs_check",
+      "value": "unknown",
+      "setup_total_minor": 160000,
+      "setup_cost_basis": "observed",
+      "listing": {
+        "key": "synthetic:book-4",
+        "price_kind": "asking",
+        "listing_id": "book-4",
+        "title": "16-inch MacBook Pro · example book-4",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-4/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 160000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-4",
+        "seller_profile_url": "https://example.invalid/seller/book-4",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time"
+      },
+      "status": "not_matching",
+      "reasons": [
+        "Maximum price does not meet your requirement"
+      ],
+      "quality": {
+        "flags": [],
+        "eligibility": {
+          "arrival_rate": {
+            "eligible": false,
+            "reasons": [
+              "Original publication time is not established"
+            ]
+          },
+          "current_stock": {
+            "eligible": true,
+            "reasons": []
+          },
+          "price_baseline": {
+            "eligible": false,
+            "reasons": [
+              "Maximum price does not meet your requirement"
+            ]
+          },
+          "duration_analysis": {
+            "eligible": false,
+            "reasons": [
+              "No confirmed active observation"
+            ]
+          },
+          "deal_alert": {
+            "eligible": false,
+            "reasons": [
+              "Maximum price does not meet your requirement"
+            ]
+          }
+        },
+        "observed_active_days": null,
+        "advertised_age_minimum_days": null,
+        "peer_count": 3,
+        "median_cash_price_minor": null,
+        "mad_minor": null,
+        "modified_z_score": null
+      },
+      "preferences": [],
+      "credibility": {
+        "status": "insufficient_data",
+        "reasons": [
+          "Not enough equivalent listings for an unusual-price check"
+        ],
+        "peer_count": 3,
+        "reference_median_minor": null,
+        "reference_stddev_minor": null,
+        "stddevs_below_median": null,
+        "price_is_outlier": null,
+        "seller_account_recent": null,
+        "seller_has_profile_image": null,
+        "seller_friend_count": null,
+        "older_account_with_many_friends": null,
+        "supporting_signals": [],
+        "policy": {
+          "recent_account_months": 24,
+          "minimum_peer_listings": 10,
+          "stddev_threshold": 3,
+          "zero_variance_discount_fraction": 0.5,
+          "established_account_minimum_friends": 100
+        }
+      }
+    },
+    {
+      "suitability": "unsuitable",
+      "verification": "needs_check",
+      "value": "unknown",
+      "setup_total_minor": 70000,
+      "setup_cost_basis": "observed",
+      "listing": {
+        "key": "synthetic:mini-1",
+        "price_kind": "asking",
+        "listing_id": "mini-1",
+        "title": "Mac mini · example mini-1",
+        "description": "Synthetic example: M4, 32 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/mini-1/",
+        "product": "mac_mini",
+        "chip": "M4",
+        "ram_gb": 32,
+        "ssd_gb": 1000,
+        "price_minor": 70000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller mini-1",
+        "seller_profile_url": "https://example.invalid/seller/mini-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M4",
+          "ram_gb": "32 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working"
+        },
+        "provenance": "synthetic",
+        "screen_inches": null,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time"
+      },
+      "status": "not_matching",
+      "reasons": [
+        "Different search category"
+      ],
+      "quality": {
+        "flags": [],
+        "eligibility": {
+          "arrival_rate": {
+            "eligible": false,
+            "reasons": [
+              "Original publication time is not established"
+            ]
+          },
+          "current_stock": {
+            "eligible": true,
+            "reasons": []
+          },
+          "price_baseline": {
+            "eligible": false,
+            "reasons": [
+              "Different search category"
+            ]
+          },
+          "duration_analysis": {
+            "eligible": false,
+            "reasons": [
+              "No confirmed active observation"
+            ]
+          },
+          "deal_alert": {
+            "eligible": false,
+            "reasons": [
+              "Different search category"
+            ]
+          }
+        },
+        "observed_active_days": null,
+        "advertised_age_minimum_days": null,
+        "peer_count": 0,
+        "median_cash_price_minor": null,
+        "mad_minor": null,
+        "modified_z_score": null
+      },
+      "preferences": [],
+      "credibility": {
+        "status": "insufficient_data",
+        "reasons": [
+          "Not enough equivalent listings for an unusual-price check"
+        ],
+        "peer_count": 0,
+        "reference_median_minor": null,
+        "reference_stddev_minor": null,
+        "stddevs_below_median": null,
+        "price_is_outlier": null,
+        "seller_account_recent": null,
+        "seller_has_profile_image": null,
+        "seller_friend_count": null,
+        "older_account_with_many_friends": null,
+        "supporting_signals": [],
+        "policy": {
+          "recent_account_months": 24,
+          "minimum_peer_listings": 10,
+          "stddev_threshold": 3,
+          "zero_variance_discount_fraction": 0.5,
+          "established_account_minimum_friends": 100
+        }
+      }
+    },
+    {
+      "suitability": "unsuitable",
+      "verification": "needs_check",
+      "value": "unknown",
+      "setup_total_minor": 85000,
+      "setup_cost_basis": "observed",
+      "listing": {
+        "key": "synthetic:mini-2",
+        "price_kind": "asking",
+        "listing_id": "mini-2",
+        "title": "Mac mini · example mini-2",
+        "description": "Synthetic example: M4, 32 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/mini-2/",
+        "product": "mac_mini",
+        "chip": "M4",
+        "ram_gb": 32,
+        "ssd_gb": 1000,
+        "price_minor": 85000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller mini-2",
+        "seller_profile_url": "https://example.invalid/seller/mini-2",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M4",
+          "ram_gb": "32 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working"
+        },
+        "provenance": "synthetic",
+        "screen_inches": null,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time"
+      },
+      "status": "not_matching",
+      "reasons": [
+        "Different search category"
+      ],
+      "quality": {
+        "flags": [],
+        "eligibility": {
+          "arrival_rate": {
+            "eligible": false,
+            "reasons": [
+              "Original publication time is not established"
+            ]
+          },
+          "current_stock": {
+            "eligible": true,
+            "reasons": []
+          },
+          "price_baseline": {
+            "eligible": false,
+            "reasons": [
+              "Different search category"
+            ]
+          },
+          "duration_analysis": {
+            "eligible": false,
+            "reasons": [
+              "No confirmed active observation"
+            ]
+          },
+          "deal_alert": {
+            "eligible": false,
+            "reasons": [
+              "Different search category"
+            ]
+          }
+        },
+        "observed_active_days": null,
+        "advertised_age_minimum_days": null,
+        "peer_count": 0,
+        "median_cash_price_minor": null,
+        "mad_minor": null,
+        "modified_z_score": null
+      },
+      "preferences": [],
+      "credibility": {
+        "status": "insufficient_data",
+        "reasons": [
+          "Not enough equivalent listings for an unusual-price check"
+        ],
+        "peer_count": 0,
+        "reference_median_minor": null,
+        "reference_stddev_minor": null,
+        "stddevs_below_median": null,
+        "price_is_outlier": null,
+        "seller_account_recent": null,
+        "seller_has_profile_image": null,
+        "seller_friend_count": null,
+        "older_account_with_many_friends": null,
+        "supporting_signals": [],
+        "policy": {
+          "recent_account_months": 24,
+          "minimum_peer_listings": 10,
+          "stddev_threshold": 3,
+          "zero_variance_discount_fraction": 0.5,
+          "established_account_minimum_friends": 100
+        }
+      }
+    }
+  ],
+  "history_input": [
+    {
+      "key": "synthetic:book-1",
+      "price_kind": "asking",
+      "listing_id": "book-1",
+      "title": "16-inch MacBook Pro · example book-1",
+      "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+      "url": "https://example.invalid/marketplace/item/book-1/",
+      "product": "macbook_pro",
+      "chip": "M3 Pro",
+      "ram_gb": 36,
+      "ssd_gb": 1000,
+      "price_minor": 110000,
+      "currency": "GBP",
+      "source": "facebook_marketplace",
+      "observed_at": "2026-10-06T12:00:00.000Z",
+      "check_outcome": "success",
+      "total_cash_cost_minor": null,
+      "condition": "good",
+      "item_state": "used",
+      "functional": true,
+      "availability": "active",
+      "seller_name": "Example seller book-1",
+      "seller_profile_url": "https://example.invalid/seller/book-1",
+      "drive_minutes": 35,
+      "travel_source": "Synthetic journey estimate; no route was calculated",
+      "travel_checked_at": "2026-10-08T12:00:00.000Z",
+      "evidence": {
+        "chip": "M3 Pro",
+        "ram_gb": "36 GB memory",
+        "ssd_gb": "1 TB internal SSD",
+        "condition": "Good cosmetic condition",
+        "functional": "Fully working",
+        "screen_inches": "16-inch MacBook Pro"
+      },
+      "provenance": "synthetic",
+      "screen_inches": 16,
+      "drive_origin": "Example origin",
+      "observation_time_precision": "import_time"
+    },
+    {
+      "key": "synthetic:book-1",
+      "price_kind": "asking",
+      "listing_id": "book-1",
+      "title": "16-inch MacBook Pro · example book-1",
+      "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+      "url": "https://example.invalid/marketplace/item/book-1/",
+      "product": "macbook_pro",
+      "chip": "M3 Pro",
+      "ram_gb": 36,
+      "ssd_gb": 1000,
+      "price_minor": 100000,
+      "currency": "GBP",
+      "source": "facebook_marketplace",
+      "observed_at": "2026-10-07T12:00:00.000Z",
+      "check_outcome": "success",
+      "total_cash_cost_minor": null,
+      "condition": "good",
+      "item_state": "used",
+      "functional": true,
+      "availability": "active",
+      "seller_name": "Example seller book-1",
+      "seller_profile_url": "https://example.invalid/seller/book-1",
+      "drive_minutes": 35,
+      "travel_source": "Synthetic journey estimate; no route was calculated",
+      "travel_checked_at": "2026-10-08T12:00:00.000Z",
+      "evidence": {
+        "chip": "M3 Pro",
+        "ram_gb": "36 GB memory",
+        "ssd_gb": "1 TB internal SSD",
+        "condition": "Good cosmetic condition",
+        "functional": "Fully working",
+        "screen_inches": "16-inch MacBook Pro"
+      },
+      "provenance": "synthetic",
+      "screen_inches": 16,
+      "drive_origin": "Example origin",
+      "observation_time_precision": "import_time"
+    },
+    {
+      "key": "synthetic:book-1",
+      "price_kind": "asking",
+      "listing_id": "book-1",
+      "title": "16-inch MacBook Pro · example book-1",
+      "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+      "url": "https://example.invalid/marketplace/item/book-1/",
+      "product": "macbook_pro",
+      "chip": "M3 Pro",
+      "ram_gb": 36,
+      "ssd_gb": 1000,
+      "price_minor": null,
+      "currency": "GBP",
+      "source": "facebook_marketplace",
+      "observed_at": "2026-10-08T12:00:00.000Z",
+      "check_outcome": "network_error",
+      "total_cash_cost_minor": null,
+      "condition": "good",
+      "item_state": "used",
+      "functional": true,
+      "availability": "active",
+      "seller_name": "Example seller book-1",
+      "seller_profile_url": "https://example.invalid/seller/book-1",
+      "drive_minutes": 35,
+      "travel_source": "Synthetic journey estimate; no route was calculated",
+      "travel_checked_at": "2026-10-08T12:00:00.000Z",
+      "evidence": {
+        "chip": "M3 Pro",
+        "ram_gb": "36 GB memory",
+        "ssd_gb": "1 TB internal SSD",
+        "condition": "Good cosmetic condition",
+        "functional": "Fully working",
+        "screen_inches": "16-inch MacBook Pro"
+      },
+      "provenance": "synthetic",
+      "screen_inches": 16,
+      "drive_origin": "Example origin",
+      "observation_time_precision": "import_time"
+    }
+  ],
+  "history_current": {
+    "key": "synthetic:book-1",
+    "price_kind": "asking",
+    "listing_id": "book-1",
+    "title": "16-inch MacBook Pro · example book-1",
+    "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+    "url": "https://example.invalid/marketplace/item/book-1/",
+    "product": "macbook_pro",
+    "chip": "M3 Pro",
+    "ram_gb": 36,
+    "ssd_gb": 1000,
+    "price_minor": 100000,
+    "currency": "GBP",
+    "source": "facebook_marketplace",
+    "observed_at": "2026-10-07T12:00:00.000Z",
+    "check_outcome": "network_error",
+    "total_cash_cost_minor": null,
+    "condition": "good",
+    "item_state": "used",
+    "functional": true,
+    "availability": "active",
+    "seller_name": "Example seller book-1",
+    "seller_profile_url": "https://example.invalid/seller/book-1",
+    "drive_minutes": 35,
+    "travel_source": "Synthetic journey estimate; no route was calculated",
+    "travel_checked_at": "2026-10-08T12:00:00.000Z",
+    "evidence": {
+      "chip": "M3 Pro",
+      "ram_gb": "36 GB memory",
+      "ssd_gb": "1 TB internal SSD",
+      "condition": "Good cosmetic condition",
+      "functional": "Fully working",
+      "screen_inches": "16-inch MacBook Pro"
+    },
+    "provenance": "synthetic",
+    "screen_inches": 16,
+    "drive_origin": "Example origin",
+    "observation_time_precision": "import_time",
+    "last_attempted_at": "2026-10-08T12:00:00.000Z",
+    "first_observed_at": "2026-10-06T12:00:00.000Z",
+    "last_observed_at": "2026-10-07T12:00:00.000Z",
+    "last_successful_at": "2026-10-07T12:00:00.000Z",
+    "first_confirmed_active_at": "2026-10-06T12:00:00.000Z",
+    "last_confirmed_active_at": "2026-10-07T12:00:00.000Z",
+    "observation_conflict": false
+  },
+  "history_events": [
+    {
+      "kind": "first_observed_at",
+      "observed_at": "2026-10-06T12:00:00.000Z"
+    },
+    {
+      "kind": "price_changed",
+      "observed_at": "2026-10-07T12:00:00.000Z",
+      "previous_price_minor": 110000,
+      "price_minor": 100000,
+      "currency": "GBP",
+      "earliest_at": "2026-10-06T12:00:00.000Z",
+      "latest_at": "2026-10-07T12:00:00.000Z"
+    },
+    {
+      "kind": "check_failed",
+      "observed_at": "2026-10-08T12:00:00.000Z",
+      "outcome": "network_error"
+    }
+  ],
+  "quality": {
+    "flags": [
+      {
+        "code": "availability_uncertain",
+        "message": "The latest listing check did not succeed",
+        "severity": "review"
+      }
+    ],
+    "eligibility": {
+      "arrival_rate": {
+        "eligible": false,
+        "reasons": [
+          "Original publication time is not established"
+        ]
+      },
+      "current_stock": {
+        "eligible": false,
+        "reasons": [
+          "The latest listing check did not succeed"
+        ]
+      },
+      "price_baseline": {
+        "eligible": false,
+        "reasons": [
+          "The latest listing check did not succeed"
+        ]
+      },
+      "duration_analysis": {
+        "eligible": true,
+        "reasons": []
+      },
+      "deal_alert": {
+        "eligible": false,
+        "reasons": [
+          "The latest listing check did not succeed"
+        ]
+      }
+    },
+    "observed_active_days": 1,
+    "advertised_age_minimum_days": null,
+    "peer_count": 0,
+    "median_cash_price_minor": null,
+    "mad_minor": null,
+    "modified_z_score": null
+  },
+  "workflow": {
+    "state": "listing",
+    "actions": [
+      {
+        "event": "observe",
+        "operation": "import_listing_observations",
+        "tool": "import_goodfinds_listing_observations",
+        "availability": "requires_input",
+        "required_inputs": [
+          "observations",
+          "request_id",
+          "run_id/worker_id (when claimed)"
+        ],
+        "conditions": [
+          "Import an observation with its own fact timestamp; claimed runs also require the current worker_id."
+        ],
+        "blockers": [
+          {
+            "code": "evidence_input",
+            "message": "Supply newly observed listing evidence.",
+            "recovery": "Import an observation with its own fact timestamp; claimed runs also require the current worker_id.",
+            "kind": "input"
+          }
+        ],
+        "execution": {
+          "profile": "collection",
+          "spawn": {
+            "model": "gpt-6-luna",
+            "reasoning_effort": "xhigh",
+            "fork_turns": "none"
+          }
+        }
+      },
+      {
+        "event": "recover_media",
+        "operation": "attach_listing_media",
+        "tool": "attach_goodfinds_listing_media",
+        "availability": "requires_input",
+        "required_inputs": [
+          "listing_key",
+          "photos",
+          "videos",
+          "media_capture"
+        ],
+        "conditions": [
+          "Attach media without advancing old fact timestamps or review coverage."
+        ],
+        "blockers": [
+          {
+            "code": "media_input",
+            "message": "Supply recovered media and observed gallery totals.",
+            "recovery": "Attach media without advancing old fact timestamps or review coverage.",
+            "kind": "input"
+          }
+        ],
+        "execution": {
+          "profile": "collection",
+          "spawn": {
+            "model": "gpt-6-luna",
+            "reasoning_effort": "xhigh",
+            "fork_turns": "none"
+          }
+        }
+      },
+      {
+        "event": "feedback",
+        "operation": "record_listing_feedback",
+        "tool": "record_goodfinds_listing_feedback",
+        "availability": "requires_input",
+        "required_inputs": [
+          "expected_entity_revision",
+          "feedback.search_id",
+          "feedback.listing_key",
+          "feedback.action"
+        ],
+        "conditions": [
+          "Pass search_id to get_goodfinds_listing for a scoped assessment.",
+          "Use the chosen search_id; category/global scope requires the buyer's intent."
+        ],
+        "blockers": [
+          {
+            "code": "feedback_input",
+            "message": "Supply the buyer's feedback and current entity revision.",
+            "recovery": "Use the chosen search_id; category/global scope requires the buyer's intent.",
+            "kind": "input"
+          }
+        ],
+        "execution": {
+          "profile": "chat",
+          "spawn": {}
+        }
+      },
+      {
+        "event": "inspect_repairs",
+        "operation": "list_media_repairs",
+        "tool": "list_goodfinds_media_repairs",
+        "availability": "available",
+        "required_inputs": [],
+        "conditions": [],
+        "blockers": [],
+        "execution": {
+          "profile": "chat",
+          "spawn": {}
+        }
+      },
+      {
+        "event": "inspect_conversation",
+        "operation": "get_seller_conversation",
+        "tool": "get_goodfinds_seller_conversation",
+        "availability": "available",
+        "required_inputs": [
+          "listing_key"
+        ],
+        "conditions": [],
+        "blockers": [],
+        "execution": {
+          "profile": "chat",
+          "spawn": {}
+        }
+      }
+    ],
+    "allowed_actions": [
+      "import_goodfinds_listing_observations",
+      "attach_goodfinds_listing_media",
+      "record_goodfinds_listing_feedback",
+      "list_goodfinds_media_repairs",
+      "get_goodfinds_seller_conversation"
+    ],
+    "prerequisites": [
+      "Import an observation with its own fact timestamp; claimed runs also require the current worker_id.",
+      "Attach media without advancing old fact timestamps or review coverage.",
+      "Pass search_id to get_goodfinds_listing for a scoped assessment.",
+      "Use the chosen search_id; category/global scope requires the buyer's intent."
+    ],
+    "availability": {
+      "state": "active",
+      "observed": "active"
+    },
+    "evidence": {
+      "state": "needs_check",
+      "checks": [
+        {
+          "id": "package_contents",
+          "label": "Included accessories",
+          "question": "Could you confirm which parts and accessories are included?",
+          "state": "unknown",
+          "evidence": null
+        }
+      ],
+      "quality": null
+    },
+    "media": {
+      "state": "pending",
+      "retry_at": null,
+      "ready": true,
+      "image_reviewed": false,
+      "video_reviewed": false
+    },
+    "assessments": [
+      {
+        "search_id": "demo-laptop",
+        "suitability": "suitable",
+        "verification": "complete",
+        "value": "below_average",
+        "dismissed": false,
+        "reasons": [
+          "Within budget and below the average of equivalent asking prices"
+        ],
+        "checks": [
+          {
+            "id": "package_contents",
+            "label": "Included accessories",
+            "question": "Could you confirm which parts and accessories are included?",
+            "state": "unknown",
+            "evidence": null
+          }
+        ],
+        "next_step": null
+      }
+    ],
+    "conversation_phase": "not_contacted",
+    "buying_outcome": "open"
+  },
+  "advanced": {
+    "peers": [
+      {
+        "key": "synthetic:peer-0",
+        "price_kind": "asking",
+        "listing_id": "peer-0",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 100000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-1",
+        "price_kind": "asking",
+        "listing_id": "peer-1",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 100500,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-2",
+        "price_kind": "asking",
+        "listing_id": "peer-2",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 101000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-3",
+        "price_kind": "asking",
+        "listing_id": "peer-3",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 101500,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-4",
+        "price_kind": "asking",
+        "listing_id": "peer-4",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 102000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-5",
+        "price_kind": "asking",
+        "listing_id": "peer-5",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 102500,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-6",
+        "price_kind": "asking",
+        "listing_id": "peer-6",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 103000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-7",
+        "price_kind": "asking",
+        "listing_id": "peer-7",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 103500,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-8",
+        "price_kind": "asking",
+        "listing_id": "peer-8",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 104000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-9",
+        "price_kind": "asking",
+        "listing_id": "peer-9",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 104500,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-10",
+        "price_kind": "asking",
+        "listing_id": "peer-10",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 105000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-11",
+        "price_kind": "asking",
+        "listing_id": "peer-11",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 105500,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-12",
+        "price_kind": "asking",
+        "listing_id": "peer-12",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 106000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-13",
+        "price_kind": "asking",
+        "listing_id": "peer-13",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 106500,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-14",
+        "price_kind": "asking",
+        "listing_id": "peer-14",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 107000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-15",
+        "price_kind": "asking",
+        "listing_id": "peer-15",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 107500,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-16",
+        "price_kind": "asking",
+        "listing_id": "peer-16",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 108000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-17",
+        "price_kind": "asking",
+        "listing_id": "peer-17",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 108500,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-18",
+        "price_kind": "asking",
+        "listing_id": "peer-18",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 109000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-19",
+        "price_kind": "asking",
+        "listing_id": "peer-19",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 109500,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-20",
+        "price_kind": "asking",
+        "listing_id": "peer-20",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 110000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-21",
+        "price_kind": "asking",
+        "listing_id": "peer-21",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 110500,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-22",
+        "price_kind": "asking",
+        "listing_id": "peer-22",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 111000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-23",
+        "price_kind": "asking",
+        "listing_id": "peer-23",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 111500,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      },
+      {
+        "key": "synthetic:peer-24",
+        "price_kind": "asking",
+        "listing_id": "peer-24",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 112000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        }
+      }
+    ],
+    "candidate": {
+      "key": "synthetic:cheap",
+      "price_kind": "asking",
+      "listing_id": "cheap",
+      "title": "16-inch MacBook Pro · example book-1",
+      "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+      "url": "https://example.invalid/marketplace/item/book-1/",
+      "product": "macbook_pro",
+      "chip": "M3 Pro",
+      "ram_gb": 36,
+      "ssd_gb": 1000,
+      "price_minor": 10000,
+      "currency": "GBP",
+      "source": "facebook_marketplace",
+      "observed_at": "2026-10-08T12:00:00.000Z",
+      "check_outcome": "success",
+      "total_cash_cost_minor": null,
+      "condition": "good",
+      "item_state": "used",
+      "functional": true,
+      "availability": "active",
+      "seller_name": "Example seller book-1",
+      "seller_profile_url": "https://example.invalid/seller/book-1",
+      "drive_minutes": 35,
+      "travel_source": "Synthetic journey estimate; no route was calculated",
+      "travel_checked_at": "2026-10-08T12:00:00.000Z",
+      "evidence": {
+        "chip": "M3 Pro",
+        "ram_gb": "36 GB memory",
+        "ssd_gb": "1 TB internal SSD",
+        "condition": "Good cosmetic condition",
+        "functional": "Fully working",
+        "screen_inches": "16-inch MacBook Pro",
+        "seller_account_joined_at": "Joined in 2026",
+        "seller_has_profile_image": "Default avatar"
+      },
+      "provenance": "synthetic",
+      "screen_inches": 16,
+      "drive_origin": "Example origin",
+      "observation_time_precision": "import_time",
+      "first_observed_at": "2026-10-08T10:30:00.000Z",
+      "last_observed_at": "2026-10-08T12:00:00.000Z",
+      "publication": {
+        "kind": "published",
+        "precision": "exact",
+        "earliest_at": "2026-10-08T10:15:00.000Z",
+        "latest_at": "2026-10-08T10:15:00.000Z",
+        "evidence": "Explicit publication time"
+      },
+      "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+      "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+      "duration": {
+        "lower_days": 0.0625,
+        "upper_days": null,
+        "unfinished": true
+      },
+      "seller_account_joined_at": "2026",
+      "seller_has_profile_image": false,
+      "seller_metadata_checked_at": "2026-10-08T12:00:00.000Z"
+    },
+    "quality": {
+      "flags": [
+        {
+          "code": "low_price",
+          "message": "Purchase price is unusually low among equivalent listings",
+          "severity": "context"
+        }
+      ],
+      "eligibility": {
+        "arrival_rate": {
+          "eligible": true,
+          "reasons": []
+        },
+        "current_stock": {
+          "eligible": true,
+          "reasons": []
+        },
+        "price_baseline": {
+          "eligible": true,
+          "reasons": []
+        },
+        "duration_analysis": {
+          "eligible": true,
+          "reasons": []
+        },
+        "deal_alert": {
+          "eligible": true,
+          "reasons": []
+        }
+      },
+      "observed_active_days": 0.0625,
+      "advertised_age_minimum_days": 0.07291666666666667,
+      "peer_count": 25,
+      "median_cash_price_minor": 106000,
+      "mad_minor": 3000,
+      "modified_z_score": -21.58
+    },
+    "credibility": {
+      "status": "review",
+      "reasons": [
+        "Price is unusually low among equivalent listings",
+        "Seller account joined recently",
+        "No custom seller profile image observed"
+      ],
+      "peer_count": 25,
+      "reference_median_minor": 106000,
+      "reference_stddev_minor": 3679.9,
+      "stddevs_below_median": 26.09,
+      "price_is_outlier": true,
+      "seller_account_recent": true,
+      "seller_has_profile_image": false,
+      "seller_friend_count": null,
+      "older_account_with_many_friends": null,
+      "supporting_signals": [],
+      "policy": {
+        "recent_account_months": 24,
+        "minimum_peer_listings": 10,
+        "stddev_threshold": 3,
+        "zero_variance_discount_fraction": 0.5,
+        "established_account_minimum_friends": 100
+      }
+    },
+    "mixed_history": [
+      {
+        "key": "synthetic:book-1",
+        "price_kind": "asking",
+        "listing_id": "book-1",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 110000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-06T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "location": "Town A",
+        "photos": [
+          {
+            "media_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "position": 1,
+            "caption": "First photo"
+          }
+        ],
+        "image_review": {
+          "total_images": 1,
+          "reviewed_positions": [
+            1
+          ],
+          "complete": true
+        },
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-01T12:00:00.000Z",
+          "latest_at": "2026-10-01T12:00:00.000Z",
+          "evidence": "Published date"
+        }
+      },
+      {
+        "key": "synthetic:book-1",
+        "source": "facebook_marketplace",
+        "provenance": "synthetic",
+        "listing_id": "book-1",
+        "product": "macbook_pro",
+        "title": "New discovery",
+        "price_minor": 100000,
+        "price_kind": "asking",
+        "currency": "GBP",
+        "availability": "active",
+        "observed_at": "2026-10-07T12:00:00.000Z",
+        "check_outcome": "success",
+        "collection_stage": "discovery",
+        "chip": "M3 Max",
+        "location": "Town B",
+        "photos": [
+          {
+            "media_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "position": 1,
+            "caption": "Another photo"
+          }
+        ],
+        "evidence": {}
+      },
+      {
+        "key": "synthetic:book-1",
+        "price_kind": "asking",
+        "listing_id": "book-1",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 100000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "sold",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time"
+      },
+      {
+        "key": "synthetic:book-1",
+        "price_kind": "asking",
+        "listing_id": "book-1",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 95000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "sold",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time"
+      }
+    ],
+    "mixed_current": {
+      "key": "synthetic:book-1",
+      "price_kind": "asking",
+      "listing_id": "book-1",
+      "title": "16-inch MacBook Pro · example book-1",
+      "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+      "url": "https://example.invalid/marketplace/item/book-1/",
+      "product": "macbook_pro",
+      "chip": "M3 Pro",
+      "ram_gb": 36,
+      "ssd_gb": 1000,
+      "price_minor": 95000,
+      "currency": "GBP",
+      "source": "facebook_marketplace",
+      "observed_at": "2026-10-08T12:00:00.000Z",
+      "check_outcome": "success",
+      "total_cash_cost_minor": null,
+      "condition": "good",
+      "item_state": "used",
+      "functional": true,
+      "availability": "sold",
+      "seller_name": "Example seller book-1",
+      "seller_profile_url": "https://example.invalid/seller/book-1",
+      "drive_minutes": 35,
+      "travel_source": "Synthetic journey estimate; no route was calculated",
+      "travel_checked_at": "2026-10-08T12:00:00.000Z",
+      "evidence": {
+        "chip": "M3 Pro",
+        "ram_gb": "36 GB memory",
+        "ssd_gb": "1 TB internal SSD",
+        "condition": "Good cosmetic condition",
+        "functional": "Fully working",
+        "screen_inches": "16-inch MacBook Pro"
+      },
+      "provenance": "synthetic",
+      "screen_inches": 16,
+      "drive_origin": "Example origin",
+      "observation_time_precision": "import_time",
+      "photos": [
+        {
+          "media_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "position": 1,
+          "caption": "First photo"
+        },
+        {
+          "media_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "position": 2,
+          "caption": "Another photo"
+        }
+      ],
+      "publication": {
+        "kind": "published",
+        "precision": "exact",
+        "earliest_at": "2026-10-01T12:00:00.000Z",
+        "latest_at": "2026-10-01T12:00:00.000Z",
+        "evidence": "Published date"
+      },
+      "last_attempted_at": "2026-10-08T12:00:00.000Z",
+      "first_observed_at": "2026-10-06T12:00:00.000Z",
+      "last_observed_at": "2026-10-08T12:00:00.000Z",
+      "last_successful_at": "2026-10-08T12:00:00.000Z",
+      "first_confirmed_active_at": "2026-10-06T12:00:00.000Z",
+      "last_confirmed_active_at": "2026-10-07T12:00:00.000Z",
+      "observation_conflict": true
+    },
+    "mixed_events": [
+      {
+        "kind": "first_observed_at",
+        "observed_at": "2026-10-06T12:00:00.000Z"
+      },
+      {
+        "kind": "price_changed",
+        "observed_at": "2026-10-07T12:00:00.000Z",
+        "previous_price_minor": 110000,
+        "price_minor": 100000,
+        "currency": "GBP",
+        "earliest_at": "2026-10-06T12:00:00.000Z",
+        "latest_at": "2026-10-07T12:00:00.000Z"
+      },
+      {
+        "kind": "content_changed",
+        "observed_at": "2026-10-07T12:00:00.000Z"
+      },
+      {
+        "kind": "status_changed",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "previous_state": "active",
+        "state": "sold",
+        "earliest_at": "2026-10-07T12:00:00.000Z",
+        "latest_at": "2026-10-08T12:00:00.000Z"
+      },
+      {
+        "kind": "content_changed",
+        "observed_at": "2026-10-08T12:00:00.000Z"
+      },
+      {
+        "kind": "price_changed",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "previous_price_minor": 100000,
+        "price_minor": 95000,
+        "currency": "GBP",
+        "earliest_at": "2026-10-08T12:00:00.000Z",
+        "latest_at": "2026-10-08T12:00:00.000Z"
+      }
+    ],
+    "duplicates": [
+      {
+        "key": "synthetic:peer-0",
+        "price_kind": "asking",
+        "listing_id": "peer-0",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 100000,
+        "currency": "GBP",
+        "source": "facebook_marketplace",
+        "observed_at": "2026-10-08T12:00:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        },
+        "entity_key": "same"
+      },
+      {
+        "key": "synthetic:peer-1",
+        "price_kind": "asking",
+        "listing_id": "peer-1",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 100500,
+        "currency": "GBP",
+        "source": "ebay",
+        "observed_at": "2026-10-08T12:01:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        },
+        "entity_key": "same"
+      }
+    ],
+    "distinct": [
+      {
+        "key": "synthetic:peer-1",
+        "price_kind": "asking",
+        "listing_id": "peer-1",
+        "title": "16-inch MacBook Pro · example book-1",
+        "description": "Synthetic example: M3 Pro, 36 GB memory, 1 TB internal SSD. Good cosmetic condition and fully working. This is not a real listing.",
+        "url": "https://example.invalid/marketplace/item/book-1/",
+        "product": "macbook_pro",
+        "chip": "M3 Pro",
+        "ram_gb": 36,
+        "ssd_gb": 1000,
+        "price_minor": 100500,
+        "currency": "GBP",
+        "source": "ebay",
+        "observed_at": "2026-10-08T12:01:00.000Z",
+        "check_outcome": "success",
+        "total_cash_cost_minor": null,
+        "condition": "good",
+        "item_state": "used",
+        "functional": true,
+        "availability": "active",
+        "seller_name": "Example seller book-1",
+        "seller_profile_url": "https://example.invalid/seller/book-1",
+        "drive_minutes": 35,
+        "travel_source": "Synthetic journey estimate; no route was calculated",
+        "travel_checked_at": "2026-10-08T12:00:00.000Z",
+        "evidence": {
+          "chip": "M3 Pro",
+          "ram_gb": "36 GB memory",
+          "ssd_gb": "1 TB internal SSD",
+          "condition": "Good cosmetic condition",
+          "functional": "Fully working",
+          "screen_inches": "16-inch MacBook Pro"
+        },
+        "provenance": "synthetic",
+        "screen_inches": 16,
+        "drive_origin": "Example origin",
+        "observation_time_precision": "import_time",
+        "first_observed_at": "2026-10-08T10:30:00.000Z",
+        "last_observed_at": "2026-10-08T12:00:00.000Z",
+        "publication": {
+          "kind": "published",
+          "precision": "exact",
+          "earliest_at": "2026-10-08T10:15:00.000Z",
+          "latest_at": "2026-10-08T10:15:00.000Z",
+          "evidence": "Explicit publication time"
+        },
+        "first_confirmed_active_at": "2026-10-08T10:30:00.000Z",
+        "last_confirmed_active_at": "2026-10-08T12:00:00.000Z",
+        "duration": {
+          "lower_days": 0.0625,
+          "upper_days": null,
+          "unfinished": true
+        },
+        "entity_key": "same",
+        "entity_sources": [
+          "ebay",
+          "facebook_marketplace"
+        ]
+      }
+    ],
+    "coverage": [
+      {
+        "source": "facebook_marketplace",
+        "search_id": "demo-laptop",
+        "query": "M3 Pro",
+        "filters": {},
+        "sort": "newest",
+        "started_at": "2026-10-08T10:00:00.000Z",
+        "finished_at": "2026-10-08T10:00:00.000Z",
+        "status": "success",
+        "pagination_complete": true,
+        "search_revision": "b235bbdd2f0de75e152ce082e2dc5d8e8f4c1a9c579256b2882a872c2dcf57fd",
+        "scope_key": "repeated-query"
+      },
+      {
+        "source": "facebook_marketplace",
+        "search_id": "demo-laptop",
+        "query": "M3 Pro",
+        "filters": {},
+        "sort": "newest",
+        "started_at": "2026-10-08T11:00:00.000Z",
+        "finished_at": "2026-10-08T11:00:00.000Z",
+        "status": "success",
+        "pagination_complete": true,
+        "search_revision": "b235bbdd2f0de75e152ce082e2dc5d8e8f4c1a9c579256b2882a872c2dcf57fd",
+        "scope_key": "repeated-query"
+      },
+      {
+        "source": "facebook_marketplace",
+        "search_id": "demo-laptop",
+        "query": "M3 Pro",
+        "filters": {},
+        "sort": "newest",
+        "started_at": "2026-10-08T12:00:00.000Z",
+        "finished_at": "2026-10-08T12:00:00.000Z",
+        "status": "success",
+        "pagination_complete": true,
+        "search_revision": "b235bbdd2f0de75e152ce082e2dc5d8e8f4c1a9c579256b2882a872c2dcf57fd",
+        "scope_key": "repeated-query"
+      }
+    ],
+    "insights": [
+      {
+        "cohort_listing_ids": [
+          "peer-0",
+          "peer-1",
+          "peer-2",
+          "peer-3",
+          "peer-4",
+          "peer-5",
+          "peer-6",
+          "peer-7",
+          "peer-8",
+          "peer-9",
+          "peer-10",
+          "peer-11",
+          "peer-12",
+          "peer-13",
+          "peer-14",
+          "peer-15",
+          "peer-16",
+          "peer-17",
+          "peer-18",
+          "peer-19",
+          "peer-20",
+          "peer-21",
+          "peer-22",
+          "peer-23",
+          "peer-24"
+        ],
+        "cohort_listing_keys": [
+          "synthetic:peer-0",
+          "synthetic:peer-1",
+          "synthetic:peer-10",
+          "synthetic:peer-11",
+          "synthetic:peer-12",
+          "synthetic:peer-13",
+          "synthetic:peer-14",
+          "synthetic:peer-15",
+          "synthetic:peer-16",
+          "synthetic:peer-17",
+          "synthetic:peer-18",
+          "synthetic:peer-19",
+          "synthetic:peer-2",
+          "synthetic:peer-20",
+          "synthetic:peer-21",
+          "synthetic:peer-22",
+          "synthetic:peer-23",
+          "synthetic:peer-24",
+          "synthetic:peer-3",
+          "synthetic:peer-4",
+          "synthetic:peer-5",
+          "synthetic:peer-6",
+          "synthetic:peer-7",
+          "synthetic:peer-8",
+          "synthetic:peer-9"
+        ],
+        "distinct_count": 25,
+        "confirmed_active_count": 25,
+        "sold_count": 0,
+        "unknown_outcome_count": 0,
+        "supported_arrivals": 25,
+        "coverage_days": 0.0833,
+        "publication_unknown_count": 0,
+        "arrivals_per_day": 300,
+        "median_arrival_gap_days": 0,
+        "median_cash_price_minor": 106000,
+        "currency": "GBP",
+        "price_period": "once",
+        "cash_price_sample_count": 25,
+        "window_days": 30,
+        "completed_period_count": 0,
+        "unfinished_period_count": 25,
+        "median_completed_lower_days": null,
+        "median_completed_upper_days": null,
+        "successful_query_checks": 3,
+        "note": "Observed sample, not complete inventory. Arrival rates need stable repeated coverage and publication evidence; unseen short-lived ads can be missed."
+      }
+    ]
+  }
+}

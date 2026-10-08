@@ -5,8 +5,8 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { ElicitRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { createGoodfindsServer } from "@goodfinds/server/mcp";
-import { NO_PREFERENCE } from "../apps/server/src/searches/interview.ts";
+import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
+import { NO_PREFERENCE } from "../tests/reference-server/src/searches/interview.ts";
 import { answersSchema, searchDefinitionSchema } from "@goodfinds/contracts/search-definition";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 

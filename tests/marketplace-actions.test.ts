@@ -12,7 +12,7 @@ import { randomUUID } from "node:crypto";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Clock, Effect } from "effect";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
 import { ListingCard } from "../apps/ui/src/features/listings/listing-card.tsx";
 import { ContactOptions } from "../apps/ui/src/features/conversations/contact-options.tsx";
 import { BrowserSettings } from "../apps/ui/src/features/settings/browser-settings.tsx";
@@ -27,7 +27,7 @@ import type { Marketplace } from "@goodfinds/contracts/integrations";
 import type { GoodfindsState } from "@goodfinds/contracts/state";
 import { stateSchema } from "@goodfinds/contracts/state";
 import type { SellerConversationSummary } from "@goodfinds/contracts/seller-conversation";
-import { createGoodfindsServer } from "@goodfinds/server/mcp";
+import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
 
 const urls: Record<Marketplace, string> = {
   facebook_marketplace: "https://www.facebook.com/marketplace/item/123456789012345/",

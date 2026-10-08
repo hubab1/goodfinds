@@ -9,13 +9,13 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { ElicitRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { createGoodfindsServer } from "@goodfinds/server/mcp";
+import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
 import {
   CUSTOM,
   NO_PREFERENCE,
   nativeAnswer,
   nativeQuestion,
-} from "../apps/server/src/searches/interview.ts";
+} from "./reference-server/src/searches/interview.ts";
 import {
   SEARCH_TEMPLATES,
   activeAnswers,

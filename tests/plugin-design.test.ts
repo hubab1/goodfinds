@@ -9,10 +9,10 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Effect } from "effect";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
-import { backupWorkspace, restoreWorkspace } from "../apps/server/src/platform/backup.ts";
-import { createGoodfindsServer } from "../apps/server/src/entrypoints/mcp.ts";
-import { RevisionConflict } from "../apps/server/src/workspace/errors.ts";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
+import { backupWorkspace, restoreWorkspace } from "./reference-server/src/platform/backup.ts";
+import { createGoodfindsServer } from "./reference-server/src/entrypoints/mcp.ts";
+import { RevisionConflict } from "./reference-server/src/workspace/errors.ts";
 import { z } from "zod";
 import { operations, receiptSchema, errorSchema } from "@goodfinds/contracts/operations";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";

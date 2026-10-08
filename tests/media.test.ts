@@ -7,8 +7,8 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { cacheImages, readImage } from "../apps/server/src/platform/media.ts";
-import { createGoodfindsServer } from "@goodfinds/server/mcp";
+import { cacheImages, readImage } from "./reference-server/src/platform/media.ts";
+import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 import searchImageSources from "@goodfinds/contracts/data/search-cover-sources.json" with { type: "json" };
 

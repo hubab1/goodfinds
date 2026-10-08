@@ -5,9 +5,9 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Effect } from "effect";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
-import { backupWorkspace, restoreWorkspace } from "../apps/server/src/platform/backup.ts";
-import { createGoodfindsServer } from "../apps/server/src/entrypoints/mcp.ts";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
+import { backupWorkspace, restoreWorkspace } from "./reference-server/src/platform/backup.ts";
+import { createGoodfindsServer } from "./reference-server/src/entrypoints/mcp.ts";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 import exampleConfig from "../skills/marketplace-shopping/assets/example-workspace.json" with { type: "json" };
 

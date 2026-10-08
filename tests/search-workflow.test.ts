@@ -9,12 +9,12 @@ import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { Clock, Effect } from "effect";
 import { z } from "zod";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
-import { createGoodfindsServer } from "@goodfinds/server/mcp";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
+import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
 import { savedSearchSchema, searchDefinitionSchema } from "@goodfinds/contracts/search-definition";
 import { stateFromToolResult, stateSchema } from "@goodfinds/contracts/state";
 import { queryPlan, searchProgress } from "@goodfinds/contracts/search-workflow";
-import { SEARCH_LEASE_MS } from "../apps/server/src/searches/runs.ts";
+import { SEARCH_LEASE_MS } from "./reference-server/src/searches/runs.ts";
 import {
   verificationChecks,
   unresolvedQuestions,
@@ -25,10 +25,10 @@ import { sellerMessageDraftSchema, offerMessage } from "@goodfinds/contracts/sel
 import {
   workspaceConfigurationSchema,
   listingObservationSchema,
-} from "../apps/server/src/workspace/model.ts";
-import { evaluateListing, matchListing } from "../apps/server/src/listings/evaluation.ts";
-import { learnedCriteria } from "../apps/server/src/searches/learning.ts";
-import { searchCohort } from "../apps/server/src/searches/definition.ts";
+} from "./reference-server/src/workspace/model.ts";
+import { evaluateListing, matchListing } from "./reference-server/src/listings/evaluation.ts";
+import { learnedCriteria } from "./reference-server/src/searches/learning.ts";
+import { searchCohort } from "./reference-server/src/searches/definition.ts";
 
 const definition = searchDefinitionSchema.parse({
   schema_version: 1,

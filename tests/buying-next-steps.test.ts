@@ -8,7 +8,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Effect } from "effect";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
 import { savedSearchSchema } from "@goodfinds/contracts/search-definition";
 import { stateSchema } from "@goodfinds/contracts/state";
 import {
@@ -24,7 +24,7 @@ import {
 } from "@goodfinds/contracts/verification";
 import { initialSellerMessageDraft } from "../apps/ui/src/lib/seller-conversation.ts";
 import { collectionPlanSchema, sellerSummary } from "@goodfinds/contracts/seller-conversation";
-import { createGoodfindsServer } from "@goodfinds/server/mcp";
+import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
 
 const search = savedSearchSchema.parse({
   id: "coffee",

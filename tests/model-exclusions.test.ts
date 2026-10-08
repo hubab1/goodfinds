@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Database } from "bun:sqlite";
 import { Effect } from "effect";
-import { WorkspaceStore } from "../apps/server/src/platform/workspace-sqlite.ts";
+import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
 import { savedSearchSchema } from "@goodfinds/contracts/search-definition";
 import { modelIsExcluded } from "@goodfinds/contracts/discovery";
 import { queryPlan } from "@goodfinds/contracts/search-workflow";

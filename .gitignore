@@ -30,3 +30,6 @@ formal/.lake/
 /media/
 /workspace.json
 /observations.json
+
+# Rust build artifacts.
+/apps/server/target/
