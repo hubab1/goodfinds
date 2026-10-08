@@ -7,9 +7,22 @@ use rusqlite::{Connection, OptionalExtension, params};
 use serde_json::{Value, json};
 use std::{
     collections::HashSet,
+    ffi::OsString,
     path::{Path, PathBuf},
     time::Duration,
 };
+
+fn automations_directory(lookup: impl Fn(&str) -> Option<OsString>) -> Option<PathBuf> {
+    let nonempty = |key| lookup(key).filter(|value| !value.is_empty());
+    nonempty("CODEX_HOME")
+        .map(PathBuf::from)
+        .or_else(|| {
+            nonempty("HOME")
+                .or_else(|| nonempty("USERPROFILE"))
+                .map(|home| PathBuf::from(home).join(".codex"))
+        })
+        .map(|root| root.join("automations"))
+}
 
 pub struct Workspace {
     pub db: Connection,
@@ -46,10 +59,7 @@ impl Workspace {
             mode: mode.into(),
             now: now(),
             access_context: access_context.into(),
-            automations_directory: std::env::var_os("CODEX_HOME")
-                .map(PathBuf::from)
-                .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".codex")))
-                .map(|p| p.join("automations")),
+            automations_directory: automations_directory(|key| std::env::var_os(key)),
         };
         crate::connections::init(&ws)?;
         // Initialization and configuration loading share the same writer lock as mutations.
@@ -540,4 +550,37 @@ pub fn device_browser() -> Value {
     }
     #[cfg(not(target_os = "macos"))]
     Value::Null
+}
+
+#[cfg(test)]
+mod platform_tests {
+    use super::*;
+
+    #[test]
+    fn automation_directory_supports_windows_profile_and_explicit_overrides() {
+        let profile = PathBuf::from("WindowsProfile");
+        let lookup = |key: &str| match key {
+            "USERPROFILE" => Some(profile.clone().into_os_string()),
+            _ => None,
+        };
+        assert_eq!(
+            automations_directory(lookup),
+            Some(profile.join(".codex").join("automations"))
+        );
+        assert_eq!(
+            automations_directory(|key| match key {
+                "CODEX_HOME" => Some(OsString::from("ExplicitCodex")),
+                _ => lookup(key),
+            }),
+            Some(PathBuf::from("ExplicitCodex").join("automations"))
+        );
+        assert_eq!(
+            automations_directory(|key| match key {
+                "CODEX_HOME" | "HOME" => Some(OsString::new()),
+                _ => lookup(key),
+            }),
+            Some(profile.join(".codex").join("automations"))
+        );
+        assert_eq!(automations_directory(|_| None), None);
+    }
 }

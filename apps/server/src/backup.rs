@@ -9,13 +9,16 @@ use rusqlite::{Connection, OpenFlags};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
+#[cfg(unix)]
+use std::fs::File;
 use std::{
     collections::HashSet,
-    fs::{self, File, OpenOptions},
+    fs::{self, OpenOptions},
     io::Write,
     path::{Component, Path, PathBuf},
     time::Duration,
 };
+
 const SCHEMA_VERSION: u64 = 4;
 #[derive(Serialize, Deserialize)]
 struct BackupFile {
@@ -127,7 +130,8 @@ fn snapshot_database(source: &Path, target: &Path) -> Result<()> {
     db.busy_timeout(Duration::from_secs(10))?;
     db.execute("VACUUM INTO ?", [target.to_string_lossy().as_ref()])?;
     private_permissions(target)?;
-    File::open(target)?.sync_all()?;
+    // Windows FlushFileBuffers requires a handle opened with write access.
+    OpenOptions::new().write(true).open(target)?.sync_all()?;
     Ok(())
 }
 struct Stage {
