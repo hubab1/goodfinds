@@ -23,6 +23,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.92.0
         with:
           components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/server -> target
+          cache-on-failure: true
       - run: bun install --frozen-lockfile
       - run: bun run contracts:check
       - run: bun run architecture:check
