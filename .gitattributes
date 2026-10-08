@@ -1,0 +1,2 @@
+# Contract snapshots and embedded text must be identical on every platform.
+* text=auto eol=lf
