@@ -255,7 +255,7 @@ pub fn demo(output: &Path, configuration: Option<&Path>) -> Result<Value> {
         row["travel_checked_at"] = json!(util::iso(now));
     }
     let temporary = Temporary(std::env::temp_dir().join(format!("goodfinds-demo-{}", util::id())));
-    let mut builder = fs::DirBuilder::new();
+    let builder = &mut fs::DirBuilder::new();
     #[cfg(unix)]
     {
         use std::os::unix::fs::DirBuilderExt;
