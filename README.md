@@ -2,6 +2,12 @@
 
 Goodfinds is a local MCP plugin for finding, comparing and following up on marketplace listings. Describe what you want to buy, refine the important requirements, and keep your searches, listing evidence and seller conversations together in an interactive panel.
 
+[![Watch the Goodfinds walkthrough](website/media/demo-poster.jpg)](https://github.com/hubab1/goodfinds/raw/refs/heads/main/website/media/goodfinds-demo.mp4)
+
+[Watch the 38-second demo](https://github.com/hubab1/goodfinds/raw/refs/heads/main/website/media/goodfinds-demo.mp4) · [Video transcript](website/media/demo-captions.vtt)
+
+The demo combines an illustrated conversation with actual Goodfinds panels. All searches, listings, prices and people are fictional; no seller is contacted.
+
 ## What it does
 
 - Turns buying briefs into editable searches, with research, must-haves and preferences.
@@ -58,3 +64,9 @@ bun run test:native
 ```
 
 Validation includes a focused seller-send specification using a pinned Lean toolchain. Install [elan](https://lean-lang.org/install/) and follow the [formal model guide](formal/README.md). The model checks permission and reconciliation guarantees; live browser integrations require separate validation.
+
+## Website and demo
+
+The promotional site is static HTML, CSS and JavaScript in `website/`. Preview it with any static server, for example `python3 -m http.server 5055 --directory website`. It has no framework, external fonts, analytics or build step.
+
+To regenerate the demo from the fictional sample screenshots, install FFmpeg with `libx264` and `drawtext`, then run `bun scripts/render-promo.ts`. The video, poster and captions are written to `website/media/`; intermediate renders stay in ignored `output/promo-render/`. Capture replacement screenshots only from an isolated sample workspace.
