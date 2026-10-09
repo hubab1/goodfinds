@@ -44,6 +44,11 @@ summary:focus-visible {
   font-weight: 700;
   letter-spacing: -0.65px;
 }
+.brand img,
+.notification-brand img,
+.start > img {
+  background: #000;
+}
 .brand img {
   object-fit: contain;
   border-radius: 7px;

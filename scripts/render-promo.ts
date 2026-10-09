@@ -197,7 +197,8 @@ for (const [index, scene] of scenes.entries()) {
   ];
   if (scene.image) args.push("-loop", "1", "-framerate", "30", "-i", join(media, scene.image));
   const logo = scene.centeredLogo ? { size: 80, x: 600, y: 159 } : { size: 38, x: 80, y: 40 };
-  const filters = [...scene.filters];
+  // The logo is transparent; it needs a black backing on the white video canvas.
+  const filters = [...scene.filters, box(logo.x, logo.y, logo.size, logo.size, "black")];
   if (!scene.centeredLogo) filters.push(text("Goodfinds", 131, 49, 23, { bold: true }));
   if (scene.label) filters.push(text(scene.label, "w-text_w-80", 52, 19, { color: "0x666666" }));
   const graph = [
