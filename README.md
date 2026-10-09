@@ -67,6 +67,6 @@ Validation includes a focused seller-send specification using a pinned Lean tool
 
 ## Website and demo
 
-The promotional site is static HTML, CSS and JavaScript in `website/`. Preview it with any static server, for example `python3 -m http.server 5055 --directory website`. It has no framework, external fonts, analytics or build step.
+The promotional site is static HTML and CSS in `website/`. Preview it with any static server, for example `python3 -m http.server 5055 --directory website`. It has no framework, external fonts, analytics or build step.
 
 To regenerate the demo from the fictional sample screenshots, install FFmpeg with `libx264` and `drawtext`, then run `bun scripts/render-promo.ts`. The video, poster and captions are written to `website/media/`; intermediate renders stay in ignored `output/promo-render/`. Capture replacement screenshots only from an isolated sample workspace.

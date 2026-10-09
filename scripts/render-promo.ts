@@ -84,8 +84,8 @@ const scenes = [
     name: "intro",
     duration: 4.5,
     filters: [
-      text("Good finds.", 80, lift(228), 88, { bold: true, alpha: reveal() }),
-      text("Your terms.", 80, lift(326, 0.22), 88, { bold: true, alpha: reveal(0.22) }),
+      text("Your next good find,", 80, lift(228), 80, { bold: true, alpha: reveal() }),
+      text("found for you.", 80, lift(326, 0.22), 80, { bold: true, alpha: reveal(0.22) }),
       box(84, 459, 100, 4, "0x111111"),
       text("Marketplace searches, kept together.", 82, 500, 27, {
         color: "0x666666",
@@ -302,7 +302,7 @@ writeFileSync(
   `WEBVTT
 
 00:00.000 --> 00:04.000
-Good finds. Your terms.
+Your next good find, found for you.
 Marketplace searches, kept together.
 
 00:04.000 --> 00:10.500
