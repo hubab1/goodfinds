@@ -130,3 +130,13 @@ void test("Panel cache keys change with frontend inputs and ignore filesystem or
   assert.notEqual(panelResourceUri(old), panelResourceUri(changed));
   assert.equal(panelResourceUri(old), panelResourceUri(old.toReversed()));
 });
+
+void test("Panel cache keys normalize mixed Windows paths before sorting", async () => {
+  const { panelResourceInputs, panelResourceUri } = await import("../scripts/panel-resource.ts");
+  const inputs = panelResourceInputs();
+  const windows = inputs.map(([path, bytes], index): readonly [string, Uint8Array] => [
+    index < 9 ? path : path.replaceAll("/", "\\"),
+    bytes,
+  ]);
+  assert.equal(panelResourceUri(windows), panelResourceUri(inputs));
+});

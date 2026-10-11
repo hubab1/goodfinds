@@ -35,7 +35,10 @@ jobs:
       - run: cargo test --manifest-path apps/server/Cargo.toml --locked
       - run: bun scripts/build-server.ts
       - run: bun scripts/package-plugin.ts
-      - run: bun test tests/build-target.test.ts tests/plugin-formats.test.ts tests/search-setup-mcp.test.ts
+      - run: cargo build --manifest-path apps/server/Cargo.toml --locked --profile test-support --features test-support --example test-driver --bin goodfinds
+      - run: bun test --timeout 30000 ./tests/build-target.test.ts ./tests/plugin-formats.test.ts ./tests/search-setup-mcp.test.ts ./tests/panel-handoff.test.ts
+      - if: runner.os == 'Linux'
+        run: bun test --timeout 30000 ./tests/marketplace-actions.test.ts ./tests/listing-shortlist-ui.test.ts
       - run: bun run package:check
       - uses: actions/upload-artifact@v4
         with:

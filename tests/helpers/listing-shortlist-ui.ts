@@ -10,6 +10,7 @@ import { operationForTool } from "@goodfinds/contracts/tool-names";
 import { entityRevision, entityTarget } from "@goodfinds/contracts/revisions";
 import type { Action } from "../../apps/ui/src/lib/actions.ts";
 import type { GoodfindsState } from "@goodfinds/contracts/state";
+import { sellerSummary } from "@goodfinds/contracts/seller-conversation";
 
 const dom = new Window({ url: "https://panel.example", width: 1200, height: 900 });
 for (const key of [
@@ -61,6 +62,7 @@ await mock.module(clientPath, () => ({
 const { createElement: el, act, useState } = await import("react");
 const { createRoot } = await import("react-dom/client");
 const { Deals } = await import("../../apps/ui/src/features/listings/listings-page.tsx");
+const { ListingCard } = await import("../../apps/ui/src/features/listings/listing-card.tsx");
 const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-shortlist-"));
 const store = new NativeWorkspace(folder, "sample");
 const fixture = {
@@ -197,6 +199,47 @@ try {
   });
   assert.equal(fixture.current.config.feedback.length, feedbackCount);
   assert.equal(document.querySelector('[role="dialog"]'), null);
+
+  // Preparing a message and reopening history remain available through the menu,
+  // even when no current contact route has been verified. Neither action sends.
+  const firstListing = fixture.current.listings[0];
+  assert.ok(firstListing);
+  const listing = firstListing;
+  const conversationState = Effect.runSync(
+    store.request("get_seller_conversation", { listing_key: listing.key }),
+  ).state;
+  assert.ok(conversationState.seller_conversation);
+  const summary = sellerSummary(conversationState.seller_conversation);
+  const requestCount = requests.length;
+  async function checkConversation(history: boolean) {
+    let returnedFocus: HTMLElement | undefined;
+    await act(async () =>
+      root.render(
+        el(ListingCard, {
+          listing: { ...listing, availability: "unavailable" },
+          state: conversationState,
+          decisions: [],
+          sample: false,
+          searches: [],
+          onNegotiate: (trigger) => {
+            returnedFocus = trigger;
+          },
+          ...(history ? { seller_conversation: { ...summary, action_label: "View history" } } : {}),
+        }),
+      ),
+    );
+    const trigger = button(`More options for ${listing.title}`);
+    await act(async () => trigger.click());
+    const message = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+      (entry) => entry.textContent?.trim() === (history ? "View history" : "Prepare message"),
+    );
+    assert.ok(message, "Conversation remains accessible without a verified contact route");
+    await act(async () => message.click());
+    assert.equal(returnedFocus, trigger, "Use the persistent menu trigger for return focus");
+    assert.equal(requests.length, requestCount, "Opening a conversation does not send a message");
+  }
+  await checkConversation(false);
+  await checkConversation(true);
 } finally {
   await act(async () => root.unmount());
   container.remove();

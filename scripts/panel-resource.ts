@@ -5,8 +5,12 @@ import { GOODFINDS_VERSION } from "@goodfinds/contracts/version";
 
 export function panelResourceUri(inputs: ReadonlyArray<readonly [string, Uint8Array]>) {
   const hash = createHash("sha256");
-  for (const [path, bytes] of inputs.toSorted(([a], [b]) => a.localeCompare(b)))
-    hash.update(path.replaceAll("\\", "/")).update("\0").update(bytes).update("\0");
+  const normalized = inputs.map(([path, bytes]): readonly [string, Uint8Array] => [
+    path.replaceAll("\\", "/"),
+    bytes,
+  ]);
+  for (const [path, bytes] of normalized.toSorted(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+    hash.update(path).update("\0").update(bytes).update("\0");
   return `ui://goodfinds/shopping-panel-v${GOODFINDS_VERSION}-${hash.digest("hex").slice(0, 16)}.html`;
 }
 

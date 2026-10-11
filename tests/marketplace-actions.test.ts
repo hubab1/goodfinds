@@ -220,17 +220,17 @@ for (const source of marketplaceSchema.options) {
     void test(`simulated ${source}/${browser}: login, contact and browser permission are independent`, (t) => {
       const f = fixture(t, source, browser);
       assert.equal(f.readiness().message, false);
-      assert.match(f.html(), />Prepare message</u);
+      assert.match(f.html(), /aria-label="More options for Fictional test listing"/u);
       f.contact();
       f.access();
       for (const status of ["signed_out", "unknown", "expired"]) {
         f.session(status);
         assert.equal(f.readiness().message, false, status);
-        assert.match(f.html(), />Prepare message</u);
+        assert.match(f.html(), /aria-label="More options for Fictional test listing"/u);
       }
       f.session();
       assert.equal(f.readiness().message, true);
-      assert.match(f.html(), />Prepare message</u);
+      assert.match(f.html(), /aria-label="More options for Fictional test listing"/u);
       f.access("denied");
       assert.equal(f.readiness().message, false);
       f.access();
@@ -238,7 +238,7 @@ for (const source of marketplaceSchema.options) {
       assert.equal(f.readiness().message, false);
       assert.doesNotMatch(f.html(), /Contact is outside the marketplace|Check messaging/u);
       assert.match(f.contactHtml(), /Contact is outside the marketplace/u);
-      assert.match(f.html(), />Prepare message</u);
+      assert.match(f.html(), /aria-label="More options for Fictional test listing"/u);
     });
   }
 }
@@ -320,7 +320,7 @@ void test("an observed guest message route does not imply guest native-offer acc
   });
   assert.equal(f.readiness().message, true);
   assert.equal(f.readiness().offer, false);
-  assert.match(f.html(), />Prepare message</u);
+  assert.match(f.html(), /aria-label="More options for Fictional test listing"/u);
   assert.doesNotMatch(f.html(), /Make an offer on/u);
   f.contact({ message_auth: "unknown" });
   assert.equal(f.readiness().message, false);
@@ -377,7 +377,7 @@ void test("eBay native offers are independent of messaging and cannot request a 
   assert.equal(f.readiness().offer, true);
   assert.match(f.contactHtml(), /Make an offer on eBay/u);
   assert.match(f.contactHtml(), /Check offer limits/u);
-  assert.match(f.html(), />Prepare message</u);
+  assert.match(f.html(), /aria-label="More options for Fictional test listing"/u);
   assert.throws(() => f.request(), /Native offers/u);
   assert.equal(f.command("get").state.seller_conversation?.actions.length, 0);
 });
@@ -515,7 +515,7 @@ void test("history remains accessible when new contact is unavailable", (t) => {
   f.contact({ message: "unavailable" });
   const summary = f.command("get").state.seller_conversations[0];
   assert.ok(summary);
-  assert.match(f.html(f.state(), summary), new RegExp(`>${summary.action_label}<`, "u"));
+  assert.match(f.html(f.state(), summary), /aria-label="More options for Fictional test listing"/u);
 });
 
 void test("backend blocks unobserved contact and rechecks revoked controls immediately before a Facebook send", (t) => {
