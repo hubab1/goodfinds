@@ -41,7 +41,11 @@ fn branch_valid(schema: &Value, value: &Value, root: &Value) -> bool {
     {
         map.insert("$defs".into(), defs.clone());
     }
-    jsonschema::validator_for(&schema).is_ok_and(|validator| validator.is_valid(value))
+    // The same union branches recur for every listing and history row. Compiling
+    // each occurrence held command transactions open while rebuilding validators.
+    // Include resolved definitions in the key so separate roots cannot share rules.
+    cached_validator(&format!("branch:{schema}"), &schema)
+        .is_ok_and(|validator| validator.is_valid(value))
 }
 fn normalize(node: &Value, value: Option<&Value>, root: &Value) -> Option<Value> {
     let node = resolve(node, root);
@@ -106,28 +110,54 @@ fn normalize(node: &Value, value: Option<&Value>, root: &Value) -> Option<Value>
 pub fn parse(name: &str, value: &Value) -> Result<Value> {
     let schema = schema(name)?;
     let value = normalize(schema, Some(value), schema).unwrap_or(Value::Null);
-    let validator = {
-        let mut cache = VALIDATORS
-            .lock()
-            .map_err(|_| Error::new("internal_error", "Contract cache unavailable"))?;
-        if let Some(v) = cache.get(name) {
-            v.clone()
-        } else {
-            let compiled = Arc::new(
-                jsonschema::validator_for(schema)
-                    .map_err(|e| Error::new("internal_error", format!("Contract {name}: {e}")))?,
-            );
-            cache.insert(name.into(), compiled.clone());
-            compiled
-        }
-    };
-    if let Some(e) = validator.iter_errors(&value).next() {
-        return Err(Error::validation(format!(
-            "{name} at {}: {e}",
-            e.instance_path()
-        )));
+    let validator = cached_validator(name, schema)?;
+    let errors = validation_messages(&validator, &value);
+    if !errors.is_empty() {
+        return Err(Error::validation(format!("{name}: {}", errors.join("; "))));
     }
     Ok(value)
+}
+pub fn cached_validator(name: &str, schema: &Value) -> Result<Arc<jsonschema::Validator>> {
+    let mut cache = VALIDATORS
+        .lock()
+        .map_err(|_| Error::new("internal_error", "Contract cache unavailable"))?;
+    if let Some(v) = cache.get(name) {
+        return Ok(v.clone());
+    }
+    let compiled = Arc::new(
+        jsonschema::validator_for(schema)
+            .map_err(|e| Error::new("internal_error", format!("Contract {name}: {e}")))?,
+    );
+    cache.insert(name.into(), compiled.clone());
+    Ok(compiled)
+}
+/// Report actionable field paths together, without echoing entire submitted documents.
+pub fn validation_messages(validator: &jsonschema::Validator, value: &Value) -> Vec<String> {
+    fn collect(error: &jsonschema::ValidationError<'_>, out: &mut Vec<String>) {
+        if out.len() >= 8 {
+            return;
+        }
+        if let jsonschema::error::ValidationErrorKind::AnyOf { context }
+        | jsonschema::error::ValidationErrorKind::OneOfNotValid { context } = error.kind()
+        {
+            // Input/saved variants often share failures; preserve their paths and deduplicate.
+            for branch in context {
+                for error in branch {
+                    collect(error, out);
+                }
+            }
+        } else {
+            let message = format!("{}: {}", error.instance_path(), error.masked());
+            if !out.contains(&message) {
+                out.push(message);
+            }
+        }
+    }
+    let mut errors = vec![];
+    for error in validator.iter_errors(value).take(8) {
+        collect(&error, &mut errors);
+    }
+    errors
 }
 pub fn operation_for_tool(name: &str) -> Option<&'static str> {
     CONTRACTS["operations"]
@@ -147,4 +177,23 @@ pub fn merge(base: &mut Value, extras: &Value) {
 }
 pub fn object() -> Value {
     Value::Object(Map::new())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn cached_union_branches_keep_their_root_definitions() {
+        let branch = json!({"$ref":"#/$defs/choice"});
+        let number = json!({"$defs":{"choice":{"type":"integer"}}});
+        let string = json!({"$defs":{"choice":{"type":"string"}}});
+        for _ in 0..2 {
+            assert!(branch_valid(&branch, &json!(4), &number));
+            assert!(!branch_valid(&branch, &json!(4), &string));
+            assert!(branch_valid(&branch, &json!("four"), &string));
+            assert!(!branch_valid(&branch, &json!("four"), &number));
+        }
+    }
 }

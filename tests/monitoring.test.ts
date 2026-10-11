@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { dispatcherArgs } from "./helpers/dispatcher.ts";
 import { seedWorkspace } from "./helpers/workspace.ts";
 import { revisionFor } from "./helpers/revisions.ts";
 import test from "node:test";
@@ -7,10 +9,10 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Effect } from "effect";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
-import { stateToolResult } from "./reference-server/src/entrypoints/mcp.ts";
-import { createGoodfindsServer } from "./reference-server/src/entrypoints/mcp.ts";
-import { backendLayer } from "./reference-server/src/entrypoints/backend.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
+import { stateToolResult } from "./helpers/native-mcp.ts";
+import { createNativeServer } from "./helpers/native-mcp.ts";
+import { nativeOptions } from "./helpers/native-mcp.ts";
 import { stateSchema, stateFromToolResult } from "@goodfinds/contracts/state";
 import { monitoringSummary, monitoringRequest } from "@goodfinds/contracts/monitoring";
 import { createElement } from "react";
@@ -24,7 +26,7 @@ const otherThread = "00000000-0000-4000-8000-000000000002";
 function fixture(t: TestContext) {
   const dir = mkdtempSync(resolve(tmpdir(), "goodfinds-monitoring-"));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
-  const store = new WorkspaceStore(seedWorkspace(dir));
+  const store = new NativeWorkspace(seedWorkspace(dir));
   const read = () => stateSchema.parse(Effect.runSync(store.request("get_workspace", {})).state);
   Effect.runSync(
     store.request("save_settings", {
@@ -50,20 +52,17 @@ function fixture(t: TestContext) {
     status: "active" | "paused" | "removed" | "blocked",
     extra: Record<string, unknown> = {},
   ) =>
-    mutate("report_host_schedule", {
-      report: {
-        search_id: searchId,
+    mutate(
+      "report_dispatcher_schedule",
+      dispatcherArgs(read(), [searchId], {
         automation_id: "fixture-coffee-search",
         thread_id: thread,
         status,
         interval_minutes: 60,
-        rrule:
-          read().monitoring.find((item) => item.search_id === searchId)?.plan.rrule ?? undefined,
-        timezone: read().config.schedule.quiet_hours.timezone,
-        evidence: "Fictional host receipt for this isolated test; no real automation created",
+        evidence: "Fictional host receipt for this isolated test",
         ...extra,
-      },
-    });
+      }),
+    );
   const summary = () => {
     const item = read().monitoring.find((entry) => entry.search_id === searchId);
     assert.ok(item);
@@ -114,14 +113,17 @@ void test("saving criteria and a recurring preference never imply an active sche
   assert.equal(f.read().monitor.scheduler_available, false);
   assert.equal(f.read().config.schedule.enabled, false);
   const restarted = Effect.runSync(
-    new WorkspaceStore(seedWorkspace(f.dir)).request("get_workspace", {}),
+    new NativeWorkspace(seedWorkspace(f.dir)).request("get_workspace", {}),
   ).state;
   assert.equal(
     restarted.monitoring.find((item) => item.search_id === f.searchId)?.interval_minutes,
     120,
   );
   const context = Effect.runSync(f.store.query("get_search_context", { search_id: f.searchId }));
-  assert.ok("paths" in context && context.paths?.database === f.store.databasePath);
+  assert.ok(
+    "paths" in context &&
+      z.object({ database: z.string() }).parse(context.paths).database === f.store.databasePath,
+  );
   assert.ok("monitoring" in context && context.monitoring?.length === 1);
 });
 
@@ -154,7 +156,7 @@ void test("pause and resume leaves an unscheduled search with a visible scheduli
   const markup = render();
   assert.match(markup, /aria-haspopup="menu"/);
   assert.equal(f.summary().label, "Monitoring off");
-  assert.ok(markup.includes(`aria-label="Monitoring for Demo laptop: Monitoring off"`));
+  assert.match(markup, /Schedule<\/dt><dd[^>]*>Off<\/dd>/);
   assert.match(monitoringRequest(f.searchId, "search"), /Save preference recurring/);
 
   f.choose("recurring");
@@ -171,7 +173,9 @@ void test("active receipts require the search choice, host identity and requeste
   f.choose("recurring");
   assert.throws(() => f.report("active", { automation_id: null }));
   assert.throws(() => f.report("active", { evidence: "" }));
-  assert.throws(() => f.report("active", { interval_minutes: 120 }));
+  assert.throws(() =>
+    f.report("active", { interval_minutes: 120, rrule: "FREQ=HOURLY;INTERVAL=2" }),
+  );
   f.report("active");
   assert.equal(f.summary().status, "active");
   assert.equal(f.read().monitor.scheduler_available, true);
@@ -183,10 +187,21 @@ void test("active receipts require the search choice, host identity and requeste
   const otherWatch = f.read().searches.find((item) => item.id !== f.searchId);
   assert.ok(otherWatch);
   f.mutate("set_monitoring", { monitoring: { search_id: otherWatch.id, preference: "recurring" } });
-  assert.throws(() => f.report("active", { search_id: otherWatch.id }));
+  const state = f.read();
+  assert.throws(() =>
+    f.mutate(
+      "report_dispatcher_schedule",
+      dispatcherArgs(state, [otherWatch.id], {
+        automation_id: "fixture-coffee-search",
+        thread_id: thread,
+        status: "active",
+        evidence: "Duplicate host identity",
+      }),
+    ),
+  );
 });
 
-void test("frequency changes reconcile the existing automation and preserve run evidence", (t) => {
+void test("frequency changes reconcile the shared automation without inventing a successful search", (t) => {
   const f = fixture(t);
   f.choose("recurring");
   f.report("active", { last_run_at: "2026-10-04T17:00:00Z" });
@@ -195,7 +210,7 @@ void test("frequency changes reconcile the existing automation and preserve run 
   assert.equal(f.summary().status, "setup_needed");
   f.report("active", { interval_minutes: 120, next_run_at: "2026-10-04T20:00:00Z" });
   assert.equal(f.summary().status, "active");
-  assert.equal(f.summary().schedule?.last_run_at, "2026-10-04T17:00:00Z");
+  assert.equal(f.summary().schedule?.last_run_at, null);
   assert.equal(f.read().monitor.next_run_at, "2026-10-04T20:00:00Z");
 });
 
@@ -222,15 +237,15 @@ void test("one-off choice and pause require verified host stop, including failed
   assert.equal(f.summary().next_action, "resume");
 });
 
-void test("a failed host setup remains visible and retries are bound to its buying thread", (t) => {
+void test("a failed host setup remains visible and a verified schedule binds its buying thread", (t) => {
   const f = fixture(t);
   f.choose("recurring");
   f.report("blocked", { automation_id: null, evidence: "Host scheduler unavailable" });
   assert.equal(f.summary().status, "blocked");
   assert.equal(f.summary().next_action, "start");
   assert.equal(f.summary().interruption, "Host scheduler unavailable");
-  assert.throws(() => f.report("active", { thread_id: otherThread }));
   f.report("active");
+  assert.throws(() => f.report("active", { thread_id: otherThread }));
   assert.equal(f.summary().interruption, null);
 });
 
@@ -262,10 +277,14 @@ void test("fulfilled goals request host pause and sample workspaces inherit no r
       false,
       null,
       state.config.schedule.quiet_hours,
+      Date.parse(state.generated_at),
+      state.dispatchers[0]
+        ? { ...state.dispatchers[0], plan: { ...state.dispatchers[0].plan, search_ids: [] } }
+        : undefined,
     ).next_action,
     "pause",
   );
-  const sampleStore = new WorkspaceStore(f.dir, "sample");
+  const sampleStore = new NativeWorkspace(f.dir, "sample");
   const sample = Effect.runSync(sampleStore.request("get_workspace", {})).state;
   assert.deepEqual(sample.config.monitoring, []);
   assert.ok(sample.monitoring.every((item) => item.status === "saved" && item.schedule === null));
@@ -304,10 +323,10 @@ void test("monitoring edits respect revisions and compact results expose follow-
 
 void test("MCP exposes monitoring choice and verified receipts through the real tool contract", async (t) => {
   const f = fixture(t);
-  const app = createGoodfindsServer(seedWorkspace(f.dir), backendLayer(f.dir, null));
+  const app = createNativeServer(seedWorkspace(f.dir), nativeOptions(f.dir, null));
   t.after(() => app.server.close());
   const set = app.calls.get("set_goodfinds_monitoring");
-  const report = app.calls.get("report_goodfinds_host_schedule");
+  const report = app.calls.get("report_goodfinds_dispatcher_schedule");
   assert.ok(set && report);
   const chosen = stateFromToolResult(
     await set({
@@ -324,17 +343,12 @@ void test("MCP exposes monitoring choice and verified receipts through the real 
   const registered = stateFromToolResult(
     await report({
       mode: "live",
-      expected_entity_revision: chosen.revisions.monitoring[f.searchId] ?? chosen.revisions.absent,
-      report: {
-        search_id: f.searchId,
+      ...dispatcherArgs(chosen, [f.searchId], {
         automation_id: "fixture-coffee-search",
         thread_id: thread,
-        interval_minutes: 60,
         status: "active",
-        rrule: chosen.monitoring[0]?.plan.rrule,
-        timezone: chosen.monitoring[0]?.plan.timezone,
         evidence: "Fictional active host receipt",
-      },
+      }),
     }),
   );
   assert.equal(
@@ -369,14 +383,36 @@ void test("panel distinguishes a pending search from registration and verified s
       }),
     );
   assert.match(render(), /Search once/);
-  assert.match(render(), /Keep watching/);
+  assert.match(render(), /Start checks/);
   f.choose("recurring");
-  assert.match(render(), /Monitoring setup needed/);
+  assert.match(render(), /Automatic checks/);
+  assert.match(render(), /Start checks/);
   assert.doesNotMatch(render(), /Monitoring active/);
   f.report("active");
-  assert.match(render(), /Monitoring active/);
-  assert.match(render(), /No scheduled run verified yet/);
+  assert.match(render(), /Automatic checks/);
+  assert.match(render(), /Pause checks/);
+  assert.equal(f.summary().schedule?.last_run_at, null);
+  assert.match(render(), /Last scheduled check<\/dt><dd><span>Not checked yet<\/span>/);
   f.report("active", { last_run_at: "2026-10-04T17:00:00Z" });
-  assert.match(render(), /Last scheduled run/);
-  assert.doesNotMatch(render(), /No scheduled run verified yet/);
+  assert.match(render(), /Not checked yet/, "A shared host wake-up does not prove this search ran");
+  let run = f.mutate("request_search_run", {
+    request: { search_id: f.searchId, request_id: randomUUID(), trigger: "scheduled" },
+  }).search_runs[0];
+  assert.ok(run);
+  for (const query of run.queries) {
+    run = f.mutate("update_search_run", {
+      request: {
+        run_id: run.id,
+        expected_version: run.version,
+        query: { ...query, status: "completed", result_count: 0, unique_relevant_count: 0 },
+      },
+    }).search_runs[0];
+    assert.ok(run);
+  }
+  f.mutate("update_search_run", {
+    request: { run_id: run.id, expected_version: run.version, phase: "completed" },
+  });
+  assert.ok(f.summary().schedule?.last_run_at);
+  assert.match(render(), /Last scheduled check<\/dt><dd><time /);
+  assert.doesNotMatch(render(), /Not checked yet/);
 });

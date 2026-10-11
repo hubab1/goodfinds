@@ -12,7 +12,7 @@ import { randomUUID } from "node:crypto";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Clock, Effect } from "effect";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
 import { ListingCard } from "../apps/ui/src/features/listings/listing-card.tsx";
 import { ContactOptions } from "../apps/ui/src/features/conversations/contact-options.tsx";
 import { BrowserSettings } from "../apps/ui/src/features/settings/browser-settings.tsx";
@@ -27,8 +27,14 @@ import type { Marketplace } from "@goodfinds/contracts/integrations";
 import type { GoodfindsState } from "@goodfinds/contracts/state";
 import { stateSchema } from "@goodfinds/contracts/state";
 import type { SellerConversationSummary } from "@goodfinds/contracts/seller-conversation";
-import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
+import { createNativeServer } from "./helpers/native-mcp.ts";
 
+const ids: Partial<Record<Marketplace, string>> = {
+  poshmark: "6577c0f3ac1f7629f1c445fe",
+  depop: "fixture-nike-hoodie",
+  mercari: "m32963257828",
+  cars_com: "92353b66-069f-47b0-a250-20a82f4ecd40",
+};
 const urls: Record<Marketplace, string> = {
   facebook_marketplace: "https://www.facebook.com/marketplace/item/123456789012345/",
   ebay: "https://www.ebay.co.uk/itm/123456789012345",
@@ -36,6 +42,12 @@ const urls: Record<Marketplace, string> = {
   gumtree: "https://www.gumtree.com/p/coffee-makers/fixture/123456789012345",
   autotrader: "https://www.autotrader.co.uk/car-details/123456789012345",
   craigslist: "https://london.craigslist.org/for/d/fixture/123456789012345.html",
+  cargurus: "https://www.cargurus.com/details/123456789012345",
+  poshmark: "https://poshmark.com/listing/fixture-6577c0f3ac1f7629f1c445fe",
+  depop: "https://www.depop.com/products/fixture-nike-hoodie/",
+  mercari: "https://www.mercari.com/us/item/m32963257828/",
+  cars_com: "https://www.cars.com/vehicledetail/92353b66-069f-47b0-a250-20a82f4ecd40/",
+  autotrader_us: "https://www.autotrader.com/cars-for-sale/vehicle/123456789012345",
 };
 
 function fixture(t: TestContext, source: Marketplace, browser: "in_app" | "external" = "in_app") {
@@ -51,7 +63,7 @@ function fixture(t: TestContext, source: Marketplace, browser: "in_app" | "exter
     monotonicTimeNanos: Effect.succeed(0n),
     sleep: () => Effect.void,
   };
-  const store = new WorkspaceStore(seedWorkspace(folder));
+  const store = new NativeWorkspace(seedWorkspace(folder));
   const run = (name: string, args: Record<string, unknown> = {}) => {
     const result = Effect.runSync(
       store.request(name, args).pipe(Effect.provideService(Clock.Clock, clock)),
@@ -65,7 +77,7 @@ function fixture(t: TestContext, source: Marketplace, browser: "in_app" | "exter
   run("import_listing_observations", {
     observations: [
       {
-        listing_id: "123456789012345",
+        listing_id: ids[source] ?? "123456789012345",
         title: "Fictional test listing",
         url: urls[source],
         source,
@@ -262,7 +274,7 @@ void test("contact reports bind to saved marketplace, listing, revision and host
         context_id: before.access_context,
         report: f.report,
       }),
-    /changed/u,
+    /does not match this resource/u,
   );
   assert.equal(saved.config.listing_contacts?.[0]?.listing_key, f.listing.key);
   assert.equal(saved.config.listing_contacts?.[0]?.context_id, saved.access_context);
@@ -270,6 +282,10 @@ void test("contact reports bind to saved marketplace, listing, revision and host
 
 void test("settings shows the selected profile's observed sign-in and refuses stale or future badges", (t) => {
   const f = fixture(t, "vinted");
+  f.run("save_settings", {
+    expected_entity_revision: f.state().revisions.settings,
+    settings: { regional_preferences: { country: "GB" } },
+  });
   f.ready();
   const text = (value = f.state()) =>
     renderToStaticMarkup(createElement(BrowserSettings, { state: value, busy: false })).replace(
@@ -535,7 +551,7 @@ void test("backend blocks unobserved contact and rechecks revoked controls immed
 
 void test("MCP contact-report tool persists listing evidence without sending", async (t) => {
   const f = fixture(t, "vinted");
-  const { server, calls } = createGoodfindsServer(seedWorkspace(f.folder));
+  const { server, calls } = createNativeServer(seedWorkspace(f.folder));
   t.after(() => server.close());
   const call = calls.get("report_goodfinds_listing_contact");
   assert.ok(call);

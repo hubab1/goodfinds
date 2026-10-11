@@ -19,6 +19,7 @@ use rmcp::{
 use serde_json::{Value, json};
 use std::{
     borrow::Cow,
+    io::IsTerminal,
     path::{Path, PathBuf},
     process::Stdio,
     sync::{
@@ -215,7 +216,30 @@ impl ServerHandler for NativeServer {
         context: RequestContext<RoleServer>,
     ) -> std::result::Result<CallToolResponse, ErrorData> {
         let cancellation = RequestCancellation::new(&context);
-        let args = Value::Object(request.arguments.unwrap_or_default());
+        let mut args = Value::Object(request.arguments.unwrap_or_default());
+        if request.name == "get_goodfinds_setup_context" && args["mode"] != "sample" {
+            let initial = context
+                .peer
+                .peer_info()
+                .and_then(|p| serde_json::to_value(p.as_ref()).ok())
+                .unwrap_or(Value::Null);
+            let mut hints = crate::regional::host_hints(&initial["_meta"]);
+            let meta = serde_json::to_value(&context.meta).unwrap_or(Value::Null);
+            for value in [
+                crate::regional::host_hints(&meta),
+                crate::regional::host_hints(
+                    &serde_json::to_value(&request.meta).unwrap_or(Value::Null),
+                ),
+                args["hints"].clone(),
+            ] {
+                if let Some(fields) = value.as_object() {
+                    for (key, value) in fields {
+                        hints[key] = value.clone();
+                    }
+                }
+            }
+            args["hints"] = hints;
+        }
         let flag = cancellation.flag.clone();
         let result = tokio::select! {
             _=context.ct.cancelled()=>{flag.store(true,Ordering::SeqCst);Err(Error::new("transport_error","The request was cancelled"))},
@@ -318,6 +342,11 @@ pub async fn protocol_cli(
     tool: Option<&str>,
     input: Option<&Path>,
 ) -> Result<Option<Value>> {
+    if command == "client" && std::io::stdin().is_terminal() {
+        return Err(Error::validation(
+            "The JSON client needs piped stdin; terminal line limits can corrupt requests. Use call TOOL --input FILE for an independent call, or a persistent client with piped stdin. Inspect arguments with schema TOOL.",
+        ));
+    }
     let executable = std::env::current_exe()?;
     let mut process = Command::new(executable);
     process
@@ -336,8 +365,6 @@ pub async fn protocol_cli(
         "TMP",
         "CODEX_HOME",
         "GOODFINDS_WORKSPACE_DIR",
-        "GOODFINDS_EBAY_CLIENT_ID",
-        "GOODFINDS_EBAY_CLIENT_SECRET",
     ] {
         if let Some(value) = std::env::var_os(key) {
             process.env(key, value);
@@ -362,8 +389,17 @@ pub async fn protocol_cli(
         .await
         .map_err(|e| Error::new("transport_error", e.to_string()))?;
     let result:Result<Option<Value>>=async{
-        if command=="doctor"{let listed=client.list_all_tools().await.map_err(|e|Error::new("transport_error",e.to_string()))?;let metadata=listed.iter().find(|t|t.name=="open_goodfinds_panel").ok_or_else(||Error::validation("The Goodfinds panel tool was not advertised"))?;let metadata=serde_json::to_value(metadata)?;let uri=metadata["_meta"]["ui"]["resourceUri"].as_str().ok_or_else(||Error::validation("The Goodfinds panel resource was not advertised"))?;let resource=client.read_resource(ReadResourceRequestParams::new(uri)).await.map_err(|e|Error::new("transport_error",e.to_string()))?;let context=client.call_tool(CallToolRequestParams::new("get_goodfinds_search_context").with_arguments(serde_json::Map::new())).await.map_err(|e|Error::new("transport_error",e.to_string()))?;if context.is_error==Some(true){return Err(Error::validation("Goodfinds context could not be read"))}
-            return Ok(Some(json!({"status":"ready","tools":listed.len(),"panel_resource":!resource.contents.is_empty(),"context_readable":true,"native_questions":"Host-dependent; helper uses the resumable chat fallback","next_step":"If tools are missing in Codex, check the plugin MCP connection and open a fresh chat after installation. Use client for a persistent fallback session."})))
+        if command=="doctor" {
+            let listed=client.list_all_tools().await.map_err(|e|Error::new("transport_error",e.to_string()))?;
+            let metadata=listed.iter().find(|t|t.name=="open_goodfinds_panel").ok_or_else(||Error::validation("The Goodfinds panel tool was not advertised"))?;
+            let metadata=serde_json::to_value(metadata)?;
+            let uri=metadata["_meta"]["ui"]["resourceUri"].as_str().ok_or_else(||Error::validation("The Goodfinds panel resource was not advertised"))?;
+            let resource=client.read_resource(ReadResourceRequestParams::new(uri)).await.map_err(|e|Error::new("transport_error",e.to_string()))?;
+            let context=client.call_tool(CallToolRequestParams::new("get_goodfinds_runtime_context").with_arguments(serde_json::Map::new())).await.map_err(|e|Error::new("transport_error",e.to_string()))?;
+            if context.is_error==Some(true){return Err(Error::validation("Goodfinds context could not be read"))}
+            let runs=client.call_tool(CallToolRequestParams::new("list_goodfinds_search_runs").with_arguments(json!({"progress_only":true}).as_object().unwrap().clone())).await.map_err(|e|Error::new("transport_error",e.to_string()))?;
+            if runs.is_error==Some(true){return Err(Error::validation("Goodfinds run status could not be read"))}
+            return Ok(Some(json!({"status":"ready","tools":listed.len(),"panel_resource":!resource.contents.is_empty(),"context_readable":true,"runtime":context.structured_content,"runs":runs.structured_content,"native_questions":"Host-dependent; helper uses the resumable chat fallback","next_step":"Protocol ready does not establish host capability. Use the original buying chat to inspect interrupted runs, drain pending alerts and reconcile stale bindings while preserving pauses. This helper session has its own observation context."})))
         }
         if command=="call"{let(name,path)=tool.zip(input).ok_or_else(||Error::validation("Use call TOOL --input FILE"))?;let text=tokio::fs::read_to_string(path).await?;let args:Value=serde_json::from_str(&text)?;let object=args.as_object().ok_or_else(||Error::validation("Tool arguments must be an object"))?.clone();let result=client.call_tool(CallToolRequestParams::new(name.to_owned()).with_arguments(object)).await.map_err(|e|Error::new("transport_error",e.to_string()))?;return Ok(Some(compact(result)))}
         if command!="client"{return Err(Error::validation("Choose doctor, call, or client"))}

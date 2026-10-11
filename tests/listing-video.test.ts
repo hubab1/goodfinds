@@ -5,12 +5,12 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
+import { createNativeServer } from "./helpers/native-mcp.ts";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 
 void test("listing videos are cached, imported and retrieved separately from state", async (t) => {
   const data = await mkdtemp(resolve(tmpdir(), "goodfinds-video-"));
-  const { server, calls } = createGoodfindsServer(seedWorkspace(data));
+  const { server, calls } = createNativeServer(seedWorkspace(data));
   t.after(async () => {
     await server.close();
     await rm(data, { recursive: true, force: true });
@@ -64,7 +64,7 @@ void test("listing videos are cached, imported and retrieved separately from sta
 
 void test("price-only and partial refreshes retain saved photos/videos and validate media types and coverage", async (t) => {
   const data = await mkdtemp(resolve(tmpdir(), "goodfinds-retain-media-"));
-  const { server, calls } = createGoodfindsServer(seedWorkspace(data));
+  const { server, calls } = createNativeServer(seedWorkspace(data));
   t.after(async () => {
     await server.close();
     await rm(data, { recursive: true, force: true });

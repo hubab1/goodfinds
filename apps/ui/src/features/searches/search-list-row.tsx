@@ -2,16 +2,15 @@ import "./search-list.css";
 import { Menu, MenuTrigger, MenuContent, MenuItem } from "@/components/ui/menu";
 import { canProposeAction, canProposeEvent } from "@goodfinds/contracts/workflow-model";
 import type { Workflow } from "@goodfinds/contracts/workflow-model";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { MonitoringSummary } from "@goodfinds/contracts/monitoring";
 import { monitoringRequest } from "@goodfinds/contracts/monitoring";
-import { Monitoring } from "@/features/searches/monitoring";
+import { Monitoring, MonitoringAction, monitoringStatus } from "@/features/searches/monitoring";
 import { HostMenuAction } from "@/host-action";
 import {
   Ellipsis,
   CircleAlert,
   RotateCcw,
-  CalendarClock,
   LoaderCircle,
   MapPin,
   Pause,
@@ -21,13 +20,14 @@ import {
   Route,
   Search,
   Square,
+  Trash2,
 } from "lucide-react";
 import { ACTIVE_SEARCH_PHASES } from "@goodfinds/contracts/search-workflow";
 import type { SearchRun } from "@goodfinds/contracts/search-workflow";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   searchBudget,
+  searchBudgetLabel,
   searchLocation,
   searchRequirements,
   searchSummary,
@@ -51,6 +51,7 @@ function SearchOptions({
   run,
   workflow,
   stop,
+  onDelete,
 }: {
   search: SavedSearch;
   busy: boolean;
@@ -63,18 +64,26 @@ function SearchOptions({
   run?: SearchRun | undefined;
   workflow?: Workflow | undefined;
   stop: () => void;
+  onDelete?: ((button: HTMLElement) => void) | undefined;
 }) {
+  const trigger = useRef<HTMLButtonElement>(null);
+  const openingDelete = useRef(false);
   const recurring =
     monitoring.preference === "recurring" || Boolean(monitoring.schedule?.automation_id);
   return (
-    <Menu>
+    <Menu
+      onOpenChange={(open) => {
+        if (open) openingDelete.current = false;
+      }}
+    >
       <MenuTrigger
+        ref={trigger}
         render={<Button size="icon-sm" />}
         aria-label={`More options for ${search.name}`}
       >
         <Ellipsis aria-hidden="true" />
       </MenuTrigger>
-      <MenuContent>
+      <MenuContent finalFocus={() => !openingDelete.current}>
         <MenuItem
           className="justify-start"
           disabled={
@@ -87,37 +96,6 @@ function SearchOptions({
           <Search aria-hidden="true" />{" "}
           {canProposeEvent(workflow, "resume") ? "Resume search" : "Search now"}
         </MenuItem>
-        {!sample &&
-          !fulfilled &&
-          (!recurring || search.enabled) &&
-          ["choice_needed", "saved", "setup_needed", "blocked", "paused"].includes(
-            monitoring.status,
-          ) && (
-            <HostMenuAction
-              className="w-full justify-start"
-              disabled={busy}
-              icon={<CalendarClock aria-hidden="true" />}
-              request={monitoringRequest(search.id, "search")}
-            >
-              {monitoring.next_action === "resume"
-                ? "Resume monitoring"
-                : monitoring.next_action === "update"
-                  ? "Update monitoring"
-                  : monitoring.preference === "recurring"
-                    ? "Set up monitoring"
-                    : "Keep watching"}
-            </HostMenuAction>
-          )}
-        {!sample && monitoring.status === "unverified" && (
-          <HostMenuAction
-            className="w-full justify-start"
-            disabled={busy}
-            icon={<CalendarClock aria-hidden="true" />}
-            request={monitoringRequest(search.id, "check")}
-          >
-            Check schedule
-          </HostMenuAction>
-        )}
         {run && canProposeAction(workflow, "cancel_search_run") && (
           <MenuItem
             className="justify-start"
@@ -160,6 +138,19 @@ function SearchOptions({
             {search.enabled ? "Pause search" : "Resume search"}
           </MenuItem>
         )}
+        {onDelete && (
+          <MenuItem
+            disabled={busy}
+            onClick={() => {
+              if (trigger.current) {
+                openingDelete.current = true;
+                onDelete(trigger.current);
+              }
+            }}
+          >
+            <Trash2 aria-hidden="true" /> Delete search
+          </MenuItem>
+        )}
       </MenuContent>
     </Menu>
   );
@@ -179,6 +170,7 @@ export function SearchListRow({
   run,
   workflow,
   onListings,
+  onDelete,
 }: {
   search: SavedSearch;
   origin: string;
@@ -193,11 +185,13 @@ export function SearchListRow({
   run?: SearchRun | undefined;
   workflow?: Workflow | undefined;
   onListings?: ((unseen: boolean) => void) | undefined;
+  onDelete?: ((button: HTMLElement) => void) | undefined;
 }) {
   const [expanded, setExpanded] = useState(false);
   const detailsId = `search-details-${search.id}`;
   const requirements = searchRequirements(search);
   const geography = searchLocation(search, origin);
+  const budgetLabel = searchBudgetLabel(search);
   const active = run && ACTIVE_SEARCH_PHASES.has(run.phase);
   const activity = active
     ? !run.worker
@@ -227,26 +221,6 @@ export function SearchListRow({
               {search.name}
             </button>
           </h3>
-          <button
-            type="button"
-            className="rounded-full focus-visible:outline-2 focus-visible:outline-offset-2"
-            aria-label={`Monitoring for ${search.name}: ${monitoring.label}`}
-            aria-expanded={expanded}
-            aria-controls={detailsId}
-            onClick={() => setExpanded(!expanded)}
-          >
-            <Badge
-              variant="outline"
-              className="px-2 py-0.5 text-[11px] font-normal"
-              title={
-                monitoringActive
-                  ? "Automatic searches are on. View details for search times."
-                  : "View monitoring details and available actions."
-              }
-            >
-              {monitoring.label}
-            </Badge>
-          </button>
         </div>
         <p className="search-row-summary text-xs leading-relaxed">{searchSummary(search)}</p>
         <div
@@ -333,6 +307,12 @@ export function SearchListRow({
           )}
         </div>
         <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+          {!sample && (
+            <>
+              <dt className="text-muted-foreground">Schedule</dt>
+              <dd className="text-right">{monitoringStatus(monitoring)}</dd>
+            </>
+          )}
           <dt className="text-muted-foreground">Last searched</dt>
           <dd className="text-right">
             {search.last_searched_at ? <RelativeTime value={search.last_searched_at} /> : "Not yet"}
@@ -349,8 +329,8 @@ export function SearchListRow({
       </div>
       <div className="search-row-actions">
         <p className="search-row-budget text-base font-medium leading-snug">
-          {searchBudget(search) !== "No price limit" && (
-            <span className="block text-[11px] font-normal">Up to</span>
+          {budgetLabel !== null && (
+            <span className="block text-[11px] font-normal">{budgetLabel}</span>
           )}
           {searchBudget(search)}
           {search.definition.price.period !== "once" && (
@@ -359,7 +339,8 @@ export function SearchListRow({
             </span>
           )}
         </p>
-        <div className="flex items-center gap-2">
+        <div className="search-row-buttons">
+          {!sample && <MonitoringAction summary={monitoring} busy={busy} compact />}
           <Button
             size="sm"
             className="search-details-button"
@@ -378,6 +359,7 @@ export function SearchListRow({
             sample={sample}
             edit={edit}
             onSearch={onSearch}
+            onDelete={onDelete}
             run={run}
             workflow={workflow}
             stop={() => {
@@ -405,7 +387,7 @@ export function SearchListRow({
       <section
         id={detailsId}
         hidden={!expanded}
-        className="col-span-full border-t pt-4"
+        className="search-row-details col-span-full border-t pt-4"
         aria-label={`Search details for ${search.name}`}
       >
         {!sample && (
@@ -418,20 +400,30 @@ export function SearchListRow({
                   : " Retry when you’re ready."}
               </p>
             )}
-            <Monitoring summary={monitoring} revision={revision} busy={busy} action={action} />
+            <Monitoring
+              summary={monitoring}
+              revision={revision}
+              busy={busy}
+              action={action}
+              showActions={false}
+            />
           </div>
         )}
-        <h4 className="mb-3 text-sm font-medium">Search details</h4>
-        <dl className="grid gap-x-8 gap-y-3 @2xl:grid-cols-2">
-          {requirements.map((requirement) => (
-            <div key={requirement.id} className="min-w-0">
-              <dt className="text-xs leading-relaxed">{requirement.label}</dt>
-              <dd className="mt-0.5 text-sm font-medium leading-relaxed break-words">
-                {requirement.value}
-              </dd>
-            </div>
-          ))}
-        </dl>
+        <div>
+          <h4 className="mb-3 text-sm font-medium">Search details</h4>
+          <dl className="grid gap-x-8 gap-y-3 @2xl:grid-cols-2">
+            {requirements.map((requirement) => (
+              <div key={requirement.id} className="min-w-0">
+                <dt className="text-xs leading-relaxed text-muted-foreground">
+                  {requirement.label}
+                </dt>
+                <dd className="mt-0.5 text-sm font-medium leading-relaxed break-words">
+                  {requirement.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
       </section>
     </li>
   );

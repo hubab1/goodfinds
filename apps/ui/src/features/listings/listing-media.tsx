@@ -117,7 +117,7 @@ function SavedImage({
       className={cn(
         avatar
           ? "flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted"
-          : "relative isolate flex aspect-[4/3] max-h-80 items-center justify-center overflow-hidden rounded-lg bg-white",
+          : "relative isolate flex aspect-[4/3] max-h-80 items-center justify-center overflow-hidden rounded-lg bg-background",
         className,
       )}
     >
@@ -301,7 +301,7 @@ export function ListingThumbnail({
   return (
     <fieldset
       ref={carousel}
-      className="listing-photo-carousel group relative min-w-0 aspect-[4/3] overflow-hidden rounded-xl border bg-white"
+      className="listing-photo-carousel group relative min-w-0 aspect-[4/3] overflow-hidden rounded-xl border bg-background"
       aria-roledescription="carousel"
       aria-label={`${label === "media" ? "Photos and videos" : "Photos"} of ${listing.title}`}
     >
@@ -526,12 +526,12 @@ export function SellerDetails({
           <Popover.Popup
             ref={popup}
             initialFocus={popup}
-            className="max-h-[var(--available-height)] w-80 max-w-[calc(100vw-2rem)] space-y-3 overflow-y-auto rounded-xl border bg-white p-4 text-xs leading-relaxed shadow-lg outline-none"
+            className="max-h-[var(--available-height)] w-80 max-w-[calc(100vw-2rem)] space-y-3 overflow-y-auto rounded-xl border bg-popover p-4 text-xs leading-relaxed text-popover-foreground shadow-lg outline-none"
           >
             <div className="flex items-start justify-between gap-3">
               <Popover.Title className="text-sm font-semibold">{name}</Popover.Title>
               <Popover.Close
-                className="flex size-7 shrink-0 items-center justify-center rounded-md bg-black text-white"
+                className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground"
                 aria-label="Close seller details"
               >
                 <X className="size-4" aria-hidden="true" />

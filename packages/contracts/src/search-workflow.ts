@@ -78,6 +78,9 @@ type SearchBrief = {
       }
     | undefined;
 };
+function queryIdentity(text: string): string {
+  return text.trim().toLowerCase().replace(/\s+/gu, " ");
+}
 export function queryPlan(search: SearchBrief, feedback: FeedbackEvent[] = []): SearchQuery[] {
   const excluded = new Set(
     excludedModels(search, feedback).map((value) => modelIdentity(value, search)),
@@ -104,21 +107,30 @@ export function queryPlan(search: SearchBrief, feedback: FeedbackEvent[] = []): 
       purpose: "alternative" as const,
     })),
   ];
+  const categoryQueries = new Set(
+    definitions
+      .filter((query) => query.purpose === "category")
+      .map((query) => queryIdentity(query.text)),
+  );
   const seen = new Set<string>();
   return (search.marketplaces ?? ["facebook_marketplace"])
     .flatMap((marketplace) =>
       definitions
         .flatMap((definition, index) => {
-          if (
-            definition.purpose !== "category" &&
-            excluded.has(modelIdentity(definition.text, search))
-          )
+          const identity = queryIdentity(definition.text);
+          const purpose = categoryQueries.has(identity) ? "category" : definition.purpose;
+          if (purpose !== "category" && excluded.has(modelIdentity(definition.text, search)))
             return [];
-          const key = `${marketplace}:${definition.text.trim().toLowerCase().replace(/\s+/gu, " ")}`;
+          const key = `${marketplace}:${identity}`;
           if (seen.has(key)) return [];
           seen.add(key);
           return [
-            searchQuerySchema.parse({ ...definition, id: `${marketplace}-${index}`, marketplace }),
+            searchQuerySchema.parse({
+              ...definition,
+              purpose,
+              id: `${marketplace}-${index}`,
+              marketplace,
+            }),
           ];
         })
         .slice(0, 20),

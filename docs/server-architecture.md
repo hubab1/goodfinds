@@ -4,19 +4,19 @@ Goodfinds runs a native Rust server with bundled SQLite. The React UI and shared
 
 ## Runtime and contracts
 
-[workspace.rs](../apps/server/src/workspace.rs) owns command transactions, optimistic revisions and retry receipts. Listing, search, seller and connection modules operate on its `Workspace`; they do not start another database connection or asynchronous task inside a command. Network operations and host transport live outside that synchronous boundary. `bun run architecture:check` checks this separation and rejects production dependencies on the development reference server.
+[workspace.rs](../apps/server/src/workspace.rs) owns command transactions, optimistic revisions and retry receipts. Listing, search, seller and connection modules operate on its `Workspace`; they do not start another database connection or asynchronous task inside a command. Network operations and host transport live outside that synchronous boundary. `bun run architecture:check` checks this separation.
 
-[storage.rs](../apps/server/src/storage.rs) opens databases and loads configuration. MCP, CLI and the loopback preview call the same native application. [media.rs](../apps/server/src/media.rs) owns private, content-addressed files; [ebay.rs](../apps/server/src/ebay.rs) uses the official HTTP API with application credentials. Neither module delegates execution to a JavaScript runtime.
+[storage.rs](../apps/server/src/storage.rs) opens databases and loads configuration. MCP, CLI and the loopback preview call the same native application. [media.rs](../apps/server/src/media.rs) owns private, content-addressed files. Marketplace browsing runs through the host browser; the native server validates and persists imported evidence.
 
 [packages/contracts](../packages/contracts/package.json) supplies the UI's types, schemas, lifecycle descriptions and tool names. The build exports JSON schemas and tool metadata to `apps/server/data/contracts.json`; [contracts.rs](../apps/server/src/contracts.rs) embeds and validates them. Rust also enforces semantic guards that JSON Schema cannot express, such as matching an observed listing URL to its ID. Update both those guards and their contract tests when changing an interface.
 
 Run `bun run contracts:generate` after editing shared contracts, and `bun run contracts:check` to verify the committed export. Generation uses UTC regardless of the developer's local timezone, so schema defaults and the packaged contracts remain reproducible.
 
-[tests/reference-server](../tests/reference-server/README.md) retains the prior TypeScript implementation for regression comparisons and contract export. It is a development fixture, excluded from plugin packages. UI development starts the native MCP executable. Rust tests compare key outcomes with reference fixtures; the packaged smoke test exercises the actual executable with an empty `PATH`.
+Contract generation reads the shared schemas in `packages/contracts`, tool metadata in `packages/contracts/data/tool-metadata.json`, and the native SQLite schema. Tests exercise Rust directly through `apps/server/examples/test-driver.rs` or the native MCP executable. The driver is built only with the `test-support` feature; plugin builds exclude it. UI development and package smoke checks use the native executable.
 
 ## Domain and storage
 
-`workspace.sqlite` stores buyer configuration, evidence and workflow state; `connections.sqlite` stores connection checks. [storage.rs](../apps/server/src/storage.rs) owns schema initialization and supported additive upgrades; unsupported schemas are rejected. New live workspaces have no searches or confirmed location. New sample workspaces initialize independent databases from bundled fictional data without reading live data. Existing saved workspaces are preserved.
+`workspace.sqlite` stores buyer configuration, evidence and workflow state; `connections.sqlite` stores connection checks. [storage.rs](../apps/server/src/storage.rs) initializes the current schema and rejects unsupported versions. New live workspaces have no searches or confirmed location. New sample workspaces initialize independent databases from bundled fictional data without reading live data. Schema version 1 is the sole supported workspace and backup version. Its canonical SQL contains the complete current schema. Only an empty, unversioned database can be initialized; other versions and removed record fields are rejected without conversion. There are no upgrade, downgrade or backfill paths. Resetting an existing workspace requires explicit authorization to erase its data.
 
 The workspace writer transaction commits related configuration changes, alert withdrawals, workflow updates, leases and operation receipts together. Reads use deferred transactions after initial configuration has been saved. Querying status projects expired work without persisting reconciliation; lifecycle commands reconcile under the writer lock.
 
@@ -24,13 +24,17 @@ Entity revisions advance only for changed entities. Retained deletion records pr
 
 SQLite commands run synchronously under one writer lock. The request checks cancellation before committing; failed or cancelled commands roll back their changes and receipts together. Asynchronous HTTP calls do not hold that transaction. Shutdown closes native transports and their tasks.
 
-Backups capture committed SQLite data, immutable media and connection checks, verify checksums and integrity, and publish a new directory atomically. Restore accepts the supported workspace format; it does not import arbitrary legacy data. Credentials and host schedules stay with their host. See [backup and restore commands](../README.md#your-data).
+Backups capture committed SQLite data, immutable media and connection checks, verify checksums and integrity, and publish a new directory atomically. Restore accepts the supported workspace format. Credentials and host schedules stay with their host. See [backup and restore commands](../README.md#your-data).
 
 ## Commands and naming
 
-[operations.ts](../packages/contracts/src/operations.ts) owns input/output schemas and annotations; [tool-names.ts](../packages/contracts/src/tool-names.ts) maps operations to MCP tools. MCP, preview and backend use these definitions. Model results contain compact changed resources and prerequisites; full panel snapshots use app metadata. Listing summaries are paginated and full evidence is fetched on demand. Encoded video payloads do not belong in model output.
+[operations.ts](../packages/contracts/src/operations.ts) owns input/output schemas and annotations; [tool-names.ts](../packages/contracts/src/tool-names.ts) maps operations to MCP tools. MCP, preview and backend use these definitions. Model results contain compact changed resources and action descriptors; full panel snapshots use app metadata. Listing summaries are paginated and full evidence is fetched on demand. Encoded video payloads do not belong in model output.
 
 Use the vocabulary in [CONTEXT.md](../CONTEXT.md). Goodfinds is the product, `goodfinds-marketplace` the plugin, `marketplace-shopping` the skill and `goodfinds` the MCP namespace. Rust modules use snake_case filenames; shared TypeScript modules use kebab-case filenames. SQL uses plural tables and snake_case columns. Resource IDs name their target, timestamps end in `_at`, millisecond deadlines identify `_ms`, and JSON columns name their contents.
+
+New buying setup uses `get_setup_context` to read settings, revision tokens, saved identity indexes and an optional category template without building a full listing snapshot. Saving a new search also saves its initial monitoring preference in the same transaction: recurring at the saved cadence, defaulting to 120 minutes in a new workspace. An explicit one-off or custom timing choice can be supplied at creation; edits retain the saved monitoring choices. Host registration remains a separate verified step.
+
+The packaged `schema TOOL` command exposes the exact input schema without a mutation. Validation reports bounded field paths together, and the persistent JSON helper requires piped input to avoid terminal line truncation.
 
 Tools follow `<verb>_goodfinds_<resource>`. `get` and `list` read; `save` and `set` edit state; `record` and `report` persist observations. `request` records intent, `claim` acquires ownership, `renew` extends a lease, `prepare` creates reviewable work and `issue` grants a checked permit. Keep intent, ownership, permission and observed completion distinct.
 
@@ -60,4 +64,16 @@ Shared lifecycle definitions own meanings, invariants, events, guards and recove
 
 `bun run docs:generate` produces the packaged [state reference](../skills/marketplace-shopping/references/state-model.md). `bun run docs:check` validates references and freshness; packaging also requires it. Edit shared definitions rather than the generated file. Tests check guard parity, transaction behavior and recovery; generated prose does not establish correctness.
 
-The [Lean specification](../formal/README.md) proves properties of an abstract seller protocol. Reference comparisons and native tests sample implementation agreement; they do not formally verify the Rust server or host browser. Keep consequential boundaries and invariants here, host procedures in skill references, interface rules in [UI design](ui-design.md), and unfinished requirements in the [roadmap](roadmap.md).
+The [Lean specification](../formal/README.md) proves properties of an abstract seller protocol. Model comparisons and native tests sample implementation agreement; they do not formally verify the Rust server or host browser. Keep consequential boundaries and invariants here, host procedures in skill references, interface rules in [UI design](ui-design.md), and unfinished requirements in the [roadmap](roadmap.md).
+
+## Coordination and recovery
+
+Lease renewals and active progress updates return their validated run and workflow without constructing panel state. They retain the same transaction, ownership, version, cancellation, brief and scheduled-execution guards. Terminal progress still performs its existing completion work. Panel progress polls use a content revision that excludes lease-only changes; those changes update the displayed run version and owner without rebuilding the workspace.
+
+`get_goodfinds_search_recovery` reads one exact run, its current brief and version-pinned pages of unfinished queries and verification references. `get_goodfinds_runtime_context` exposes the installed workflow contract and expiring, connection-scoped capability observations. Reports are caller observations, not host attestations or execution permissions. Schedule compatibility diagnosis preserves paused bindings.
+
+MCP pending-alert reads use stable keyset cursors and recheck qualification against the full current peer population. A page may be empty while returning a cursor. Acknowledgement is atomic, receipted and idempotent for already delivered IDs. Failed or uncertain presentation remains pending; the server supplies no notification transport.
+
+Schema version 1 includes a small sequenced completion stream that records completed, interrupted and deferred run transitions and alert creation in the same transaction as the resources, using SQLite triggers. No automatic retention or receipt deletion is configured. Consumers persist the returned stream cursor only after processing, reread referenced resources and tolerate duplicates. Restored backups receive a fresh stream identity. Invalid/foreign or truncated cursors return `cursor_gap` and require resynchronization. Reads project lease expiry without writing; its interruption event is recorded when normal command reconciliation persists it. Seller sends remain exclusively behind their exact-message permit and reconciliation protocol.
+
+Scoped listing queries omit activity and historical analytics. Current rows for the complete relevant product population still determine ranking and comparison pools; exact detail reads hydrate only the requested history. Global relationship identities and recommendation ordering are retained. See [performance measurements](server-performance.md) for diagnostics and regression budgets.

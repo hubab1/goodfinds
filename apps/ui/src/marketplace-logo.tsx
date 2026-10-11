@@ -30,7 +30,10 @@ export function MarketplaceLogo({
       alt=""
       width={24}
       height={24}
-      className={cn("size-6 shrink-0 object-contain", className)}
+      className={cn(
+        "size-6 shrink-0 rounded-sm bg-[var(--logo-surface)] object-contain",
+        className,
+      )}
     />
   ) : (
     <Store className={cn("size-6 shrink-0", className)} aria-hidden="true" />

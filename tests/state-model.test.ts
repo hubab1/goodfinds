@@ -24,11 +24,10 @@ import { conversationSchema, sellerActionSchema } from "@goodfinds/contracts/sel
 import { operations } from "@goodfinds/contracts/operations";
 import { listingSchema } from "@goodfinds/contracts/state";
 import { listingWorkflow, mediaState } from "@goodfinds/contracts/listing-model";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
-import { errorDetails } from "./reference-server/src/workspace/errors.ts";
-import { repairQueue } from "./reference-server/src/listings/media.ts";
-import { createGoodfindsServer } from "./reference-server/src/entrypoints/mcp.ts";
-import { backendLayer } from "./reference-server/src/entrypoints/backend.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
+import { errorDetails } from "./helpers/native-driver.ts";
+import { createNativeServer } from "./helpers/native-mcp.ts";
+import { nativeOptions } from "./helpers/native-mcp.ts";
 import {
   executionPolicy,
   executionPolicySchema,
@@ -74,7 +73,7 @@ function runRecord() {
 function fixture(t: TestContext) {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-model-"));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  const store = new WorkspaceStore(seedWorkspace(folder));
+  const store = new NativeWorkspace(seedWorkspace(folder));
   let time = now;
   const clock: Clock.Clock = {
     currentTimeMillisUnsafe: () => time,
@@ -133,7 +132,7 @@ const observation = {
   videos: [],
 };
 
-void test("collection dispatch selects Luna xhigh while judgment preserves the chat settings", () => {
+void test("browsing inherits chat settings while connection checks retain their collection profile", () => {
   const collection = executionPolicySchema.parse(executionPolicy("collection"));
   assert.deepEqual(collection.spawn, {
     model: "gpt-6-luna",
@@ -141,11 +140,18 @@ void test("collection dispatch selects Luna xhigh while judgment preserves the c
     fork_turns: "none",
   });
   assert.deepEqual(executionPolicySchema.parse(executionPolicy("chat")).spawn, {});
+  for (const task of ["search_collection", "listing_evidence", "media_repair"] as const) {
+    const policy = executionPolicySchema.parse(executionPolicy(workerTasks[task].profile));
+    assert.equal(policy.profile, "browser_collection");
+    assert.deepEqual(policy.spawn, { fork_turns: "none" });
+  }
+  for (const task of ["connection_check", "contact_check", "reply_check"] as const)
+    assert.deepEqual(executionPolicy(workerTasks[task].profile), collection);
   for (const task of ["buying_judgment", "seller_message", "monitoring"] as const)
     assert.deepEqual(executionPolicy(workerTasks[task].profile).spawn, {});
   assert.equal(
     searchWorkflow(null, { now }).actions.find((a) => a.event === "request")?.execution.profile,
-    "collection",
+    "browser_collection",
   );
   const prompt = hostRequest(`Collect listings ${QUIET_BROWSING_GUIDANCE}`);
   assert.equal(prompt.split(WORKER_ROUTING_GUIDANCE).length, 2);
@@ -170,7 +176,7 @@ void test("actual search executor settings survive reconnect and renewal without
     },
   }).state.search_runs[0];
   assert.ok(claimed?.worker);
-  const reopened = f.execute(new WorkspaceStore(seedWorkspace(f.folder)).request("get_workspace"))
+  const reopened = f.execute(new NativeWorkspace(seedWorkspace(f.folder)).request("get_workspace"))
     .state.search_runs[0];
   assert.deepEqual(reopened?.worker?.execution, execution);
   const renewed = f.request("renew_search_lease", {
@@ -507,13 +513,13 @@ void test("listing dimensions reuse scoped evaluation, conflict checks and indep
   assert.deepEqual(view.actions.find((a) => a.event === "observe")?.execution.spawn, {});
   assert.equal(
     view.actions.find((a) => a.event === "recover_media")?.execution.profile,
-    "collection",
+    "browser_collection",
   );
   assert.equal(
     listingWorkflow({ ...row, verification_checks: [] }, context, now).actions.find(
       (a) => a.event === "observe",
     )?.execution.profile,
-    "collection",
+    "browser_collection",
   );
   assert.equal(view.media.state, "pending");
   assert.equal(view.media.image_reviewed, false);
@@ -525,9 +531,6 @@ void test("listing dimensions reuse scoped evaluation, conflict checks and indep
     ],
   );
   assert.equal(listingWorkflow(row, context, now, second.id).assessments.length, 1);
-  const queue = repairQueue([row], now)[0];
-  assert.equal(queue?.retry_at, mediaState(row, now).retry_at);
-  assert.equal(queue?.ready, view.media.ready);
   assert.equal(view.media.ready, false);
   assert.equal(
     mediaState(
@@ -545,9 +548,9 @@ void test("listing dimensions reuse scoped evaluation, conflict checks and indep
 
 void test("MCP read views are schema-validated and guard failures retain blocker codes", async (t) => {
   const f = fixture(t);
-  const { calls, server } = createGoodfindsServer(
+  const { calls, server } = createNativeServer(
     f.folder,
-    backendLayer(f.folder, null, async () => null),
+    nativeOptions(f.folder, null, async () => null),
   );
   t.after(() => server.close());
   const list = calls.get("list_goodfinds_search_runs"),

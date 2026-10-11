@@ -21,8 +21,8 @@
 .responsive-overlay-popup {
   display: flex;
   flex-direction: column;
-  color: var(--foreground, #000);
-  background: var(--background, #fff);
+  color: var(--popover-foreground);
+  background: var(--popover);
   border: 1px solid var(--border, #e5e5e5);
   box-shadow: 0 20px 60px rgb(0 0 0 / 15%);
   outline: none;
@@ -86,7 +86,7 @@
 .responsive-overlay-handle {
   width: 36px;
   height: 4px;
-  background: #c8c8c8;
+  background: var(--handle);
   border-radius: 4px;
 }
 
@@ -128,8 +128,8 @@
   place-items: center;
   border: 0;
   border-radius: 8px;
-  color: #fff;
-  background: #000;
+  color: var(--primary-foreground);
+  background: var(--primary);
   cursor: pointer;
 }
 
@@ -138,11 +138,11 @@
 }
 
 .responsive-overlay-close:hover {
-  background: #262626;
+  background: color-mix(in srgb, var(--primary) 90%, var(--popover));
 }
 
 .responsive-overlay-close:focus-visible {
-  outline: 2px solid #000;
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
@@ -151,6 +151,7 @@
   flex: 1;
   padding: var(--dialog-space);
   overflow-y: auto;
+  scrollbar-gutter: stable;
   overscroll-behavior: contain;
 }
 

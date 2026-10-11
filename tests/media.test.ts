@@ -1,14 +1,13 @@
 import { seedWorkspace } from "./helpers/workspace.ts";
 import { revisionFor } from "./helpers/revisions.ts";
 import { Effect } from "effect";
-import { createHash } from "node:crypto";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { cacheImages, readImage } from "./reference-server/src/platform/media.ts";
-import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
+import { cacheImages, readImage } from "./helpers/native-domain.ts";
+import { createNativeServer } from "./helpers/native-mcp.ts";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 import searchImageSources from "@goodfinds/contracts/data/search-cover-sources.json" with { type: "json" };
 
@@ -19,7 +18,7 @@ const png = Buffer.from(
 
 void test("search covers validate cached images, survive edits and stay separate from listing evidence", async (t) => {
   const data = await mkdtemp(resolve(tmpdir(), "goodfinds-cover-"));
-  const { server, calls } = createGoodfindsServer(seedWorkspace(data));
+  const { server, calls } = createNativeServer(seedWorkspace(data));
   t.after(async () => {
     await server.close();
     await rm(data, { recursive: true, force: true });
@@ -77,7 +76,7 @@ void test("search covers validate cached images, survive edits and stay separate
     (
       await call("set_goodfinds_search_cover", {
         ...request,
-        cover: { ...image, kind: "generated" },
+        cover: { ...image, source_url: undefined },
       })
     ).isError,
     true,
@@ -112,14 +111,20 @@ void test("search covers validate cached images, survive edits and stay separate
     image,
   );
   const sample = stateFromToolResult(await call("get_goodfinds_workspace", { mode: "sample" }));
-  await call("set_goodfinds_search_cover", {
+  const sampleCover = await call("set_goodfinds_search_cover", {
     mode: "sample",
     expected_entity_revision: revisionFor(sample, "set_goodfinds_search_cover", {
       search_id: search.id,
     }),
     search_id: search.id,
-    cover: { ...image, alt: "Sample cover" },
+    cover: {
+      ...image,
+      kind: "generated",
+      source_name: "AI illustration",
+      alt: "Fictional laptop illustration",
+    },
   });
+  assert.equal(sampleCover.isError, undefined);
   assert.deepEqual(
     stateFromToolResult(await call("get_goodfinds_workspace", {})).searches[0]?.cover,
     image,
@@ -169,37 +174,9 @@ void test("downloaded images persist by content ID, deduplicate and reject unsaf
   );
 });
 
-void test("bundled cover aliases verify replacement hashes and preserve cached originals", async (t) => {
-  const data = await mkdtemp(resolve(tmpdir(), "goodfinds-cover-alias-"));
-  t.after(() => rm(data, { recursive: true, force: true }));
-  const source = resolve(data, "original.png");
-  await writeFile(source, png);
-  const oldId = createHash("sha256").update(png).digest("hex");
-  const replacement = await readFile(
-    resolve(import.meta.dir, "../assets/search-covers", searchImageSources.rental.file),
-  );
-  const path = resolve(data, "replacement.webp");
-  await writeFile(path, replacement);
-  const bundled = { path, mediaId: searchImageSources.rental.media_id };
-  const image = await Effect.runPromise(readImage(data, oldId, bundled));
-  assert.equal(image.mimeType, "image/webp");
-  assert.equal(image.data, replacement.toString("base64"));
-
-  await Effect.runPromise(cacheImages(data, [{ path: source, label: "Original cover" }]));
-  assert.equal(
-    (await Effect.runPromise(readImage(data, oldId, bundled))).data,
-    png.toString("base64"),
-  );
-  await writeFile(resolve(data, "media", oldId), Buffer.from("changed"));
-  await assert.rejects(Effect.runPromise(readImage(data, oldId, bundled)), /changed/);
-  await rm(resolve(data, "media", oldId));
-  await writeFile(path, png);
-  await assert.rejects(Effect.runPromise(readImage(data, oldId, bundled)), /changed/);
-});
-
 void test("MCP import requires cached image references and the panel loads bytes separately", async (t) => {
   const data = await mkdtemp(resolve(tmpdir(), "goodfinds-media-tools-"));
-  const { server, calls } = createGoodfindsServer(seedWorkspace(data));
+  const { server, calls } = createNativeServer(seedWorkspace(data));
   t.after(async () => {
     await server.close();
     await rm(data, { recursive: true, force: true });

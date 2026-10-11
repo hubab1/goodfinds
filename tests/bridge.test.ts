@@ -10,7 +10,7 @@ import { AppBridge, isToolVisibilityAppOnly } from "@modelcontextprotocol/ext-ap
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
-import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
+import { createNativeServer } from "./helpers/native-mcp.ts";
 import {
   SEARCH_REQUEST,
   interviewRequest,
@@ -26,7 +26,7 @@ import { requestConnectionCheck } from "../apps/ui/src/lib/connection-checks.ts"
 
 void test("Settings Check queues through MCP Apps and sends one delegation request before a worker claim", async (t) => {
   const data = await mkdtemp(resolve(tmpdir(), "goodfinds-check-bridge-"));
-  const { server } = createGoodfindsServer(seedWorkspace(data));
+  const { server } = createNativeServer(seedWorkspace(data));
   const client = new Client({ name: "Connection check host", version: "1.0.0" });
   const [serverTransport, clientTransport] = InMemoryTransport.createLinkedPair();
   await server.connect(serverTransport);
@@ -98,7 +98,7 @@ void test("Settings Check queues through MCP Apps and sends one delegation reque
 
 void test("MCP Apps handshake forwards a UI edit to the same state read by conversation tools", async (t) => {
   const data = await mkdtemp(resolve(tmpdir(), "goodfinds-bridge-"));
-  const { server } = createGoodfindsServer(seedWorkspace(data));
+  const { server } = createNativeServer(seedWorkspace(data));
   const client = new Client({ name: "UI test host", version: "1.0.0" });
   const [serverTransport, clientTransport] = InMemoryTransport.createLinkedPair();
   await server.connect(serverTransport);
@@ -119,7 +119,7 @@ void test("MCP Apps handshake forwards a UI edit to the same state read by conve
   });
   await bridge.connect(hostTransport);
   await app.connect(appTransport);
-  assert.ok(client.getInstructions()?.endsWith(QUIET_BROWSING_GUIDANCE));
+  assert.equal(client.getInstructions(), "Use the marketplace-shopping skill.");
   const { tools } = await client.listTools();
   const imageTool = tools.find((tool) => tool.name === "get_goodfinds_image");
   assert.ok(imageTool);
@@ -202,7 +202,7 @@ void test("MCP Apps handshake forwards a UI edit to the same state read by conve
 
 void test("Search now sends a user request to the host chat and reports host rejection", async (t) => {
   const data = await mkdtemp(resolve(tmpdir(), "goodfinds-search-"));
-  const { server } = createGoodfindsServer(seedWorkspace(data));
+  const { server } = createNativeServer(seedWorkspace(data));
   const client = new Client({ name: "UI test host", version: "1.0.0" });
   const [serverTransport, clientTransport] = InMemoryTransport.createLinkedPair();
   await server.connect(serverTransport);

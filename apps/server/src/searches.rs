@@ -20,7 +20,6 @@ pub const ACTIONS: &[&str] = &[
     "renew_search_lease",
     "cancel_search_run",
     "set_monitoring",
-    "report_host_schedule",
     "report_dispatcher_schedule",
     "request_scheduled_batch",
     "get_dispatcher_context",
@@ -55,7 +54,7 @@ fn strings(v: &Value) -> Vec<String> {
 fn invalid<T>(message: impl Into<String>) -> Result<T> {
     Err(Error::validation(message.into()))
 }
-fn active(run: &Value) -> bool {
+pub(crate) fn active(run: &Value) -> bool {
     ["requested", "discovering", "verifying"].contains(&s(&run["phase"]))
 }
 fn resumable(run: &Value) -> bool {
@@ -417,7 +416,11 @@ pub fn native_question(field: &Value, custom: bool) -> Value {
             let mut p = json!({"type":"number","title":format!("{title}: {}",if bound=="min"{"minimum"}else{"maximum"})});
             for k in ["minimum", "maximum"] {
                 if let Some(v) = field[k].as_f64() {
-                    p[k] = json!(v / divisor)
+                    p[k] = if p["type"] == "integer" {
+                        json!((v / divisor) as i64)
+                    } else {
+                        json!(v / divisor)
+                    }
                 }
             }
             props.insert(bound.into(), p);
@@ -427,7 +430,11 @@ pub fn native_question(field: &Value, custom: bool) -> Value {
             json!({"type":if kind=="integer"&&divisor==1.0{"integer"}else{"number"},"title":title});
         for k in ["minimum", "maximum"] {
             if let Some(v) = field[k].as_f64() {
-                p[k] = json!(v / divisor)
+                p[k] = if p["type"] == "integer" {
+                    json!((v / divisor) as i64)
+                } else {
+                    json!(v / divisor)
+                }
             }
         }
         props.insert(fid.into(), p);
@@ -475,7 +482,7 @@ pub fn native_answer(field: &Value, content: &Value, custom: bool) -> Result<Val
     if ["integer", "number"].contains(&kind)
         && let Some(x) = value.as_f64()
     {
-        return Ok(json!(if kind == "integer" && divisor == 100.0 {
+        return Ok(json!(if kind == "integer" && divisor > 1.0 {
             (x * divisor).round()
         } else {
             x * divisor
@@ -936,6 +943,17 @@ pub fn query_plan(search: &Value, feedback: &[Value]) -> Vec<Value> {
             .iter()
             .map(|v| json!({"text":v["model"],"purpose":"alternative"})),
     );
+    let query_identity = |text: &str| {
+        text.split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+            .to_lowercase()
+    };
+    let category_queries: HashSet<String> = definitions
+        .iter()
+        .filter(|query| query["purpose"] == "category")
+        .map(|query| query_identity(s(&query["text"])))
+        .collect();
     let markets = search
         .get("marketplaces")
         .cloned()
@@ -945,20 +963,21 @@ pub fn query_plan(search: &Value, feedback: &[Value]) -> Vec<Value> {
     for market in a(&markets) {
         let mut count = 0;
         for (i, d) in definitions.iter().enumerate() {
-            if d["purpose"] != "category"
+            let normalized = query_identity(s(&d["text"]));
+            let purpose = if category_queries.contains(&normalized) {
+                "category"
+            } else {
+                s(&d["purpose"])
+            };
+            if purpose != "category"
                 && excluded.contains(&canonical(&canonical_model(&d["text"], search)))
             {
                 continue;
             }
-            let normalized = s(&d["text"])
-                .split_whitespace()
-                .collect::<Vec<_>>()
-                .join(" ")
-                .to_lowercase();
             if !seen.insert(format!("{}:{normalized}", s(market))) {
                 continue;
             }
-            out.push(json!({"text":s(&d["text"]).trim(),"purpose":d["purpose"],"id":format!("{}-{i}",s(market)),"marketplace":market,"status":"planned","result_count":null,"unique_relevant_count":null,"reason":null}));
+            out.push(json!({"text":s(&d["text"]).trim(),"purpose":purpose,"id":format!("{}-{i}",s(market)),"marketplace":market,"status":"planned","result_count":null,"unique_relevant_count":null,"reason":null}));
             count += 1;
             if count == 20 || out.len() == 120 {
                 break;
@@ -1039,6 +1058,19 @@ pub fn expired_run(run: &Value, now: i64) -> Value {
     out["next_step"] = json!("Resume this search with a new background agent.");
     out
 }
+
+// Lease-only updates change CAS versions but do not require panel evaluation.
+pub fn refresh_key(run: &Value) -> Value {
+    let mut visible = run.clone();
+    visible.as_object_mut().unwrap().remove("version");
+    visible.as_object_mut().unwrap().remove("updated_at");
+    if let Some(worker) = visible["worker"].as_object_mut() {
+        worker.remove("last_heartbeat_at");
+        worker.remove("lease_expires_at");
+    }
+    json!(hash(&visible))
+}
+
 pub fn runs(ws: &Workspace, search_id: Option<&str>) -> Result<Vec<Value>> {
     Ok(raw_runs(ws, search_id, true)?
         .iter()
@@ -1067,6 +1099,25 @@ fn save_run(ws: &Workspace, run: &Value) -> Result<()> {
         )?;
     } else {
         ws.db.execute("INSERT INTO search_run_workers(run_id,document_json) VALUES (?,?) ON CONFLICT(run_id) DO UPDATE SET document_json=excluded.document_json",params![s(&run["id"]),run["worker"].to_string()])?;
+    }
+    Ok(())
+}
+pub fn preserve_cover_runs(ws: &Workspace, previous: &Value, next: &Value) -> Result<()> {
+    let before = hash(previous);
+    let after = hash(next);
+    let mut previous_brief = previous.clone();
+    let mut next_brief = next.clone();
+    previous_brief.as_object_mut().unwrap().remove("cover");
+    next_brief.as_object_mut().unwrap().remove("cover");
+    if before == after || hash(&previous_brief) != hash(&next_brief) {
+        return Ok(());
+    }
+    // Cover edits do not renew a lease, revive a run, or change progress versions.
+    for mut run in raw_runs(ws, Some(s(&previous["id"])), false)? {
+        if run["search_revision"] == before {
+            run["search_revision"] = json!(after);
+            save_run(ws, &run)?;
+        }
     }
     Ok(())
 }
@@ -1594,8 +1645,6 @@ fn workflow(run: Option<&Value>, context: &Value) -> Value {
     let run = run.map(|r| expired_run(r, n(&context["now"])));
     let state = run.as_ref().map(|r| s(&r["phase"])).unwrap_or("absent");
     let mut actions = Vec::new();
-    let mut allowed = Vec::new();
-    let mut prerequisites = Vec::new();
     if let Some(events) = contracts::data("searchEvents").as_object() {
         for (event, definition) in events {
             if definition["operation"].is_null()
@@ -1621,21 +1670,10 @@ fn workflow(run: Option<&Value>, context: &Value) -> Value {
                 .iter()
                 .map(|v| contracts::data("searchGuards")[s(v)]["recovery"].clone())
                 .collect();
-            for p in conditions
-                .iter()
-                .chain(reasons.iter().map(|r| &r["recovery"]))
-            {
-                if !prerequisites.contains(p) {
-                    prerequisites.push(p.clone())
-                }
-            }
-            if availability != "blocked" && !allowed.contains(&tool) {
-                allowed.push(tool.clone())
-            }
             actions.push(json!({"event":event,"operation":operation,"tool":tool,"availability":availability,"required_inputs":definition["inputs"],"conditions":conditions,"blockers":reasons,"execution":contracts::data("executionPolicies")[definition["execution_profile"].as_str().unwrap_or("chat")]}));
         }
     }
-    json!({"state":state,"actions":actions,"allowed_actions":allowed,"prerequisites":prerequisites})
+    json!({"state":state,"actions":actions})
 }
 
 fn minute_of_day(time: &str) -> i64 {
@@ -1807,7 +1845,7 @@ pub fn schedule_plan(timing: &Value, quiet: &Value, allow_quiet: bool) -> Value 
             if interval == 60 {
                 "hour".into()
             } else {
-                format!("{interval} minutes")
+                format!("{interval} mins")
             }
         )
     };
@@ -2092,7 +2130,7 @@ pub fn set_monitoring(config: &mut Value, input: &Value) -> Result<()> {
             .unwrap_or(&config["schedule"]["interval_minutes"])
             .clone()
     };
-    let record = json!({"search_id":sid,"preference":request["preference"],"interval_minutes":minutes,"timing":timing,"allow_quiet_hours":request.get("allow_quiet_hours").unwrap_or(&previous["allow_quiet_hours"]).as_bool().unwrap_or(false),"schedule":previous["schedule"],"interruption":previous["interruption"],"last_scheduled_run_at":previous["last_scheduled_run_at"]});
+    let record = json!({"search_id":sid,"preference":request["preference"],"interval_minutes":minutes,"timing":timing,"allow_quiet_hours":request.get("allow_quiet_hours").unwrap_or(&previous["allow_quiet_hours"]).as_bool().unwrap_or(false),"interruption":previous["interruption"],"last_scheduled_run_at":previous["last_scheduled_run_at"]});
     let mut records = a(&config["monitoring"]).to_vec();
     records.retain(|m| s(&m["search_id"]) != sid);
     records.push(record);
@@ -2106,87 +2144,6 @@ pub fn set_monitoring(config: &mut Value, input: &Value) -> Result<()> {
     }
     Ok(())
 }
-pub fn record_schedule(config: &mut Value, input: &Value, now: i64) -> Result<()> {
-    let report = contracts::parse("hostScheduleReportSchema", input)?;
-    validate_zone(&report["timezone"])?;
-    let sid = s(&report["search_id"]);
-    if report["status"] != "blocked" && report["automation_id"].is_null() {
-        return invalid("A verified schedule needs its host automation ID");
-    }
-    if dispatcher(config, sid).is_some() {
-        return invalid(
-            "This search uses a shared schedule. Reconcile it with report_goodfinds_dispatcher_schedule.",
-        );
-    }
-    let saved = search(config, sid).ok_or_else(|| {
-        Error::validation("Save the buyer's monitoring choice for this search first")
-    })?;
-    let record = monitoring(config, sid).ok_or_else(|| {
-        Error::validation("Save the buyer's monitoring choice for this search first")
-    })?;
-    let previous = record["schedule"].clone();
-    if !report["automation_id"].is_null()
-        && a(&config["monitoring"]).iter().any(|m| {
-            m["search_id"] != sid && m["schedule"]["automation_id"] == report["automation_id"]
-        })
-    {
-        return invalid("That automation belongs to another saved search");
-    }
-    if !previous.is_null() && previous["thread_id"] != report["thread_id"] {
-        return invalid("Keep this schedule in its original buying thread");
-    }
-    if !previous["automation_id"].is_null()
-        && previous["status"] != "removed"
-        && !report["automation_id"].is_null()
-        && previous["automation_id"] != report["automation_id"]
-    {
-        return invalid("Update the existing automation instead of creating a duplicate");
-    }
-    if report["status"] == "active" {
-        if !b(&saved["enabled"]) || record["preference"] != "recurring" {
-            return invalid(
-                "Recurring checks require an enabled search and the buyer's search choice",
-            );
-        }
-        if report["interval_minutes"] != record["interval_minutes"] {
-            return invalid("Verify the host schedule at the buyer's saved frequency");
-        }
-        if !report["rrule"].is_null() {
-            let plan = plan_for(config, sid);
-            if plan["rrule"].is_null()
-                || canonical_rule(s(&report["rrule"])) != canonical_rule(s(&plan["rrule"]))
-                || report["timezone"] != plan["timezone"]
-            {
-                return invalid(
-                    "Verify the host schedule's saved times, quiet hours and time zone",
-                );
-            }
-        }
-    }
-    let record = config["monitoring"]
-        .as_array_mut()
-        .unwrap()
-        .iter_mut()
-        .find(|m| m["search_id"] == sid)
-        .unwrap();
-    if report["status"] == "blocked" {
-        record["interruption"] = report["evidence"].clone();
-        if !previous.is_null() {
-            return Ok(());
-        }
-    } else {
-        record["interruption"] = Value::Null
-    }
-    let mut receipt = report;
-    receipt.as_object_mut().unwrap().remove("search_id");
-    if receipt["last_run_at"].is_null() && previous["automation_id"] == receipt["automation_id"] {
-        receipt["last_run_at"] = previous["last_run_at"].clone()
-    }
-    receipt["verified_at"] = json!(iso(now));
-    record["schedule"] = receipt;
-    Ok(())
-}
-
 fn interval_minutes(rule: &str) -> Option<i64> {
     let bare = rule.strip_prefix("RRULE:").unwrap_or(rule);
     let mut fields = HashMap::new();
@@ -2222,7 +2179,7 @@ pub fn host_observations(ws: &Workspace) -> Result<HashMap<String, Value>> {
     let Some(directory) = ws.automations_directory.as_ref() else {
         return Ok(results);
     };
-    let mut records = a(&ws.config["monitoring"]).to_vec();
+    let mut records = Vec::new();
     for d in a(&ws.config["dispatchers"]) {
         records.push(
             json!({"search_id":format!("dispatcher:{}",s(&d["id"])),"schedule":d["schedule"]}),
@@ -2350,6 +2307,32 @@ fn dispatcher_matches(summary: &Value) -> bool {
         && canonical_rule(s(rule)) == canonical_rule(s(&summary["plan"]["rrule"]))
         && zone == &summary["plan"]["timezone"]
 }
+fn removed_schedule_recovery(
+    config: &Value,
+    ids: &[String],
+    selected: &[String],
+    thread: &Value,
+    hosts: &HashMap<String, Value>,
+) -> Result<HashSet<String>> {
+    for sid in ids {
+        let owner = dispatcher(config, sid);
+        let old_thread = owner.map(|d| &d["thread_id"]);
+        if !selected.contains(sid) || old_thread.is_none_or(|old| old.is_null() || old == thread) {
+            return invalid("Recover only explicitly selected searches from another buying chat");
+        }
+        let key = owner
+            .map(|d| format!("dispatcher:{}", s(&d["id"])))
+            .unwrap_or_else(|| sid.clone());
+        if hosts
+            .get(&key)
+            .is_none_or(|host| host["status"] != "removed")
+        {
+            return invalid("The previous schedule must be verified removed before recovery");
+        }
+    }
+    Ok(ids.iter().cloned().collect())
+}
+
 pub fn record_dispatcher(
     config: &mut Value,
     input: &Value,
@@ -2373,6 +2356,24 @@ pub fn record_dispatcher(
         return invalid(
             "The shared schedule plan changed. Read its context again before reporting it.",
         );
+    }
+    let recovering = removed_schedule_recovery(
+        config,
+        &strings(&report["recover_removed_search_ids"]),
+        &ids,
+        &report["thread_id"],
+        hosts,
+    )?;
+    for source in a(&config["dispatchers"]).iter().filter(|d| {
+        strings(&d["search_ids"])
+            .iter()
+            .any(|id| recovering.contains(id))
+    }) {
+        if source["host_id"] != report["host_id"]
+            || source["notification_policy"] != report["notification_policy"]
+        {
+            return invalid("Preserve the recovered search's host and notification settings");
+        }
     }
     let previous = a(&config["dispatchers"])
         .iter()
@@ -2399,35 +2400,21 @@ pub fn record_dispatcher(
                 "Only searches with an existing recurring choice can join a dispatcher",
             );
         };
-        if search(config, sid).is_none() || m["preference"] != "recurring" {
+        let stopping_existing = report["schedule"]["status"] != "active"
+            && previous
+                .as_ref()
+                .is_some_and(|d| strings(&d["search_ids"]).contains(sid));
+        if search(config, sid).is_none() || (m["preference"] != "recurring" && !stopping_existing) {
             return invalid(
                 "Only searches with an existing recurring choice can join a dispatcher",
             );
         }
-        if a(&config["dispatchers"])
-            .iter()
-            .any(|d| d["id"] != report["dispatcher_id"] && strings(&d["search_ids"]).contains(sid))
+        if !recovering.contains(sid)
+            && a(&config["dispatchers"]).iter().any(|d| {
+                d["id"] != report["dispatcher_id"] && strings(&d["search_ids"]).contains(sid)
+            })
         {
             return invalid("This search already belongs to another dispatcher");
-        }
-        if !m["schedule"]["thread_id"].is_null()
-            && m["schedule"]["thread_id"] != report["thread_id"]
-        {
-            return invalid("Keep each search in its original buying chat");
-        }
-        if report["schedule"]["status"] != "blocked"
-            && !m["schedule"]["automation_id"].is_null()
-            && m["schedule"]["automation_id"] != report["schedule"]["automation_id"]
-        {
-            let status = hosts
-                .get(sid)
-                .map(|h| s(&h["status"]))
-                .unwrap_or(s(&m["schedule"]["status"]));
-            if !["paused", "removed"].contains(&status) {
-                return invalid(
-                    "Pause and verify the redundant automation before migrating this search",
-                );
-            }
         }
     }
     if report["schedule"]["status"] == "blocked" {
@@ -2488,14 +2475,17 @@ pub fn record_dispatcher(
     let d = json!({"id":report["dispatcher_id"],"thread_id":report["thread_id"],"host_id":report["host_id"],"notification_policy":report["notification_policy"],"search_ids":ids,"schedule":schedule});
     let mut dispatchers = a(&config["dispatchers"]).to_vec();
     dispatchers.retain(|v| v["id"] != d["id"]);
+    for source in &mut dispatchers {
+        let members: Vec<String> = strings(&source["search_ids"])
+            .into_iter()
+            .filter(|id| !recovering.contains(id))
+            .collect();
+        source["search_ids"] = json!(members);
+    }
     dispatchers.push(d);
     config["dispatchers"] = json!(dispatchers);
     for m in config["monitoring"].as_array_mut().unwrap() {
         if ids.iter().any(|id| id == s(&m["search_id"])) {
-            if m["last_scheduled_run_at"].is_null() {
-                m["last_scheduled_run_at"] = m["schedule"]["last_run_at"].clone()
-            }
-            m["schedule"] = Value::Null;
             m["interruption"] = Value::Null;
         }
     }
@@ -2533,7 +2523,7 @@ fn monitoring_summary(
             .get("dispatcher")
             .map(|d| d["schedule"].clone())
             .filter(|v| !v.is_null())
-            .unwrap_or_else(|| record["schedule"].clone())
+            .unwrap_or(Value::Null)
     };
     if !receipt.is_null() && !shared.is_null() {
         receipt["last_run_at"] = record["last_scheduled_run_at"].clone()
@@ -2799,11 +2789,6 @@ pub fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> 
             reconcile_scheduled_runs(ws)?;
             Ok(json!({}))
         }
-        "report_host_schedule" => {
-            record_schedule(&mut ws.config, &args["report"], ws.now)?;
-            reconcile_scheduled_runs(ws)?;
-            Ok(json!({}))
-        }
         "report_dispatcher_schedule" => {
             let fulfilled = fulfilled_searches(ws)?;
             let hosts = host_observations(ws)?;
@@ -2848,7 +2833,7 @@ pub fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> 
                 selected
                     .iter()
                     .map(|r| if progress_only {
-                        json!({"id":r["id"],"version":r["version"],"phase":r["phase"]})
+                        json!({"id":r["id"],"version":r["version"],"phase":r["phase"],"updated_at":r["updated_at"],"worker":r["worker"],"refresh_key":refresh_key(r)})
                     } else {
                         let mut run = r.clone();
                         run["progress"] = search_progress(r);
@@ -2933,7 +2918,12 @@ pub fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> 
 }
 fn dispatcher_context(ws: &Workspace, args: &Value) -> Result<Value> {
     let mut scoped = json!({});
-    for key in ["thread_id", "search_ids", "dispatcher_id"] {
+    for key in [
+        "thread_id",
+        "search_ids",
+        "dispatcher_id",
+        "recover_removed_search_ids",
+    ] {
         if let Some(value) = args.get(key) {
             scoped[key] = value.clone();
         }
@@ -2963,20 +2953,24 @@ fn dispatcher_context(ws: &Workspace, args: &Value) -> Result<Value> {
             .flat_map(|d| strings(&d["dispatcher"]["search_ids"]))
             .collect()
     };
+    let recovering = removed_schedule_recovery(
+        &ws.config,
+        &strings(&input["recover_removed_search_ids"]),
+        &ids,
+        &input["thread_id"],
+        &hosts,
+    )?;
     for id in &ids {
-        let m = monitoring(&ws.config, id);
         let owning = dispatcher(&ws.config, id);
         if search(&ws.config, id).is_none()
-            || m.is_some_and(|m| {
-                !m["schedule"].is_null() && m["schedule"]["thread_id"] != input["thread_id"]
-            })
-            || owning.is_some_and(|d| d["thread_id"] != input["thread_id"])
+            || (!recovering.contains(id)
+                && owning.is_some_and(|d| d["thread_id"] != input["thread_id"]))
         {
             return invalid("Choose saved searches from this buying chat");
         }
     }
     Ok(
-        json!({"revision":hash(&ws.config),"mode":ws.mode,"plan":dispatcher_plan(&ws.config,&ids,&fulfilled,ws.now),"dispatcher":selected,"dispatchers":dispatchers,"legacy_schedules":a(&ws.config["monitoring"]).iter().filter(|m|ids.iter().any(|id|id==s(&m["search_id"]))&&!m["schedule"].is_null()).map(|m|json!({"search_id":m["search_id"],"schedule":m["schedule"]})).collect::<Vec<_>>()}),
+        json!({"revision":hash(&ws.config),"mode":ws.mode,"plan":dispatcher_plan(&ws.config,&ids,&fulfilled,ws.now),"dispatcher":selected,"dispatchers":dispatchers}),
     )
 }
 
@@ -3221,29 +3215,6 @@ mod tests {
         );
     }
     #[test]
-    fn monitoring_keeps_verified_receipt_after_failed_check() {
-        let (_dir, mut ws) = workspace();
-        let sid = ws.config["searches"][0]["id"].clone();
-        set_monitoring(
-            &mut ws.config,
-            &json!({"search_id":sid,"preference":"recurring","interval_minutes":60}),
-        )
-        .unwrap();
-        let thread = id();
-        let plan = plan_for(&ws.config, s(&sid));
-        let report = json!({"search_id":sid,"automation_id":"schedule-one","thread_id":thread,"status":"active","interval_minutes":60,"rrule":plan["rrule"],"timezone":plan["timezone"],"evidence":"Verified"});
-        record_schedule(&mut ws.config, &report, ws.now).unwrap();
-        let mut blocked = report.clone();
-        blocked["status"] = json!("blocked");
-        blocked["evidence"] = json!("Host offline");
-        record_schedule(&mut ws.config, &blocked, ws.now).unwrap();
-        assert_eq!(ws.config["monitoring"][0]["schedule"]["status"], "active");
-        assert_eq!(ws.config["monitoring"][0]["interruption"], "Host offline");
-        let mut duplicate = report;
-        duplicate["automation_id"] = json!("new-automation");
-        assert!(record_schedule(&mut ws.config, &duplicate, ws.now).is_err());
-    }
-    #[test]
     fn shared_dispatch_is_reserved_once_and_keeps_pauses() {
         let (_dir, mut ws) = workspace();
         ws.config["schedule"]["quiet_hours"] = quiet();
@@ -3284,22 +3255,104 @@ mod tests {
         assert_eq!(paused["reason"], "paused");
     }
     #[test]
+    fn removed_schedule_recovery_preserves_peers_and_requires_fresh_evidence() {
+        let (dir, mut ws) = workspace();
+        let mut peer = ws.config["searches"][0].clone();
+        peer["id"] = json!("recovery-peer");
+        ws.config["searches"].as_array_mut().unwrap().push(peer);
+        ws.config["schedule"]["quiet_hours"]["enabled"] = json!(false);
+        let ids: Vec<String> = a(&ws.config["searches"])
+            .iter()
+            .map(|v| s(&v["id"]).to_owned())
+            .collect();
+        assert!(ids.len() >= 2);
+        for sid in &ids {
+            set_monitoring(
+                &mut ws.config,
+                &json!({"search_id":sid,"preference":"recurring","interval_minutes":120}),
+            )
+            .unwrap();
+        }
+        let old_thread = id();
+        let old_dispatcher = id();
+        let plan = dispatcher_plan(&ws.config, &ids, &HashSet::new(), ws.now);
+        let report = json!({"dispatcher_id":old_dispatcher,"thread_id":old_thread,"search_ids":ids,"plan_revision":hash(&ws.config),
+            "schedule":{"automation_id":"old-schedule","thread_id":old_thread,"status":"active","interval_minutes":plan["interval_minutes"],"rrule":plan["rrule"],"timezone":plan["timezone"],"evidence":"Fixture registration"}});
+        record_dispatcher(
+            &mut ws.config,
+            &report,
+            ws.now,
+            &HashSet::new(),
+            &HashMap::new(),
+        )
+        .unwrap();
+        let target = id();
+        let target_dispatcher = id();
+        let selected = vec![ids[0].clone()];
+        let input =
+            json!({"thread_id":target,"search_ids":selected,"recover_removed_search_ids":selected});
+        assert!(dispatcher_context(&ws, &input).is_err());
+        let directory = dir.path().join("automations");
+        std::fs::create_dir_all(&directory).unwrap();
+        ws.automations_directory = Some(directory);
+        assert!(
+            dispatcher_context(&ws, &json!({"thread_id":target,"search_ids":selected})).is_err()
+        );
+        let context = dispatcher_context(&ws, &input).unwrap();
+        let before = ws.config.clone();
+        let recovery = json!({"dispatcher_id":target_dispatcher,"thread_id":target,"search_ids":selected,"recover_removed_search_ids":selected,"plan_revision":context["plan"]["revision"],
+            "schedule":{"automation_id":"new-schedule","thread_id":target,"status":"active","interval_minutes":context["plan"]["interval_minutes"],"rrule":context["plan"]["rrule"],"timezone":context["plan"]["timezone"],"evidence":"Buyer restored a removed schedule in this chat"}});
+        let mut hosts = host_observations(&ws).unwrap();
+        let key = format!("dispatcher:{old_dispatcher}");
+        for status in ["active", "paused", "unavailable"] {
+            hosts.get_mut(&key).unwrap()["status"] = json!(status);
+            assert!(
+                record_dispatcher(&mut ws.config, &recovery, ws.now, &HashSet::new(), &hosts)
+                    .is_err()
+            );
+            assert_eq!(ws.config, before);
+        }
+        hosts.get_mut(&key).unwrap()["status"] = json!("removed");
+        record_dispatcher(&mut ws.config, &recovery, ws.now, &HashSet::new(), &hosts).unwrap();
+        assert_eq!(
+            dispatcher(&ws.config, &ids[0]).unwrap()["id"],
+            target_dispatcher
+        );
+        assert_eq!(
+            dispatcher(&ws.config, &ids[1]).unwrap()["id"],
+            old_dispatcher
+        );
+        assert_eq!(ws.config["monitoring"], before["monitoring"]);
+        assert_eq!(
+            dispatcher(&ws.config, &ids[1]).unwrap()["schedule"],
+            before["dispatchers"][0]["schedule"]
+        );
+    }
+
+    #[test]
     fn host_observation_is_read_only_and_bound_to_original_chat() {
         let (dir, mut ws) = workspace();
         let sid = ws.config["searches"][0]["id"].clone();
         let thread = id();
         set_monitoring(
             &mut ws.config,
-            &json!({"search_id":sid,"preference":"recurring"}),
+            &json!({"search_id":sid,"preference":"recurring","interval_minutes":60}),
         )
         .unwrap();
-        record_schedule(&mut ws.config,&json!({"search_id":sid,"automation_id":"linked","thread_id":thread,"status":"active","interval_minutes":60,"evidence":"Verified"}),ws.now).unwrap();
+        let dispatcher_id = id();
+        let plan = dispatcher_plan(&ws.config, &[s(&sid).into()], &HashSet::new(), ws.now);
+        let revision = hash(&ws.config);
+        record_dispatcher(&mut ws.config,&json!({"plan_revision":revision,"dispatcher_id":dispatcher_id,"thread_id":thread,"search_ids":[sid],"schedule":{"automation_id":"linked","thread_id":thread,"status":"active","interval_minutes":plan["interval_minutes"],"rrule":plan["rrule"],"timezone":plan["timezone"],"evidence":"Verified"}}),ws.now,&HashSet::new(),&HashMap::new()).unwrap();
+        let host_key = format!("dispatcher:{dispatcher_id}");
         let before = ws.config.clone();
         let directory = dir.path().join("automations");
         std::fs::create_dir_all(directory.join("linked")).unwrap();
         std::fs::write(directory.join("linked/automation.toml"),format!("id = \"linked\"\nkind = \"heartbeat\"\nstatus = \"PAUSED\"\nrrule = \"FREQ=HOURLY;INTERVAL=1\"\ntarget_thread_id = \"{thread}\"\ntimezone = \"Europe/London\"\n")).unwrap();
         ws.automations_directory = Some(directory.clone());
-        assert_eq!(host_observations(&ws).unwrap()[s(&sid)]["status"], "paused");
+        assert_eq!(
+            host_observations(&ws).unwrap()[&host_key]["status"],
+            "paused"
+        );
         assert_eq!(ws.config, before);
         std::fs::write(
             directory.join("linked/automation.toml"),
@@ -3307,7 +3360,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            host_observations(&ws).unwrap()[s(&sid)]["status"],
+            host_observations(&ws).unwrap()[&host_key]["status"],
             "unavailable"
         );
     }
@@ -3361,9 +3414,6 @@ pub fn validate_cover(cover: &Value) -> Result<Value> {
     {
         return invalid("Include the image's source page");
     }
-    if cover["kind"] == "generated" && cover["prompt"].is_null() {
-        return invalid("Keep the image generation prompt");
-    }
     if !cover["source_url"].is_null()
         && url::Url::parse(s(&cover["source_url"]))
             .ok()
@@ -3414,6 +3464,27 @@ mod edge_tests {
         ws.config["schedule"]["quiet_hours"] =
             json!({"enabled":true,"start":"22:00","end":"08:00","timezone":"UTC"});
         (root, ws)
+    }
+    #[test]
+    fn shared_model_query_preserves_category_coverage() {
+        for (product, reference, exact) in [
+            ("car", "Ford Focus", "Ford Focus 2018 automatic"),
+            ("clothing", "J.Crew hoodie", "J.Crew hoodie XXL"),
+        ] {
+            let search = json!({"id":"audit","product":product,"marketplaces":["gumtree","vinted"],"discovery":{"reference_model":reference,"category_terms":[reference],"query_plan":[{"text":exact,"purpose":"exact"},{"text":reference,"purpose":"category"}]}});
+            let queries = query_plan(&search, &[]);
+            for market in ["gumtree", "vinted"] {
+                let shared: Vec<_> = queries
+                    .iter()
+                    .filter(|q| q["marketplace"] == market && q["text"] == reference)
+                    .collect();
+                assert_eq!(shared.len(), 1);
+                assert_eq!(shared[0]["purpose"], "category");
+                assert!(queries.iter().any(|q| q["marketplace"] == market
+                    && q["text"] == exact
+                    && q["purpose"] == "exact"));
+            }
+        }
     }
     #[test]
     fn distinct_model_aliases_preserve_category_discovery() {
@@ -3896,16 +3967,9 @@ pub fn empty_workflow(now: i64) -> Value {
 }
 
 pub fn is_bundled_cover(media_id: &str) -> bool {
-    let sources: Value = serde_json::from_str(include_str!(
-        "../../../packages/contracts/data/search-cover-sources.json"
-    ))
-    .expect("bundled cover index");
-    let canonical = sources["media_id_aliases"][media_id]
-        .as_str()
-        .unwrap_or(media_id);
     a(contracts::data("bundledSearchCovers"))
         .iter()
-        .any(|entry| s(&entry["image"]["media_id"]) == canonical)
+        .any(|entry| s(&entry["image"]["media_id"]) == media_id)
 }
 pub fn bundled_cover_for(search: &Value) -> Option<Value> {
     let product = s(&search["product"]).trim().to_lowercase();

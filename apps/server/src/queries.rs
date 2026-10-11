@@ -7,6 +7,7 @@ use crate::{
 };
 use serde_json::{Value, json};
 pub const QUERY_ACTIONS: &[&str] = &[
+    "get_setup_context",
     "get_search_context",
     "get_settings",
     "get_monitoring",
@@ -28,9 +29,28 @@ fn merge(target: &mut Value, fields: Value) {
 }
 pub fn query(ws: &Workspace, action: &str, args: &Value, state: &Value) -> Result<Value> {
     let config = &ws.config;
+    if action == "get_setup_context" {
+        let settings = query(ws, "get_settings", &json!({}), state)?;
+        let templates = crate::contracts::data("templates");
+        let region = crate::regional::resolve(
+            config,
+            &args["preferences"],
+            &args["hints"],
+            s(&args["category"]),
+        );
+        return Ok(json!({
+            "revision": settings["revision"], "revisions": settings["revisions"],
+            "access_context": ws.access_context, "origin_confirmed": settings["origin_confirmed"],
+            "settings": settings["settings"], "regional_context": region, "device_browser": crate::storage::device_browser(),
+            "search_index": array(config, "searches").iter().map(|s|json!({"id":s["id"],"name":s["name"],"product":s["product"],"enabled":s["enabled"]})).collect::<Vec<_>>(),
+            "draft_index": array(config, "drafts").iter().map(|s|json!({"id":s["id"],"name":s["name"]})).collect::<Vec<_>>(),
+            "template_catalog": a(templates).iter().map(|t|json!({"category":t["category"],"title":t["title"]})).collect::<Vec<_>>(),
+            "templates": a(templates).iter().filter(|t| !region["currency"].is_null() && !args["category"].is_null() && t["category"] == args["category"]).map(|t| crate::regional::localize_template(t, s(&region["currency"]))).collect::<Vec<_>>()
+        }));
+    }
     if action == "get_settings" {
         return Ok(
-            json!({"revision":hash(config),"revisions":ws.revisions()?,"access_context":ws.access_context,"origin_confirmed":config["origin_confirmed"].as_bool().unwrap_or(false),"settings":{"origin":config["origin"],"location":config["location"],"platforms":config["platforms"],"browser_preference":config["browser_preference"],"journey_checks_enabled":config["journey_checks_enabled"],"interval_minutes":config["schedule"]["interval_minutes"],"quiet_hours":config["schedule"]["quiet_hours"],"baseline_days":config["baseline_days"],"minimum_peer_listings":config["minimum_peer_listings"]},"browser_access":config["browser_access"],"platform_sessions":config["platform_sessions"]}),
+            json!({"revision":hash(config),"revisions":ws.revisions()?,"access_context":ws.access_context,"origin_confirmed":config["origin_confirmed"].as_bool().unwrap_or(false),"settings":{"regional_preferences":config.get("regional_preferences").cloned().unwrap_or(json!({})),"origin":config["origin"],"location":config["location"],"platforms":config["platforms"],"browser_preference":config["browser_preference"],"journey_checks_enabled":config["journey_checks_enabled"],"interval_minutes":config["schedule"]["interval_minutes"],"quiet_hours":config["schedule"]["quiet_hours"],"baseline_days":config["baseline_days"],"minimum_peer_listings":config["minimum_peer_listings"]},"browser_access":config["browser_access"],"platform_sessions":config["platform_sessions"]}),
         );
     }
     let selected: Vec<Value> = a(&config["searches"])
@@ -77,7 +97,8 @@ pub fn query(ws: &Workspace, action: &str, args: &Value, state: &Value) -> Resul
     let rows = if state["listings"].is_array() {
         a(&state["listings"]).to_vec()
     } else {
-        listings::load(ws)?
+        let products: Vec<Value> = selected.iter().map(|s| s["product"].clone()).collect();
+        listings::load_current(ws, Some(&products))?
     };
     let discovery = listings::discovery_summary(ws)?;
     let media: Vec<Value> = rows
@@ -101,6 +122,8 @@ pub fn query(ws: &Workspace, action: &str, args: &Value, state: &Value) -> Resul
             "configuration_storage":"SQLite entity rows; workspace_settings stores shared settings",
             "journeys":{"provider":"google_maps_browser","enabled":config["journey_checks_enabled"],"pending_towns":listings::journey_queue(&rows,&selected,config,ws.now).len(),"next_step":"Read list_goodfinds_journey_checks, check each Google Maps driving route in the selected browser, and save record_goodfinds_journey_check. Reuse town-level estimates across listings. Report blocked routes without inventing a duration."},
             "media_repairs":{"pending":media.len(),"ready":media.iter().filter(|m|m["ready"]==true).count(),"next_step":if media.is_empty(){Value::Null}else{json!("After provisional discovery, read list_goodfinds_media_repairs for this search and attach ready recovered galleries without changing old fact timestamps or review coverage.")}},
+            "regional_preferences":config.get("regional_preferences").cloned().unwrap_or(json!({})),
+            "marketplace_routes":selected.iter().map(|search| (s(&search["id"]).to_owned(),crate::regional::search_routes(config,search))).collect::<serde_json::Map<String, Value>>(),
             "origin":config["origin"],"origin_confirmed":config["origin_confirmed"].as_bool().unwrap_or(false),"location":config["location"],"browser_preference":config["browser_preference"],"platforms":config["platforms"],"browser_access":config["browser_access"],"platform_sessions":config["platform_sessions"],
             "comparison":{"baseline_days":config["baseline_days"],"minimum_peer_listings":config["minimum_peer_listings"]},
             "searches":selected.iter().map(|search|{let mut search=search.clone();let sid=s(&search["id"]).to_owned();let reading=listings::reading_summary(&rows,&search,config,discovery["last_searched"][&sid].as_str());merge(&mut search,reading);search["found_count"]=discovery["counts"][&sid].clone();search}).collect::<Vec<_>>(),
@@ -176,5 +199,33 @@ mod tests {
             .query_row("SELECT count(*) FROM listing_seen", [], |r| r.get(0))
             .unwrap();
         assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn scoped_context_and_monitoring_match_full_snapshot_queries() {
+        let root = tempfile::tempdir().unwrap();
+        crate::workspace::execute(
+            root.path(),
+            "compact-context",
+            "load_sample_workspace",
+            &json!({"mode":"sample"}),
+            std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+        )
+        .unwrap();
+        let ws = Workspace::open(root.path(), "sample", "compact-context").unwrap();
+        let full = crate::snapshot::snapshot(&ws).unwrap();
+        assert!(!a(&full["listings"]).is_empty());
+        let compact = json!({"seller_conversations":sellers::summaries(&ws).unwrap()});
+        for action in ["get_search_context", "get_monitoring"] {
+            for args in [
+                json!({}),
+                json!({"search_id":ws.config["searches"][0]["id"]}),
+            ] {
+                assert_eq!(
+                    query(&ws, action, &args, &compact).unwrap(),
+                    query(&ws, action, &args, &full).unwrap(),
+                );
+            }
+        }
     }
 }

@@ -4,9 +4,8 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { Database } from "bun:sqlite";
 import { Effect } from "effect";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
 import { savedSearchSchema } from "@goodfinds/contracts/search-definition";
 import { modelIsExcluded } from "@goodfinds/contracts/discovery";
 import { queryPlan } from "@goodfinds/contracts/search-workflow";
@@ -45,7 +44,7 @@ const coffeeSearch = savedSearchSchema.parse({
 void test("model exclusions survive restart, filter aliases in all views and planning, and Undo restores them", (t) => {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-models-"));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  const store = new WorkspaceStore(seedWorkspace(folder));
+  const store = new NativeWorkspace(seedWorkspace(folder));
   let state = Effect.runSync(store.request("get_workspace")).state;
   const base = coffeeSearch;
   const search = {
@@ -101,7 +100,7 @@ void test("model exclusions survive restart, filter aliases in all views and pla
   const event = state.config.feedback.at(-1);
   assert.equal(event?.rule?.value, "Sage Barista Express");
   assert.equal(event?.rule?.importance, "required");
-  const restarted = new WorkspaceStore(seedWorkspace(folder));
+  const restarted = new NativeWorkspace(seedWorkspace(folder));
   state = Effect.runSync(restarted.request("get_workspace")).state;
   const banned = state.listings.find((listing) => listing.listing_id === "123451");
   assert.ok(banned);
@@ -149,10 +148,10 @@ void test("model exclusions survive restart, filter aliases in all views and pla
   assert.ok(queryPlan(search, state.config.feedback).some((query) => query.purpose === "exact"));
 });
 
-void test("unknown models cannot create bans and old explicit model rejections upgrade only with verified identity", (t) => {
+void test("unknown models cannot create bans", (t) => {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-old-feedback-"));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  const store = new WorkspaceStore(seedWorkspace(folder));
+  const store = new NativeWorkspace(seedWorkspace(folder));
   let state = Effect.runSync(store.request("get_workspace")).state;
   const search = coffeeSearch;
   state = Effect.runSync(
@@ -197,36 +196,5 @@ void test("unknown models cannot create bans and old explicit model rejections u
         }),
       ),
     /model is not verified/u,
-  );
-  const db = new Database(store.databasePath);
-  try {
-    for (const [index, row] of state.listings.entries()) {
-      const event = {
-        id: `old-${index}`,
-        search_id: search.id,
-        listing_key: row.key,
-        action: "dismiss",
-        reason: "Not interested in this model",
-        scope: "search",
-        category: search.product,
-        created_at: new Date().toISOString(),
-        undone: false,
-      };
-      db.run("INSERT INTO listing_feedback_events VALUES (?,?,1,0,?,?)", [
-        event.id,
-        search.id,
-        index,
-        JSON.stringify(event),
-      ]);
-    }
-  } finally {
-    db.close();
-  }
-  state = Effect.runSync(new WorkspaceStore(seedWorkspace(folder)).request("get_workspace")).state;
-  const known = state.config.feedback.find((event) => event.listing_key !== unknown.key);
-  assert.equal(known?.rule?.value, "Sage Bambino");
-  assert.equal(
-    state.config.feedback.find((event) => event.listing_key === unknown.key)?.rule,
-    undefined,
   );
 });

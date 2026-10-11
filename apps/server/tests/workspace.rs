@@ -68,8 +68,8 @@ fn compact_queries_validate() {
     }
 }
 #[test]
-fn legacy_hashes_preserve_unicode_and_javascript_numbers() {
-    let cases: Value = serde_json::from_str(include_str!("data/hash-parity.json")).unwrap();
+fn canonical_hashes_are_stable_for_unicode_and_numbers() {
+    let cases: Value = serde_json::from_str(include_str!("data/canonical-hashes.json")).unwrap();
     for case in cases.as_array().unwrap() {
         assert_eq!(util::canonical(&case["value"]), case["canonical"]);
         assert_eq!(util::hash(&case["value"]), case["hash"]);

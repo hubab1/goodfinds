@@ -155,7 +155,7 @@ const progressGuards = [
 ];
 export const searchEvents = {
   request: {
-    execution_profile: "collection",
+    execution_profile: "browser_collection",
     operation: "request_search_run",
     from: ["absent", "completed", "cancelled"],
     to: ["requested"],
@@ -164,7 +164,7 @@ export const searchEvents = {
     meaning: "Create a query plan; repeated requests return the saved run.",
   },
   resume: {
-    execution_profile: "collection",
+    execution_profile: "browser_collection",
     diagram: [
       { from: "partial", to: "requested" },
       { from: "blocked", to: "requested" },
@@ -178,7 +178,7 @@ export const searchEvents = {
     meaning: "Preserve queries/results and clear the previous worker and interruption.",
   },
   claim: {
-    execution_profile: "collection",
+    execution_profile: "browser_collection",
     diagram: [
       { from: "requested", to: "discovering" },
       { from: "discovering", to: "discovering" },
@@ -200,7 +200,7 @@ export const searchEvents = {
     meaning: "Claim or renew an active run; requested becomes discovering.",
   },
   renew: {
-    execution_profile: "collection",
+    execution_profile: "browser_collection",
     operation: "renew_search_lease",
     from: active,
     to: ["discovering", "verifying"],
@@ -216,7 +216,7 @@ export const searchEvents = {
     meaning: "Renew the current worker lease.",
   },
   progress: {
-    execution_profile: "collection",
+    execution_profile: "browser_collection",
     operation: "update_search_run",
     from: mutable,
     to: mutable,
@@ -231,7 +231,7 @@ export const searchEvents = {
       "Update the candidate query plan and phase atomically. Existing workerless execution remains supported.",
   },
   verify: {
-    execution_profile: "collection",
+    execution_profile: "browser_collection",
     diagram: [{ from: "discovering", to: "verifying", label: "category checked" }],
     operation: "update_search_run",
     from: mutable,
@@ -246,7 +246,7 @@ export const searchEvents = {
     meaning: "Begin shortlist verification after category coverage.",
   },
   complete: {
-    execution_profile: "collection",
+    execution_profile: "browser_collection",
     diagram: [
       { from: "verifying", to: "completed", label: "coverage accounted for" },
       { from: "requested", to: "completed", label: "workerless coverage accounted for" },
@@ -264,7 +264,7 @@ export const searchEvents = {
     meaning: "Complete coverage, independently of listing evidence and buying outcome.",
   },
   interrupt: {
-    execution_profile: "collection",
+    execution_profile: "browser_collection",
     diagram: [
       { from: "discovering", to: "partial" },
       { from: "discovering", to: "blocked", label: "interruption required" },
@@ -283,7 +283,7 @@ export const searchEvents = {
     meaning: "Save partial progress or explain an interruption.",
   },
   import: {
-    execution_profile: "collection",
+    execution_profile: "browser_collection",
     operation: "import_listing_observations",
     from: mutable,
     to: mutable,

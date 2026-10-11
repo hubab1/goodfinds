@@ -120,6 +120,7 @@ export function ListingTrends({
   searches,
   now,
   sample,
+  hideEmpty = false,
 }: {
   search: SavedSearch;
   history: MarketHistory[];
@@ -128,6 +129,7 @@ export function ListingTrends({
   searches: SavedSearch[];
   now: number;
   sample: boolean;
+  hideEmpty?: boolean;
 }) {
   const id = useId();
   const container = useRef<HTMLDivElement>(null);
@@ -142,6 +144,7 @@ export function ListingTrends({
     [listings, history, search, now],
   );
   const group = groups.find((item) => item.id === groupId) ?? groups[0];
+  const hasData = groups.some((item) => item.initial.length > 0 || item.history.length > 0);
   const target = targetPrice(search);
   const days = windowDays === "all" ? null : Number(windowDays);
   const points = trendWindow(
@@ -171,6 +174,7 @@ export function ListingTrends({
       series.set(point.series, trace);
     }
   useEffect(() => {
+    if (hideEmpty && !hasData) return undefined;
     const element = container.current;
     if (!element) return () => undefined;
     const observer = new ResizeObserver(([entry]) => {
@@ -178,7 +182,7 @@ export function ListingTrends({
     });
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [hasData, hideEmpty]);
   const tickDate = (at: number) =>
     new Date(at).toLocaleString("en-GB", {
       day: "numeric",
@@ -188,6 +192,7 @@ export function ListingTrends({
         : {}),
     });
   const clearSelection = () => setClusterSelection([]);
+  if (hideEmpty && !hasData) return null;
   return (
     <section
       className="listing-trends rounded-xl border bg-card p-4 @md:p-5"

@@ -4,11 +4,10 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { Database } from "bun:sqlite";
 import { Effect } from "effect";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
 import {
   journeyQueue,
   journeyOriginKey,
@@ -17,12 +16,11 @@ import {
   journeyLifetime,
 } from "@goodfinds/contracts/journeys";
 import { savedSearchSchema } from "@goodfinds/contracts/search-definition";
-import { criteria } from "./reference-server/src/searches/definition.ts";
-import { listingObservationSchema } from "./reference-server/src/workspace/model.ts";
+import { criteria } from "./helpers/native-domain.ts";
+import { listingObservationSchema } from "./helpers/native-domain.ts";
 import { stateFromToolResult, listingSchema } from "@goodfinds/contracts/state";
-import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
+import { createNativeServer } from "./helpers/native-mcp.ts";
 import { revisionFor } from "./helpers/revisions.ts";
-import { initializeWorkspaceDatabase } from "./reference-server/src/platform/database-schema.ts";
 const search = savedSearchSchema.parse({
   id: "coffee",
   name: "Coffee",
@@ -64,7 +62,7 @@ const queueSchema = z.object({
 void test("checked routes share a persistent local cache without refreshing listing facts, and changed origins invalidate reuse", (t) => {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-journeys-"));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  const store = new WorkspaceStore(seedWorkspace(folder));
+  const store = new NativeWorkspace(seedWorkspace(folder));
   let state = Effect.runSync(store.request("get_workspace")).state;
   state = Effect.runSync(
     store.request("save_search", {
@@ -141,7 +139,7 @@ void test("checked routes share a persistent local cache without refreshing list
   assert.equal(
     queueSchema.parse(
       Effect.runSync(
-        new WorkspaceStore(seedWorkspace(folder)).query("list_journey_checks", {
+        new NativeWorkspace(seedWorkspace(folder)).query("list_journey_checks", {
           search_id: search.id,
         }),
       ),
@@ -251,17 +249,9 @@ void test("town routes expire according to evidence and unresolved destinations 
   assert.equal(journeyQueue([{ ...row, location: null }], [search], [], config, now).length, 0);
 });
 
-void test("journey tools register in MCP and the additive database upgrade preserves old tables", async (t) => {
-  const db = new Database(":memory:");
-  t.after(() => db.close());
-  db.run(
-    "CREATE TABLE preserved (id TEXT); INSERT INTO preserved VALUES ('saved'); PRAGMA user_version=1;",
-  );
-  initializeWorkspaceDatabase(db);
-  assert.ok(db.query("SELECT 1 FROM journey_estimates").all());
-  assert.deepEqual(db.query("SELECT id FROM preserved").get(), { id: "saved" });
+void test("journey tools register in native MCP", async (t) => {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-journey-tools-"));
-  const { server, calls } = createGoodfindsServer(seedWorkspace(folder));
+  const { server, calls } = createNativeServer(seedWorkspace(folder));
   t.after(async () => {
     await server.close();
     rmSync(folder, { recursive: true, force: true });

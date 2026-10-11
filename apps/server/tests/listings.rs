@@ -5,13 +5,13 @@ use goodfinds::{
 };
 use serde_json::{Value, json};
 fn fixture() -> Value {
-    serde_json::from_str(include_str!("data/listing-parity.json")).unwrap()
+    serde_json::from_str(include_str!("data/listing-cases.json")).unwrap()
 }
 fn equal(actual: &Value, expected: &Value) {
     assert_eq!(canonical(actual), canonical(expected));
 }
 #[test]
-fn typescript_parity_normalization_evaluation_history_and_quality() {
+fn normalization_evaluation_history_and_quality() {
     let f = fixture();
     let now = f["now"].as_i64().unwrap();
     let rows = listings::normalize_observations(&f["input"], true, now).unwrap();
@@ -83,7 +83,8 @@ fn sqlite_alert_outbox_deduplicates_and_rechecks_preserve_discovery() {
         .map(|a| a["id"].as_str().unwrap().to_owned())
         .collect::<Vec<_>>();
     assert_eq!(listings::acknowledge(&mut ws, &ids).unwrap(), ids.len());
-    assert!(listings::acknowledge(&mut ws, &ids).is_err());
+    assert_eq!(listings::acknowledge(&mut ws, &ids).unwrap(), ids.len());
+    assert!(listings::acknowledge(&mut ws, &["unknown-alert".into()]).is_err());
     listings::command(
         &mut ws,
         "set_listing_seen",
@@ -176,7 +177,7 @@ fn media_repair_preserves_fact_timestamps_and_invalid_files_are_rejected() {
     assert!(listings::command(&mut ws, "attach_listing_media", &broken).is_err());
 }
 #[test]
-fn typescript_parity_outliers_merging_duplicates_and_coverage_rates() {
+fn outliers_merging_duplicates_and_coverage_rates() {
     let f = fixture();
     let now = f["now"].as_i64().unwrap();
     let advanced = &f["advanced"];
@@ -239,7 +240,7 @@ fn typescript_parity_outliers_merging_duplicates_and_coverage_rates() {
     );
 }
 #[test]
-fn listing_query_keeps_inboxes_scoped_and_workflow_matches_typescript() {
+fn listing_query_keeps_inboxes_scoped_and_workflow_matches_shared_contract() {
     let f = fixture();
     let now = f["now"].as_i64().unwrap();
     let dir = tempfile::tempdir().unwrap();

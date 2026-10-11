@@ -197,7 +197,9 @@ export function ListingFilters({
         >
           <Settings2 aria-hidden="true" />
           Seller filters
-          {active > 0 && <Badge className="border-white/50 px-1.5 py-0">{active}</Badge>}
+          {active > 0 && (
+            <Badge className="border-primary-foreground/50 px-1.5 py-0">{active}</Badge>
+          )}
           {!compact && (
             <ChevronDown
               className={open ? "rotate-180 transition-transform" : "transition-transform"}
@@ -228,7 +230,7 @@ export function ListingFilters({
         <section
           id={id + "-panel"}
           aria-label="Seller filters"
-          className="seller-filter-panel rounded-xl border bg-white p-5"
+          className="seller-filter-panel rounded-xl border bg-card p-5"
         >
           <div className="mb-4 flex items-center justify-between gap-3">
             <h2 className="font-semibold">Seller filters</h2>

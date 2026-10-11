@@ -1,4 +1,5 @@
-import { accessAvailable, MARKETPLACES } from "@goodfinds/contracts/integrations";
+import { resolveRegion } from "@goodfinds/contracts/regional";
+import { accessAvailable, marketHome } from "@goodfinds/contracts/integrations";
 import type { Marketplace } from "@goodfinds/contracts/integrations";
 import type { GoodfindsState } from "@goodfinds/contracts/state";
 import type { QuietHours } from "@goodfinds/contracts/search-timing";
@@ -6,6 +7,7 @@ import type { QuietHours } from "@goodfinds/contracts/search-timing";
 export type SettingsPatch = Partial<
   Pick<
     GoodfindsState["config"],
+    | "regional_preferences"
     | "browser_preference"
     | "platforms"
     | "baseline_days"
@@ -25,6 +27,9 @@ export function marketplaceConnection(
   now: number,
 ): "Off" | "Not checked" | "Check needed" | "Signed in" | "Sign in" | "Unavailable" {
   if (state.config.platforms[marketplace]?.enabled === false) return "Off";
+  const region = resolveRegion(state.config);
+  const home = marketHome(marketplace, region.country, region.locale);
+  if (!home) return "Unavailable";
   const browser = marketplaceBrowser(state, marketplace);
   const access = state.config.browser_access.find(
     (report) => report.browser === browser && report.context_id === state.access_context,
@@ -40,8 +45,7 @@ export function marketplaceConnection(
     now >= Date.parse(checked) && now - Date.parse(checked) <= 30 * 60_000;
   if (!fresh(access.checked_at)) return "Check needed";
   if (access.status === "denied" || access.status === "unavailable") return "Unavailable";
-  const platform = MARKETPLACES.find((item) => item.id === marketplace);
-  const domain = platform ? new URL(platform.home).hostname : undefined;
+  const domain = new URL(home).hostname;
   if (!accessAvailable(state.config.browser_access, browser, state.access_context, now, domain))
     return access.status === "available" ? "Unavailable" : "Check needed";
   const session = state.config.platform_sessions.findLast(

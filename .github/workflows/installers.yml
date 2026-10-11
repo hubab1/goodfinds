@@ -1,0 +1,97 @@
+name: Desktop installers
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mac-payload:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            chip: arm64
+          - os: macos-15-intel
+            chip: x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+      - uses: dtolnay/rust-toolchain@1.92.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/server -> target
+      - run: bun install --frozen-lockfile
+      - run: bun scripts/build-server.ts
+      - run: bun scripts/package-plugin.ts
+      - run: bun scripts/smoke-plugin.ts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: goodfinds-mac-payload-${{ matrix.chip }}
+          path: dist/goodfinds-marketplace/
+          include-hidden-files: true
+          if-no-files-found: error
+
+  mac-installer:
+    needs: mac-payload
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: goodfinds-mac-payload-*
+          path: dist/mac-payloads
+      - run: python3 installers/macos/universal.py dist/mac-payloads/goodfinds-mac-payload-arm64 dist/mac-payloads/goodfinds-mac-payload-x86_64 dist/goodfinds-marketplace-universal
+      - run: installers/macos/build.sh dist/goodfinds-marketplace-universal
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Goodfinds-installer-macOS-universal
+          path: dist/Goodfinds-*-macos-universal.pkg
+          if-no-files-found: error
+
+  verify-mac:
+    needs: mac-installer
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Goodfinds-installer-macOS-universal
+          path: dist
+      - run: |
+          python3 installers/macos/check-package.py dist/Goodfinds-*-macos-universal.pkg
+
+  windows-installer:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+      - uses: dtolnay/rust-toolchain@1.92.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/server -> target
+      - run: bun install --frozen-lockfile
+      - run: bun scripts/build-server.ts
+      - run: bun scripts/package-plugin.ts
+      - run: bun scripts/smoke-plugin.ts
+      - run: choco install innosetup --yes --no-progress
+      - run: ./installers/windows/build.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Goodfinds-installer-Windows-x64
+          path: dist/Goodfinds-*.exe
+          if-no-files-found: error

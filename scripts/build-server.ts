@@ -50,7 +50,6 @@ for (const path of new Set([home, home.replaceAll("\\", "/"), root, root.replace
 const staging = resolve(output, `${name}.pending`);
 copyFileSync(compiled, staging);
 renameSync(staging, resolve(output, name));
-rmSync(resolve(output, "goodfinds.mjs"), { force: true });
 writeFileSync(
   resolve(output, "build.json"),
   `${JSON.stringify({ target: buildTarget, runtime: "native-rust", executable: name })}\n`,

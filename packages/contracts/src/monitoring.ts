@@ -12,11 +12,24 @@ import {
 import type { QuietHours } from "./search-timing.ts";
 import type { DispatcherSummary } from "./scheduled-dispatch.ts";
 
+export const dispatcherReceiptSchema = z.object({
+  workflow_version: z.number().int().positive().optional(),
+  skill_name: z.literal("marketplace-shopping").optional(),
+  automation_id: z.string().min(1).max(200).nullable(),
+  thread_id: z.uuid(),
+  status: z.enum(["active", "paused", "removed", "blocked"]),
+  interval_minutes: z.number().int().min(15).max(1440),
+  rrule: z.string().min(1).max(2000).optional(),
+  timezone: quietHoursSchema.shape.timezone.optional(),
+  evidence: z.string().trim().min(1).max(2000),
+  next_run_at: z.iso.datetime({ offset: true }).nullable().default(null),
+  last_run_at: z.iso.datetime({ offset: true }).nullable().default(null),
+  verified_at: z.iso.datetime({ offset: true }),
+});
+
 const interval = z.number().int().min(15).max(1440);
-const threadId = z.uuid();
-export const monitoringPreferenceSchema = z
+export const initialMonitoringSchema = z
   .object({
-    search_id: z.string().min(1),
     preference: z.enum(["once", "recurring"]),
     interval_minutes: interval.optional(),
     timing: searchTimingSchema.optional(),
@@ -27,24 +40,9 @@ export const monitoringPreferenceSchema = z
     (request) => request.interval_minutes === undefined || request.timing === undefined,
     "Choose an interval or specific times, not both",
   );
-const hostScheduleReportBaseSchema = z
-  .object({
-    search_id: z.string().min(1),
-    automation_id: z.string().trim().min(1).max(200).nullable(),
-    thread_id: threadId,
-    status: z.enum(["active", "paused", "removed", "blocked"]),
-    interval_minutes: interval,
-    rrule: z.string().min(1).max(2000).optional(),
-    timezone: quietHoursSchema.shape.timezone.optional(),
-    evidence: z.string().trim().min(1).max(2000),
-    next_run_at: z.iso.datetime({ offset: true }).nullable().default(null),
-    last_run_at: z.iso.datetime({ offset: true }).nullable().default(null),
-  })
-  .strict();
-export const hostScheduleReportSchema = hostScheduleReportBaseSchema.refine(
-  (report) => report.status === "blocked" || report.automation_id !== null,
-  "A verified schedule needs its host automation ID",
-);
+export const monitoringPreferenceSchema = initialMonitoringSchema.safeExtend({
+  search_id: z.string().min(1),
+});
 export const monitoringRecordSchema = z
   .object({
     search_id: z.string().min(1),
@@ -54,13 +52,6 @@ export const monitoringRecordSchema = z
     allow_quiet_hours: z.boolean().default(false),
     interruption: z.string().nullable().default(null),
     last_scheduled_run_at: z.iso.datetime({ offset: true }).nullable().default(null),
-    schedule: hostScheduleReportBaseSchema
-      .omit({ search_id: true })
-      .extend({
-        verified_at: z.iso.datetime({ offset: true }),
-      })
-      .nullable()
-      .default(null),
   })
   .strict();
 export const monitoringRecordsSchema = z
@@ -105,7 +96,7 @@ export const monitoringSummarySchema = z.object({
   ]),
   label: z.string(),
   next_action: z.enum(["choose", "start", "resume", "update", "pause", "check", "none"]),
-  schedule: monitoringRecordSchema.shape.schedule,
+  schedule: dispatcherReceiptSchema.nullable().default(null),
   host_schedule: hostScheduleObservationSchema.nullable().default(null),
   interruption: z.string().nullable().default(null),
   dispatcher_id: z.uuid().nullable().default(null),
@@ -131,7 +122,7 @@ export function monitoringSummary(
   const timing = record?.timing ?? { mode: "interval" as const, interval_minutes: minutes };
   const plan = schedulePlan(timing, quietHours, record?.allow_quiet_hours);
   const quietNow = inQuietHours(now, plan.quiet_hours);
-  const rawReceipt = sample ? null : (shared?.dispatcher.schedule ?? record?.schedule ?? null);
+  const rawReceipt = sample ? null : (shared?.dispatcher.schedule ?? null);
   const receipt =
     rawReceipt && shared
       ? { ...rawReceipt, last_run_at: record?.last_scheduled_run_at ?? null }
@@ -233,11 +224,11 @@ export function scheduleIsActive(summary: MonitoringSummary): boolean {
 
 export function monitoringRequest(
   searchId: string,
-  action: "search" | "pause" | "check" | "enable" | "disable",
+  action: "search" | "resume" | "pause" | "check" | "enable" | "disable",
 ): string {
   const intent =
-    action === "search"
-      ? "Keep watching this saved search. This request authorizes recurring checks at its saved cadence, defaulting to hourly, and respects quiet hours (22:00–08:00 by default)."
+    action === "search" || action === "resume"
+      ? "Keep watching this saved search. This request authorizes recurring checks at its saved cadence, defaulting to every two hours, and respects quiet hours (22:00–08:00 by default)."
       : action === "pause"
         ? "Stop recurring checks for this saved search and keep its listings."
         : action === "enable" || action === "disable"
@@ -248,6 +239,12 @@ export function monitoringRequest(
       ? "Preserve the saved monitoring choice and enabled flag."
       : action === "enable" || action === "disable"
         ? `Preserve the monitoring choice and call set_goodfinds_search_enabled with enabled ${action === "enable" ? "true" : "false"} before reconciling the host schedule.`
-        : `Save preference ${action === "search" ? "recurring" : "once"} with set_goodfinds_monitoring.`;
-  return `Use Goodfinds's marketplace-shopping skill to change only search_id ${JSON.stringify(searchId)}. ${intent} Read get_goodfinds_search_context and references/evaluation-delivery.md. ${choice} Reconcile through get_goodfinds_dispatcher_context in the original buying chat. Join an existing compatible dispatcher using its compiled shared plan and preserve every peer's timing and monitoring choice. Pausing this search leaves other active members running; pause the host automation only when no members remain eligible. Reuse the automation ID, original thread and notification settings. Each shared wake-up uses request_goodfinds_scheduled_batch to reserve only due searches from the database. Verify the host result and record report_goodfinds_dispatcher_schedule with the fresh plan revision. A saved preference alone does not activate monitoring. A development/review request cannot activate a buyer's search. Preserve observed host pauses unless resuming is authorized. Search execution and seller contact are separate actions.`;
+        : action === "resume"
+          ? "Save preference recurring with set_goodfinds_monitoring and call set_goodfinds_search_enabled with enabled true."
+          : `Save preference ${action === "search" ? "recurring" : "once"} with set_goodfinds_monitoring.`;
+  const recovery =
+    action === "resume" || action === "search"
+      ? " This explicit start/resume request also authorizes restoring this search in the current chat if the original buying chat is unavailable and its old automation is verified removed. Follow the removed-schedule recovery steps in references/scheduled-dispatch.md. Preserve every other search; this authorization covers only the named search."
+      : "";
+  return `Use Goodfinds's marketplace-shopping skill to change only search_id ${JSON.stringify(searchId)}. ${intent} Read get_goodfinds_search_context and references/evaluation-delivery.md. ${choice} Reconcile through get_goodfinds_dispatcher_context, preferring the original buying chat.${recovery} Join an existing compatible dispatcher using its compiled shared plan and preserve every peer's timing and monitoring choice. Pausing this search leaves other active members running; pause the host automation only when no members remain eligible. Preserve notification settings and reuse the existing automation and chat whenever available. Each shared wake-up uses request_goodfinds_scheduled_batch to reserve only due searches from the database. Verify the host result and record report_goodfinds_dispatcher_schedule with the fresh plan revision. A saved preference alone does not activate monitoring. A development/review request cannot activate a buyer's search. Preserve observed host pauses unless resuming is authorized. Search execution and seller contact are separate actions.`;
 }

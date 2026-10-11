@@ -9,13 +9,8 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { ElicitRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
-import {
-  CUSTOM,
-  NO_PREFERENCE,
-  nativeAnswer,
-  nativeQuestion,
-} from "./reference-server/src/searches/interview.ts";
+import { createNativeServer } from "./helpers/native-mcp.ts";
+import { CUSTOM, NO_PREFERENCE, nativeAnswer, nativeQuestion } from "./helpers/native-domain.ts";
 import {
   SEARCH_TEMPLATES,
   activeAnswers,
@@ -154,7 +149,7 @@ void test("native forms preserve false, no preference, ranges and displayed curr
 
 void test("native interview resumes a durable draft, handles cancellation and skips inapplicable questions", async (t) => {
   const data = await mkdtemp(resolve(tmpdir(), "goodfinds-interview-"));
-  const { server } = createGoodfindsServer(seedWorkspace(data));
+  const { server } = createNativeServer(seedWorkspace(data));
   const client = new Client(
     { name: "Question test", version: "1.0.0" },
     { capabilities: { elicitation: { form: {} } } },
@@ -248,7 +243,7 @@ void test("native interview resumes a durable draft, handles cancellation and sk
 
 void test("hosts without native questions return a resumable draft instead of inventing answers", async (t) => {
   const data = await mkdtemp(resolve(tmpdir(), "goodfinds-no-questions-"));
-  const { calls } = createGoodfindsServer(seedWorkspace(data));
+  const { calls } = createNativeServer(seedWorkspace(data));
   t.after(() => rm(data, { recursive: true, force: true }));
   const read = calls.get("get_goodfinds_workspace");
   const prepare = calls.get("save_goodfinds_search_draft");

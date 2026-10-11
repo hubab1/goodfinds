@@ -4,6 +4,7 @@ import { SEARCH_TEMPLATES, searchDefinitionSchema } from "@goodfinds/contracts/s
 import { savedSearchSchema } from "@goodfinds/contracts/state";
 import {
   searchBudget,
+  searchBudgetLabel,
   searchLocation,
   searchRequirements,
   searchSummary,
@@ -29,6 +30,7 @@ void test("compact laptop summaries keep the limits and leave complete requireme
   });
   assert.equal(searchSummary(search), "M3 or newer · 32 GB+ memory · 1 TB+");
   assert.equal(searchBudget(search), "£1,200");
+  assert.equal(searchBudgetLabel(search), "Up to");
   assert.deepEqual(searchLocation(search, "Birmingham"), {
     location: "Birmingham",
     distances: [{ label: "Up to 1 hour drive", kind: "drive" }],
@@ -67,6 +69,49 @@ void test("rental rows follow conditional answers, location fields and weekly pr
     ),
   );
   assert.ok(searchRequirements(search).some((item) => item.value === "£250 per week"));
+});
+
+void test("a flexible fleece budget is a target while an explicit ceiling keeps its limit", () => {
+  const search = savedSearchSchema.parse({
+    id: "black-fleece",
+    name: "Black premium fleece",
+    product: "clothing",
+    definition: {
+      schema_version: 1,
+      version: 1,
+      category: "clothing",
+      title: "Black premium fleece",
+      description: "Black fleece around £30, size XL or XXL",
+      price: { currency: "GBP", period: "once" },
+      comparison_attributes: ["brand", "size"],
+      fields: [
+        {
+          id: "target_price_minor",
+          label: "Target price",
+          type: "integer",
+          match: { attribute: "price_minor", operator: "lte", importance: "preferred" },
+        },
+        {
+          id: "max_price_minor",
+          label: "Maximum price",
+          type: "integer",
+          match: { attribute: "price_minor", operator: "lte" },
+        },
+      ],
+    },
+    values: { target_price_minor: 3000 },
+  });
+  assert.equal(searchBudget(search), "£30");
+  assert.equal(searchBudgetLabel(search), "Target");
+  const ceiling = { ...search, values: { ...search.values, max_price_minor: 4000 } };
+  assert.equal(searchBudget(ceiling), "£40");
+  assert.equal(searchBudgetLabel(ceiling), "Up to");
+  const free = { ...search, values: { target_price_minor: 0 } };
+  assert.equal(searchBudget(free), "£0");
+  assert.equal(searchBudgetLabel(free), "Target");
+  const unbounded = { ...search, values: { target_price_minor: null } };
+  assert.equal(searchBudget(unbounded), "No price limit");
+  assert.equal(searchBudgetLabel(unbounded), null);
 });
 
 void test("new categories retain false and zero preferences without a category-specific layout", () => {
@@ -115,6 +160,7 @@ void test("new categories retain false and zero preferences without a category-s
   assert.equal(searchSummary(search), "54 cm frame size · Electric: No · 0 previous owners");
   assert.deepEqual(searchLocation(search, "Birmingham"), { location: "Cambridge", distances: [] });
   assert.equal(searchBudget(search), "No price limit");
+  assert.equal(searchBudgetLabel(search), null);
   assert.ok(
     searchRequirements(search).some(
       (item) => item.id === "seller" && item.value === "No preference",

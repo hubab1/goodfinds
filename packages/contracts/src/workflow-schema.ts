@@ -23,8 +23,6 @@ export const actionDescriptorSchema = z.object({
 export const workflowSchema = z.object({
   state: z.string(),
   actions: z.array(actionDescriptorSchema),
-  allowed_actions: z.array(z.string()),
-  prerequisites: z.array(z.string()),
 });
 export const sellerWorkflowSchema = workflowSchema.extend({
   conversation_phase: z.string(),

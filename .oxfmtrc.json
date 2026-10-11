@@ -17,7 +17,6 @@
     "apps/server/target/**",
     "apps/server/data/contracts.json",
     "apps/server/tests/data/*.json",
-    "apps/server/src/seller_parity_fixture.json",
     "apps/server/src/currency_formats.json"
   ]
 }

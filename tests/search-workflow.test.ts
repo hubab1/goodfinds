@@ -9,12 +9,12 @@ import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { Clock, Effect } from "effect";
 import { z } from "zod";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
-import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
+import { createNativeServer } from "./helpers/native-mcp.ts";
 import { savedSearchSchema, searchDefinitionSchema } from "@goodfinds/contracts/search-definition";
 import { stateFromToolResult, stateSchema } from "@goodfinds/contracts/state";
 import { queryPlan, searchProgress } from "@goodfinds/contracts/search-workflow";
-import { SEARCH_LEASE_MS } from "./reference-server/src/searches/runs.ts";
+import { SEARCH_LEASE_MS } from "./helpers/native-domain.ts";
 import {
   verificationChecks,
   unresolvedQuestions,
@@ -22,13 +22,10 @@ import {
   verificationCheckSchema,
 } from "@goodfinds/contracts/verification";
 import { sellerMessageDraftSchema, offerMessage } from "@goodfinds/contracts/seller-conversation";
-import {
-  workspaceConfigurationSchema,
-  listingObservationSchema,
-} from "./reference-server/src/workspace/model.ts";
-import { evaluateListing, matchListing } from "./reference-server/src/listings/evaluation.ts";
-import { learnedCriteria } from "./reference-server/src/searches/learning.ts";
-import { searchCohort } from "./reference-server/src/searches/definition.ts";
+import { workspaceConfigurationSchema, listingObservationSchema } from "./helpers/native-domain.ts";
+import { evaluateListing, matchListing } from "./helpers/native-domain.ts";
+import { learnedCriteria } from "./helpers/native-domain.ts";
+import { searchCohort } from "./helpers/native-domain.ts";
 
 const definition = searchDefinitionSchema.parse({
   schema_version: 1,
@@ -96,7 +93,7 @@ function required<T>(value: T | null | undefined): T {
 function fixture(t: TestContext, controlled = false) {
   const dir = mkdtempSync(resolve(tmpdir(), "goodfinds-workflow-"));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
-  const store = new WorkspaceStore(seedWorkspace(dir));
+  const store = new NativeWorkspace(seedWorkspace(dir));
   let now = Date.now();
   const clock: Clock.Clock = {
     currentTimeMillisUnsafe: () => now,
@@ -156,7 +153,7 @@ void test("one background worker owns a run across clicks, reconnects and progre
   );
   assert.equal(
     Effect.runSync(
-      new WorkspaceStore(seedWorkspace(dir))
+      new NativeWorkspace(seedWorkspace(dir))
         .request("get_workspace")
         .pipe(Effect.provideService(Clock.Clock, clock)),
     ).state.search_runs[0]?.worker?.id,
@@ -695,7 +692,7 @@ void test("description enrichment updates provisional specs and repeated cards r
   run("import_listing_observations", {
     observations: [{ ...card, observed_at: new Date(start + 2000).toISOString() }],
   });
-  const retained = Effect.runSync(new WorkspaceStore(seedWorkspace(dir)).request("get_workspace"))
+  const retained = Effect.runSync(new NativeWorkspace(seedWorkspace(dir)).request("get_workspace"))
     .state.listings[0];
   assert.equal(retained?.description, description);
   assert.equal(retained?.ram_gb, 16);
@@ -763,7 +760,7 @@ void test("repeated discovery retains detailed evidence and selected draft quest
     draft,
   });
   const restored = Effect.runSync(
-    new WorkspaceStore(seedWorkspace(dir)).request("get_seller_conversation", {
+    new NativeWorkspace(seedWorkspace(dir)).request("get_seller_conversation", {
       listing_key: listing.key,
     }),
   ).state.seller_conversation;
@@ -778,7 +775,7 @@ void test("repeated discovery retains detailed evidence and selected draft quest
 
 void test("MCP model results stay compact while app metadata and paginated evidence remain complete", async (t) => {
   const { dir } = fixture(t);
-  const { server, calls } = createGoodfindsServer(seedWorkspace(dir));
+  const { server, calls } = createNativeServer(seedWorkspace(dir));
   t.after(async () => server.close());
   const call = async (name: string, args: Record<string, unknown> = {}) => {
     const tool = calls.get(name);

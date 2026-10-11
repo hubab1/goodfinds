@@ -1,3 +1,4 @@
+import { resolveRegion, browserLocaleHints } from "@goodfinds/contracts/regional";
 import { useRef, useState } from "react";
 import { LocateFixed, MapPin, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,9 +46,11 @@ const COUNTRY_CODES = [
 const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
 
 function initialCountry(state: GoodfindsState): string {
-  if (state.config.location) return state.config.location.country;
-  const region = new Intl.Locale(navigator.language).region;
-  return region || "GB";
+  return (
+    state.config.location?.country ??
+    resolveRegion(state.config, {}, browserLocaleHints()).country ??
+    ""
+  );
 }
 
 export function LocationSettings({
@@ -80,7 +83,9 @@ export function LocationSettings({
       ...(/^[A-Z]{2}$/u.test(country) ? [country] : []),
       ...COUNTRY_CODES,
     ]),
-  ].toSorted((a, b) => (countryNames.of(a) ?? a).localeCompare(countryNames.of(b) ?? b));
+  ]
+    .filter(Boolean)
+    .toSorted((a, b) => (countryNames.of(a) ?? a).localeCompare(countryNames.of(b) ?? b));
 
   async function locate(kind: "device" | "ip" | "manual") {
     if (busy || working || locating.current) return;
@@ -192,6 +197,7 @@ export function LocationSettings({
               setOptions([]);
             }}
           >
+            <NativeSelectOption value="">Choose country</NativeSelectOption>
             {countries.map((code) => (
               <NativeSelectOption key={code} value={code}>
                 {countryNames.of(code) ?? code}

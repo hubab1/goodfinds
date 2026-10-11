@@ -204,15 +204,9 @@ pub fn contact(
 ) -> Value {
     let source = row["source"].as_str().unwrap_or("facebook_marketplace");
     let mut r = json!({"message":false,"offer":false,"reason":"Contact options need checking","check_needed":true});
-    if ![
-        "facebook_marketplace",
-        "ebay",
-        "vinted",
-        "gumtree",
-        "autotrader",
-        "craigslist",
-    ]
-    .contains(&source)
+    if !contracts::data("MARKETPLACES")
+        .as_array()
+        .is_some_and(|items| items.iter().any(|v| v["id"] == source))
     {
         r["reason"] = json!("Marketplace is unsupported");
         r["check_needed"] = json!(false);
@@ -655,22 +649,7 @@ pub fn workflow(ws: &Workspace, c: &Value, row: &Value) -> Value {
             .collect();
         descriptors.push(json!({"event":event,"operation":operation,"tool":tool,"availability":if blocked{"blocked"}else if issues.is_empty(){"available"}else{"requires_input"},"required_inputs":d["inputs"],"conditions":conditions,"blockers":issues,"execution":execution_policy(profile)}));
     }
-    let mut allowed = vec![];
-    let mut prerequisites = vec![];
-    for d in &descriptors {
-        if d["availability"] != "blocked" && !allowed.contains(&d["tool"]) {
-            allowed.push(d["tool"].clone())
-        }
-        for x in arr(&d["conditions"])
-            .iter()
-            .chain(arr(&d["blockers"]).iter().map(|b| &b["recovery"]))
-        {
-            if !prerequisites.contains(x) {
-                prerequisites.push(x.clone())
-            }
-        }
-    }
-    json!({"state":state,"actions":descriptors,"allowed_actions":allowed,"prerequisites":prerequisites,"conversation_phase":c["phase"],"buying_outcome":c["outcome"],"action_id":action.map(|a|a["id"].clone()).unwrap_or(Value::Null)})
+    json!({"state":state,"actions":descriptors,"conversation_phase":c["phase"],"buying_outcome":c["outcome"],"action_id":action.map(|a|a["id"].clone()).unwrap_or(Value::Null)})
 }
 pub fn execution_policy(profile: &str) -> Value {
     if profile == "collection" {
@@ -2184,9 +2163,9 @@ mod tests {
         assert_eq!(summary(&c, f.ws.now)["label"], "Check send");
     }
     #[test]
-    fn all_5280_legacy_guard_decisions_match_native_protocol() {
+    fn all_5280_guard_decisions_match_native_protocol() {
         let corpus: Value =
-            serde_json::from_str(include_str!("seller_parity_fixture.json")).unwrap();
+            serde_json::from_str(include_str!("../tests/data/seller-guards.json")).unwrap();
         let mut f = Fixture::new();
         f.ws.now = corpus["now"].as_i64().unwrap();
         f.ws.access_context = s(&corpus["context_id"]).to_string();

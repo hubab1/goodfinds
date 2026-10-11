@@ -1,3 +1,10 @@
+import { MARKETPLACES, marketHome } from "@goodfinds/contracts/integrations";
+import {
+  resolveRegion,
+  localizeTemplate,
+  browserLocaleHints,
+  type RegionalConfig,
+} from "@goodfinds/contracts/regional";
 import type { Marketplace } from "@goodfinds/contracts/integrations";
 import type { Action, PanelInput, PanelTool } from "@/lib/actions";
 import { useEffect, useId, useRef, useState } from "react";
@@ -18,6 +25,7 @@ import type {
 import type { SavedSearch } from "@goodfinds/contracts/state";
 
 export type SearchEditorOptions = {
+  config?: RegionalConfig;
   search: SavedSearch | undefined;
   draft?: SearchDraft;
   revision: string;
@@ -26,6 +34,7 @@ export type SearchEditorOptions = {
   close: () => void;
 };
 export function useSearchEditor({
+  config = {},
   search,
   draft,
   revision,
@@ -35,16 +44,77 @@ export function useSearchEditor({
 }: SearchEditorOptions) {
   const initial = search?.definition ?? draft?.definition ?? SEARCH_TEMPLATES[0];
   if (!initial) throw new Error("No search definitions are available");
+  const region = resolveRegion(config, {}, browserLocaleHints(), initial.category);
+  const original = search ?? draft;
+  const manualCurrency = useRef(
+    Boolean(original?.definition.price.currency || config.regional_preferences?.currency),
+  );
+  const [currency, setCurrency] = useState(
+    () => original?.definition.price.currency ?? region.currency ?? "",
+  );
+  const [market, setMarket] = useState(
+    () =>
+      original?.market ?? {
+        ...(region.country ? { country: region.country } : {}),
+        ...(region.locale ? { locale: region.locale } : {}),
+        fulfilment: region.fulfilment,
+      },
+  );
   const [definition, setDefinition] = useState<SearchDefinition>(() =>
-    withSellerListingField(initial),
+    withSellerListingField(
+      !original && region.currency ? localizeTemplate(initial, region.currency) : initial,
+    ),
   );
   const [answers, setAnswers] = useState<Answers>(() => search?.values ?? draft?.values ?? {});
-  const [marketplaces, setMarketplaces] = useState<Marketplace[]>(
-    () => search?.marketplaces ?? draft?.marketplaces ?? ["facebook_marketplace"],
+  const manualMarketplaces = useRef(Boolean(original));
+  const [marketplaces, updateMarketplaces] = useState<Marketplace[]>(() =>
+    original
+      ? (original.marketplaces ?? ["facebook_marketplace"])
+      : region.marketplaces.map((m) => m.id),
   );
+  function setMarketplaces(update: Marketplace[] | ((current: Marketplace[]) => Marketplace[])) {
+    manualMarketplaces.current = true;
+    updateMarketplaces(update);
+  }
+  const availableMarketplaces = MARKETPLACES.filter(
+    (platform) =>
+      marketplaces.includes(platform.id) ||
+      marketHome(platform.id, market.country, market.locale ?? region.locale),
+  );
+  function changeMarket(next: typeof market) {
+    setMarket(next);
+    if (next.country !== market.country && !manualCurrency.current) {
+      const nextCurrency = resolveRegion(config, next, browserLocaleHints()).currency;
+      if (nextCurrency) applyCurrency(nextCurrency);
+    }
+    if (!manualMarketplaces.current)
+      updateMarketplaces(
+        resolveRegion(config, next, {}, definition.category).marketplaces.map((m) => m.id),
+      );
+  }
+  function changeCurrency(next: string) {
+    manualCurrency.current = true;
+    applyCurrency(next);
+  }
+  function applyCurrency(next: string) {
+    if (!next || next === currency) return;
+    setCurrency(next);
+    setDefinition((current) => ({
+      ...localizeTemplate(current, next),
+      version: current.version + 1,
+    }));
+    // Changing currency is not an exchange-rate conversion. Ask for the budget again.
+    setAnswers((current) =>
+      Object.fromEntries(
+        Object.entries(current).filter(
+          ([id]) => definition.fields.find((f) => f.id === id)?.match?.attribute !== "price_minor",
+        ),
+      ),
+    );
+  }
   const [discovery, setDiscovery] = useState(() => search?.discovery ?? draft?.discovery);
   const [name, setName] = useState(search?.name ?? draft?.name ?? "");
-  const [phase, setPhase] = useState<"edit" | "review" | "remove">("edit");
+  const [phase, setPhase] = useState<"edit" | "review">("edit");
   const title = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     if (phase !== "edit") title.current?.focus();
@@ -76,7 +146,12 @@ export function useSearchEditor({
   const values = activeAnswers(definition, answers);
   async function save(): Promise<void> {
     if (disabled || submitting.current) return;
+    if (!currency || (!original && !market.country)) {
+      setValidation("Choose a shopping country and budget currency.");
+      return;
+    }
     const parsed = searchInputSchema.safeParse({
+      market,
       ...(search ? { id: search.id, ...(search.cover ? { cover: search.cover } : {}) } : {}),
       marketplaces,
       ...(discovery ? { discovery } : {}),
@@ -107,6 +182,10 @@ export function useSearchEditor({
     );
   }
   async function saveDraft(): Promise<void> {
+    if (!currency) {
+      setValidation("Choose a budget currency.");
+      return;
+    }
     const partialValues = Object.fromEntries(
       Object.entries(values).filter(
         ([id, value]) =>
@@ -125,6 +204,7 @@ export function useSearchEditor({
         draft: {
           ...(draft ? { id: draft.id } : {}),
           name,
+          market,
           definition,
           values: partialValues,
           ...(draft?.uncertain_fields
@@ -153,7 +233,9 @@ export function useSearchEditor({
     setSending(true);
     setValidation("");
     try {
-      await requestSearchInterview(brief.trim());
+      await requestSearchInterview(
+        `${brief.trim()}\nCurrent shopping choices: ${JSON.stringify({ ...market, ...(currency ? { currency } : {}), ...(manualMarketplaces.current ? { marketplaces } : {}) })}. Preserve these choices unless my brief explicitly changes them.`,
+      );
       if (!dismissed.current) dismiss();
     } catch (failure) {
       setValidation(errorMessage(failure));
@@ -162,19 +244,14 @@ export function useSearchEditor({
       setSending(false);
     }
   }
-  async function remove(): Promise<void> {
-    if (search)
-      await commit(
-        "remove_goodfinds_search",
-        { search_id: search.id, snapshot_revision: revision },
-        "Search removed",
-      );
-  }
-
   function chooseCategory(category: string) {
     const next = SEARCH_TEMPLATES.find((item) => item.category === category);
     if (next) {
-      setDefinition(withSellerListingField(next));
+      setDefinition(withSellerListingField(currency ? localizeTemplate(next, currency) : next));
+      if (!manualMarketplaces.current)
+        updateMarketplaces(
+          resolveRegion(config, market, {}, category).marketplaces.map((m) => m.id),
+        );
       setAnswers({});
       setShowErrors(false);
       setValidation("");
@@ -226,6 +303,11 @@ export function useSearchEditor({
   }
   return {
     definition,
+    market,
+    currency,
+    changeMarket,
+    changeCurrency,
+    availableMarketplaces,
     answers,
     setAnswers,
     marketplaces,
@@ -249,7 +331,6 @@ export function useSearchEditor({
     save,
     saveDraft,
     interview,
-    remove,
     chooseCategory,
     changeScope,
     changeReferenceModel,

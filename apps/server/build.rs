@@ -23,12 +23,8 @@ fn main() {
         images.extend(data[group].as_object().unwrap().values().cloned());
     }
     let mut code = String::from(
-        "pub fn bundled_image(id:&str)->Option<(&'static [u8],&'static str)>{let id=match id{\n",
+        "pub fn bundled_image(id:&str)->Option<(&'static [u8],&'static str)>{match id{\n",
     );
-    for (old, new) in data["media_id_aliases"].as_object().unwrap() {
-        code.push_str(&format!("{old:?}=>{:?},\n", new.as_str().unwrap()));
-    }
-    code.push_str("_=>id};match id{\n");
     let mut seen = std::collections::HashSet::new();
     for image in images {
         let id = image["media_id"].as_str().unwrap();

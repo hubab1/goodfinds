@@ -5,20 +5,18 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
-import { Database } from "bun:sqlite";
 import { Effect } from "effect";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
-import { initializeWorkspaceDatabase } from "./reference-server/src/platform/database-schema.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
 import { listingDiscoveryLabel } from "../apps/ui/src/lib/listing-presentation.ts";
 import { firstDiscovery } from "@goodfinds/contracts/listing-discovery";
-import { stateToolResult } from "./reference-server/src/entrypoints/mcp.ts";
+import { stateToolResult } from "./helpers/native-mcp.ts";
 import { stateSummarySchema } from "@goodfinds/contracts/operations";
 import { revisionFor } from "./helpers/revisions.ts";
 
 void test("discovery keeps the original search run through repeat sightings and restart, and counts unique listings per search", (t) => {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-discovery-"));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  const store = new WorkspaceStore(seedWorkspace(folder));
+  const store = new NativeWorkspace(seedWorkspace(folder));
   let state = Effect.runSync(store.request("get_workspace")).state;
   const search = state.searches[0];
   assert.ok(search);
@@ -98,7 +96,7 @@ void test("discovery keeps the original search run through repeat sightings and 
       observations: [row(200001)],
     }),
   ).state;
-  state = Effect.runSync(new WorkspaceStore(seedWorkspace(folder)).request("get_workspace")).state;
+  state = Effect.runSync(new NativeWorkspace(seedWorkspace(folder)).request("get_workspace")).state;
   assert.equal(state.searches.find((item) => item.id === other.id)?.found_count, 1);
   assert.equal(state.searches.find((item) => item.id === search.id)?.found_count, 3);
   const associations =
@@ -120,47 +118,6 @@ void test("discovery keeps the original search run through repeat sightings and 
     )?.run_id,
     first.id,
   );
-});
-
-void test("older workspaces recover original run links from all retained runs, beyond the progress page limit", () => {
-  const db = new Database(":memory:");
-  try {
-    db.run(
-      "CREATE TABLE search_runs (id TEXT PRIMARY KEY,search_id TEXT,document_json TEXT); PRAGMA user_version=2;",
-    );
-    const original = randomUUID();
-    db.run("INSERT INTO search_runs VALUES (?,?,?)", [
-      original,
-      "laptop",
-      JSON.stringify({
-        created_at: "2026-10-01T08:15:00.000Z",
-        listing_keys: ["manual:1", "manual:1"],
-      }),
-    ]);
-    for (let i = 0; i < 60; i++)
-      db.run("INSERT INTO search_runs VALUES (?,?,?)", [
-        randomUUID(),
-        "laptop",
-        JSON.stringify({ created_at: "2026-10-06T15:00:00.000Z", listing_keys: ["manual:1"] }),
-      ]);
-    initializeWorkspaceDatabase(db);
-    const found = db
-      .query<{ run_id: string; recorded_at: string | null }, []>(
-        "SELECT run_id,recorded_at FROM listing_search_discoveries",
-      )
-      .get();
-    assert.equal(found?.run_id, original);
-    assert.equal(found?.recorded_at, null, "Backfill must not invent an ingestion timestamp");
-    initializeWorkspaceDatabase(db);
-    assert.equal(
-      db
-        .query<{ count: number }, []>("SELECT count(*) AS count FROM listing_search_discoveries")
-        .get()?.count,
-      1,
-    );
-  } finally {
-    db.close();
-  }
 });
 
 void test("card discovery copy uses the run hour, local timezone and scoped search; missing run metadata is omitted", () => {

@@ -12,6 +12,7 @@
     "./scheduled-dispatch": "./src/scheduled-dispatch.ts",
     "./buying-next-steps": "./src/buying-next-steps.ts",
     "./host-request": "./src/host-request.ts",
+    "./panel-presentation": "./src/panel-presentation.ts",
     "./verification": "./src/verification.ts",
     "./search-workflow": "./src/search-workflow.ts",
     "./marketplace-actions": "./src/marketplace-actions.ts",
@@ -38,7 +39,11 @@
     "./worker-execution": "./src/worker-execution.ts",
     "./journeys": "./src/journeys.ts",
     "./listing-discovery": "./src/listing-discovery.ts",
-    "./listing-reading": "./src/listing-reading.ts"
+    "./listing-reading": "./src/listing-reading.ts",
+    "./regional": "./src/regional.ts",
+    "./regional-data": "./src/regional-data.ts",
+    "./mcp-catalog": "./src/mcp-catalog.ts",
+    "./workspace-schema": "./src/workspace-schema.ts"
   },
   "scripts": {
     "typecheck": "bun --bun tsc --noEmit"

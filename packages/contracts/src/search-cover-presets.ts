@@ -31,12 +31,8 @@ export const bundledSearchCovers = [
   })),
 ];
 
-// Previously saved covers keep their original content IDs after asset recompression.
-const coverMediaIdAliases = new Map<string, string>(Object.entries(sources.media_id_aliases));
-
 export function bundledSearchCoverById(mediaId: string) {
-  const canonicalId = coverMediaIdAliases.get(mediaId) ?? mediaId;
-  return bundledSearchCovers.find(({ image }) => image.media_id === canonicalId)?.image;
+  return bundledSearchCovers.find(({ image }) => image.media_id === mediaId)?.image;
 }
 
 const marketplaceTypes = new Map<string, keyof typeof marketplaceCovers>([

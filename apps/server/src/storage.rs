@@ -3,16 +3,34 @@ use crate::{
     error::{Error, Result},
     util::*,
 };
-use rusqlite::{Connection, OptionalExtension, params};
+use rusqlite::{Connection, ErrorCode, OptionalExtension, params};
 use serde_json::{Value, json};
 use std::{
     collections::HashSet,
     ffi::OsString,
     path::{Path, PathBuf},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
+pub const SCHEMA_VERSION: i64 = 1;
+
 fn automations_directory(lookup: impl Fn(&str) -> Option<OsString>) -> Option<PathBuf> {
+    #[cfg(feature = "test-support")]
+    if let Some(path) = TEST_CONTEXT.lock().unwrap()["automationsDirectory"].as_str() {
+        return if path.is_empty() {
+            None
+        } else {
+            Some(PathBuf::from(path))
+        };
+    }
+    #[cfg(feature = "test-support")]
+    if let Ok(path) = std::env::var("GOODFINDS_TEST_AUTOMATIONS") {
+        return if path.is_empty() {
+            None
+        } else {
+            Some(PathBuf::from(path))
+        };
+    }
     let nonempty = |key| lookup(key).filter(|value| !value.is_empty());
     nonempty("CODEX_HOME")
         .map(PathBuf::from)
@@ -22,6 +40,35 @@ fn automations_directory(lookup: impl Fn(&str) -> Option<OsString>) -> Option<Pa
                 .map(|home| PathBuf::from(home).join(".codex"))
         })
         .map(|root| root.join("automations"))
+}
+
+fn configure_connection(db: &Connection) -> Result<()> {
+    let timeout = Duration::from_secs(10);
+    let deadline = Instant::now() + timeout;
+    loop {
+        db.busy_timeout(deadline.saturating_duration_since(Instant::now()))?;
+        // Concurrent first opens can fail the journal-mode lock upgrade without
+        // invoking SQLite's busy handler. Retry only this connection setup step.
+        match db.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;") {
+            Ok(()) => break,
+            Err(e)
+                if matches!(
+                    e.sqlite_error_code(),
+                    Some(ErrorCode::DatabaseBusy | ErrorCode::DatabaseLocked)
+                ) && Instant::now() < deadline =>
+            {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            Err(e) => {
+                return Err(Error::new(
+                    "storage_error",
+                    format!("Configure workspace journal: {e}"),
+                ));
+            }
+        }
+    }
+    db.busy_timeout(timeout)?;
+    Ok(())
 }
 
 pub struct Workspace {
@@ -45,8 +92,7 @@ impl Workspace {
         };
         std::fs::create_dir_all(&folder)?;
         let db = Connection::open(folder.join("workspace.sqlite"))?;
-        db.busy_timeout(Duration::from_secs(10))?;
-        db.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;")?;
+        configure_connection(&db)?;
         initialize(&db)?;
         db.execute(
             "ATTACH DATABASE ? AS checks",
@@ -138,7 +184,6 @@ impl Workspace {
             }
             self.config = validate_config(&config)?;
             drop(statement);
-            self.upgrade_model_feedback()?;
         } else {
             let value = if self.mode == "sample" {
                 contracts::data("example").clone()
@@ -147,52 +192,6 @@ impl Workspace {
             };
             self.config = validate_config(&value)?;
             self.save_config()?;
-        }
-        Ok(())
-    }
-    fn upgrade_model_feedback(&mut self) -> Result<()> {
-        let pending: Vec<usize> = array(&self.config, "feedback")
-            .iter()
-            .enumerate()
-            .filter(|(_, event)| {
-                !bool_(event, "undone")
-                    && event["rule"].is_null()
-                    && event["exclude_model"] != false
-                    && event["reason"] == "Not interested in this model"
-            })
-            .map(|(i, _)| i)
-            .collect();
-        if pending.is_empty() {
-            return Ok(());
-        }
-        let provenance = if self.mode == "sample" {
-            "synthetic"
-        } else {
-            "manual"
-        };
-        let listings = self.documents(
-            "SELECT document_json FROM listings WHERE provenance=?",
-            [provenance],
-        )?;
-        let mut changed = false;
-        for i in pending {
-            let event = &self.config["feedback"][i];
-            let row = listings
-                .iter()
-                .find(|row| row["key"] == event["listing_key"]);
-            let search = array(&self.config, "searches")
-                .iter()
-                .find(|search| search["id"] == event["search_id"]);
-            if let (Some(row), Some(search)) = (row, search)
-                && let Some(rule) = crate::configuration::model_exclusion_rule(row, search)
-            {
-                self.config["feedback"][i]["rule"] = rule;
-                self.config["feedback"][i]["exclude_model"] = json!(true);
-                changed = true;
-            }
-        }
-        if changed {
-            self.save_config()?
         }
         Ok(())
     }
@@ -251,6 +250,7 @@ impl Workspace {
             "browser_access",
             "platform_sessions",
             "listing_contacts",
+            "host_capabilities",
         ] {
             base.as_object_mut().unwrap().remove(key);
         }
@@ -329,7 +329,12 @@ impl Workspace {
                 }
             }
         }
-        for key in ["browser_access", "platform_sessions", "listing_contacts"] {
+        for key in [
+            "browser_access",
+            "platform_sessions",
+            "listing_contacts",
+            "host_capabilities",
+        ] {
             let previous: Option<String> = self
                 .db
                 .query_row(
@@ -410,7 +415,6 @@ pub fn validate_config(input: &Value) -> Result<Value> {
                 return Err(Error::validation("Search times must be unique"));
             }
         }
-        crate::searches::validate_zone(&record["schedule"]["timezone"])?;
     }
     let mut dispatchers = HashSet::new();
     let mut members = HashSet::new();
@@ -447,30 +451,26 @@ pub fn validate_config(input: &Value) -> Result<Value> {
     }
     Ok(value)
 }
-pub(crate) fn initialize(db: &Connection) -> Result<()> {
+pub fn initialize(db: &Connection) -> Result<()> {
     db.execute_batch("BEGIN IMMEDIATE")?;
     let result = (|| {
         let version: i64 = db.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-        if version == 4 {
+        if version == SCHEMA_VERSION {
             return Ok(());
         }
-        if version == 0 {
-            let exists:bool=db.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%')",[],|r|r.get(0))?;
-            if exists {
-                return Err(Error::validation(
-                    "Unsupported workspace schema; use a canonical workspace database",
-                ));
-            }
-            db.execute_batch(contracts::all()["schema_sql"].as_str().unwrap())?;
-        } else if (1..=3).contains(&version) {
-            db.execute_batch("CREATE TABLE IF NOT EXISTS journey_estimates(origin_key TEXT NOT NULL,destination_key TEXT NOT NULL,document_json TEXT NOT NULL CHECK(json_valid(document_json)),PRIMARY KEY(origin_key,destination_key));CREATE TABLE IF NOT EXISTS listing_search_discoveries(listing_key TEXT NOT NULL,search_id TEXT NOT NULL,run_id TEXT NOT NULL,run_started_at TEXT NOT NULL,recorded_at TEXT,PRIMARY KEY(listing_key,search_id));CREATE INDEX IF NOT EXISTS listing_discoveries_by_search ON listing_search_discoveries(search_id);CREATE TABLE IF NOT EXISTS listing_seen(listing_key TEXT NOT NULL,search_id TEXT NOT NULL,seen_at TEXT NOT NULL,PRIMARY KEY(listing_key,search_id));CREATE INDEX IF NOT EXISTS listing_seen_by_search ON listing_seen(search_id);")?;
-            if version<3 && db.query_row("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='search_runs')",[],|r|r.get::<_,bool>(0))?{db.execute_batch("INSERT OR IGNORE INTO listing_search_discoveries SELECT found.value,runs.search_id,runs.id,json_extract(runs.document_json,'$.created_at'),NULL FROM search_runs AS runs,json_each(runs.document_json,'$.listing_keys') AS found WHERE found.type='text' AND julianday(json_extract(runs.document_json,'$.created_at')) IS NOT NULL ORDER BY julianday(json_extract(runs.document_json,'$.created_at')),runs.id;")?;}
-        } else {
+        let exists: bool = db.query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name NOT LIKE 'sqlite_%')",
+            [],
+            |r| r.get(0),
+        )?;
+        if version != 0 || exists {
             return Err(Error::validation(
-                "Unsupported workspace schema; use a canonical workspace database",
+                "Unsupported workspace schema; this build requires schema version 1 and does not migrate existing data",
             ));
         }
-        db.execute_batch("PRAGMA user_version=4")?;
+        db.execute_batch(contracts::all()["schema_sql"].as_str().unwrap())?;
+        db.execute("INSERT INTO coordination_stream VALUES(1,?)", [id()])?;
+        db.pragma_update(None, "user_version", SCHEMA_VERSION)?;
         Ok(())
     })();
     match result {
@@ -484,6 +484,14 @@ pub(crate) fn initialize(db: &Connection) -> Result<()> {
 }
 
 pub fn device_browser() -> Value {
+    #[cfg(feature = "test-support")]
+    if let Some(value) = TEST_CONTEXT.lock().unwrap().get("browser") {
+        return value.clone();
+    }
+    #[cfg(feature = "test-support")]
+    if let Ok(raw) = std::env::var("GOODFINDS_TEST_BROWSER") {
+        return serde_json::from_str(&raw).expect("valid test browser");
+    }
     #[cfg(target_os = "macos")]
     {
         use std::ffi::c_void;

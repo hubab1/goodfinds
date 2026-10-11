@@ -7,13 +7,13 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
+import { createNativeServer } from "./helpers/native-mcp.ts";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 import { listingIsDismissed, DISREGARD_REASONS } from "../apps/ui/src/lib/listing-feedback.ts";
 
 void test("disregard reasons hide one listing in its search and Undo restores it without banning a model", async (t) => {
   const data = await mkdtemp(resolve(tmpdir(), "goodfinds-disregard-"));
-  const { server, calls } = createGoodfindsServer(seedWorkspace(data));
+  const { server, calls } = createNativeServer(seedWorkspace(data));
   t.after(async () => {
     await server.close();
     await rm(data, { recursive: true, force: true });

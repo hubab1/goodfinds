@@ -36,6 +36,7 @@ import { ListingHistory } from "@/features/listings/listing-history";
 import { ListingPhotos, ListingThumbnail, SellerDetails } from "@/features/listings/listing-media";
 import { MarketplaceBadge } from "@/marketplace-badge";
 import { ListingDisregard } from "@/features/listings/listing-disregard";
+import { ListingActions } from "@/features/listings/listing-actions";
 import type { Action } from "@/lib/actions";
 import { setupCostTotal } from "@goodfinds/contracts/verification";
 import { DetailFacts } from "@/components/ui/detail-facts";
@@ -123,16 +124,29 @@ function DecisionBadge({
   );
 }
 
-function ListingLink({ url, children }: { url: string | null | undefined; children: string }) {
+function ListingLink({
+  url,
+  children,
+  compact = false,
+}: {
+  url: string | null | undefined;
+  children: string;
+  compact?: boolean;
+}) {
   const href = marketplaceUrl(url);
   return href ? (
     <a
-      className={buttonVariants({ size: "sm" })}
+      className={buttonVariants({
+        size: "sm",
+        className: compact ? "listing-card-open" : undefined,
+      })}
       href={href}
+      aria-label={children}
+      title={children}
       target="_blank"
       rel="noopener noreferrer"
     >
-      {children}
+      <span className={compact ? "listing-card-open-label" : undefined}>{children}</span>
       <ArrowUpRight aria-hidden="true" />
     </a>
   ) : null;
@@ -464,7 +478,7 @@ export function ListingCard({
   action?: Action | undefined;
   busy?: boolean | undefined;
   preferredWatchId?: string | undefined;
-  onDisregarded?: ((id: string) => void) | undefined;
+  onDisregarded?: ((event: GoodfindsState["config"]["feedback"][number]) => void) | undefined;
   onSeen?: RecordSeen | undefined;
 }) {
   const [open, setOpen] = useState(false);
@@ -591,7 +605,24 @@ export function ListingCard({
                   compact
                 />
               </div>
-              <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+              <div className="listing-card-actions">
+                {(action || negotiate) && (
+                  <ListingActions
+                    listing={listing}
+                    state={state}
+                    busy={busy}
+                    action={action}
+                    preferredSearchId={preferredWatchId}
+                    onMessage={negotiate}
+                    messageLabel={
+                      hasConversation
+                        ? seller_conversation?.action_label
+                        : buyingAction
+                          ? "Review message"
+                          : "Prepare message"
+                    }
+                  />
+                )}
                 {action && (
                   <ListingDisregard
                     listing={listing}
@@ -602,16 +633,10 @@ export function ListingCard({
                     onDisregarded={onDisregarded}
                   />
                 )}
-                {!sample && <ListingLink url={listing.url}>Open listing</ListingLink>}
-                {negotiate && (
-                  <Button size="sm" onClick={(event) => negotiate(event.currentTarget)}>
-                    <MessageCircle aria-hidden="true" />
-                    {hasConversation
-                      ? seller_conversation?.action_label
-                      : buyingAction
-                        ? "Review message"
-                        : "Prepare message"}
-                  </Button>
+                {!sample && (
+                  <ListingLink url={listing.url} compact>
+                    Open listing
+                  </ListingLink>
                 )}
               </div>
             </div>

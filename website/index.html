@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" prefix="og: https://ogp.me/ns#">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,10 +7,49 @@
       name="description"
       content="Your next good find, found for you. Tell Goodfinds what you want, let your agent search marketplaces on your schedule, and get notified about promising matches."
     />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)" />
+    <link rel="canonical" href="https://goodfinds.thirdtechapps.com/" />
+    <meta property="og:title" content="Goodfinds — Your next good find, found for you." />
+    <meta
+      property="og:description"
+      content="Your next good find, found for you. Tell Goodfinds what you want, let your agent search marketplaces on your schedule, and get notified about promising matches."
+    />
+    <meta property="og:url" content="https://goodfinds.thirdtechapps.com/" />
+    <meta name="twitter:title" content="Goodfinds — Your next good find, found for you." />
+    <meta
+      name="twitter:description"
+      content="Your next good find, found for you. Tell Goodfinds what you want, let your agent search marketplaces on your schedule, and get notified about promising matches."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Goodfinds" />
+    <meta property="og:locale" content="en_GB" />
+    <meta
+      property="og:image"
+      content="https://goodfinds.thirdtechapps.com/media/social/goodfinds-og-v5.jpg"
+    />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Goodfinds — Your next good find, found for you. A shopping plugin for ChatGPT. Laptop, camera, bicycle and red Toyota Camry above logos for Facebook Marketplace, Craigslist, eBay, Vinted, Gumtree and Auto Trader."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:image"
+      content="https://goodfinds.thirdtechapps.com/media/social/goodfinds-twitter-v5.jpg"
+    />
+    <meta
+      name="twitter:image:alt"
+      content="Goodfinds — Your next good find, found for you. A shopping plugin for ChatGPT. Laptop, camera, bicycle and red Toyota Camry above logos for Facebook Marketplace, Craigslist, eBay, Vinted, Gumtree and Auto Trader."
+    />
     <title>Goodfinds — Your next good find, found for you.</title>
-    <link rel="icon" href="media/logo.png" type="image/png" />
+    <link rel="icon" href="/media/favicon-dark.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="marketplaces.js"></script>
+    <script type="module" src="currency.js"></script>
   </head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
@@ -20,7 +59,7 @@
       >
       <nav aria-label="Main navigation">
         <a href="#how-it-works">How it works</a
-        ><a href="#demo">Watch the demo <span aria-hidden="true">↗</span></a>
+        ><a href="/downloads/">Download Goodfinds <span aria-hidden="true">↗</span></a>
       </nav>
     </header>
     <main id="main">
@@ -30,7 +69,19 @@
           Tell Goodfinds what you want. Your agent searches marketplaces on your schedule and lets
           you know when a promising deal turns up.
         </p>
-        <a class="button" href="#get-started">Get Goodfinds <span aria-hidden="true">↗</span></a>
+        <a class="button" href="/downloads/"
+          >Download Goodfinds <span aria-hidden="true">↗</span></a
+        >
+        <p class="hero-compatibility">
+          <img
+            src="media/apps/chatgpt.webp"
+            width="28"
+            height="28"
+            alt=""
+            title="ChatGPT and its logo are trademarks of OpenAI."
+          />
+          <span>A shopping plugin for <strong>ChatGPT</strong> on desktop.</span>
+        </p>
         <a class="journey-link" href="#how-it-works"
           >Here’s how it happens <span aria-hidden="true">↓</span></a
         >
@@ -44,12 +95,34 @@
             </div>
             <h3>Tell it what matters.</h3>
             <p class="step-copy">
-              What you want. What you’d like to spend. The things you won’t compromise on.
+              Install Goodfinds, connect your browser, and tell ChatGPT what you’re looking for.
+              Your budget. Your must-haves. Your next good find.
             </p>
-            <div class="example brief-example" aria-label="Illustrated buying request">
-              <span class="example-label">You</span>
-              <p>“Find me a MacBook Pro under £1,250. At least 32 GB memory and 1 TB storage.”</p>
-              <div class="brief-tags"><span>Your budget</span><span>Your must-haves</span></div>
+            <div class="example brief-example" aria-label="Example buying request">
+              <p class="buying-request">“Find me a<br />MacBook Pro.”</p>
+              <img
+                class="brief-art"
+                src="media/products/macbook-pro.webp"
+                width="600"
+                height="400"
+                alt="Illustration of an open silver MacBook Pro"
+                loading="lazy"
+                decoding="async"
+              />
+              <dl class="brief-requirements">
+                <div>
+                  <dt>Budget</dt>
+                  <dd>Up to <bdi data-example-amount="budget">£1,250</bdi></dd>
+                </div>
+                <div>
+                  <dt>Memory</dt>
+                  <dd>32 GB or more</dd>
+                </div>
+                <div>
+                  <dt>Storage</dt>
+                  <dd>At least 1 TB</dd>
+                </div>
+              </dl>
             </div>
           </li>
           <li>
@@ -61,18 +134,20 @@
               It checks listings against your needs, compares asking prices and searches again on
               your schedule.
             </p>
-            <div class="example search-example" aria-label="Illustrated agent listing checks">
-              <div class="example-heading">
-                <span class="search-symbol" aria-hidden="true">⌕</span
-                ><span>Looking for your good find</span>
+            <div class="example search-example" aria-label="Example match from a scheduled search">
+              <div class="match-heading">
+                <span>16-inch MacBook Pro</span><span aria-hidden="true">↗</span>
               </div>
-              <ul class="checks">
-                <li><span aria-hidden="true">✓</span> Within your budget</li>
-                <li><span aria-hidden="true">✓</span> Matches your must-haves</li>
-                <li><span aria-hidden="true">✓</span> Compared with similar listings</li>
+              <p class="match-price"><bdi data-example-amount="price">£1,100</bdi></p>
+              <ul class="match-checks">
+                <li>
+                  <span aria-hidden="true">✓</span>
+                  <span><bdi data-example-amount="saving">£150</bdi> under your budget</span>
+                </li>
+                <li><span aria-hidden="true">✓</span> 36 GB memory · 1 TB SSD</li>
               </ul>
               <p class="schedule-note">
-                <span class="status-dot" aria-hidden="true"></span>Checks again on your schedule
+                <span class="status-dot" aria-hidden="true"></span>Next check: tomorrow
               </p>
             </div>
           </li>
@@ -87,108 +162,562 @@
             </p>
             <div
               class="example notification-example"
-              aria-label="Illustrated notification for a fictional listing"
+              aria-label="Example notification for a fictional listing"
             >
               <div class="notification-brand">
-                <img src="media/logo.png" width="25" height="25" alt="" /><span>Goodfinds</span
-                ><span class="example-label">Example alert</span>
+                <img src="media/logo.png" width="30" height="30" alt="" /><span>Goodfinds</span>
               </div>
-              <p class="notification-title">This one looks promising.</p>
-              <div class="found-item"><span>16-inch MacBook Pro</span><strong>£1,100</strong></div>
-              <p class="item-specs">M3 Pro · 36 GB memory · 1 TB SSD</p>
-              <p class="review-note">Ready for you to take a closer look.</p>
+              <p class="notification-title">Your MacBook search<br />has a new match.</p>
+              <p class="notification-summary">
+                <bdi data-example-amount="price">£1,100</bdi>. Fits your must-haves.<br />Worth a
+                closer look.
+              </p>
+              <p class="review-note">Ready when you are <span aria-hidden="true">↗</span></p>
             </div>
           </li>
         </ol>
-        <p class="example-note">
-          An illustrated journey with fictional data. Actual alerts are delivered through your host
-          app.
-        </p>
       </section>
-      <section class="purpose wrap" aria-labelledby="purpose-title">
-        <span class="purpose-mark" aria-hidden="true">↳</span>
-        <div>
-          <h2 id="purpose-title">You shouldn’t have to start your search again every day.</h2>
-          <p>
-            Goodfinds remembers what matters to you and keeps your search organised, so you can
-            spend your attention on the finds worth considering.
-          </p>
-        </div>
-      </section>
-      <section class="demo-section wrap" id="demo" aria-labelledby="demo-title">
-        <div class="demo-heading">
-          <h2 id="demo-title">Watch a search unfold.</h2>
-          <span>38 seconds</span>
-        </div>
-        <div class="video-frame">
-          <video
-            id="demo-video"
-            controls
-            playsinline
-            preload="none"
-            poster="media/demo-poster.jpg"
-            width="1280"
-            height="720"
-            aria-label="Goodfinds product walkthrough"
-          >
-            <source src="media/goodfinds-demo.mp4" type="video/mp4" />
-            <track kind="captions" src="media/demo-captions.vtt" srclang="en" label="English" />
-            <p><a href="media/goodfinds-demo.mp4">Download the Goodfinds walkthrough.</a></p>
-          </video>
-        </div>
-        <div class="media-caption">
-          <p>Actual Goodfinds panels · Illustrated conversation · Fictional demo data</p>
-          <a href="media/goodfinds-demo.mp4" download>Download video ↓</a>
-        </div>
-        <details class="transcript">
-          <summary>Read the video transcript</summary>
-          <div>
-            <p>Your next good find, found for you. Marketplace searches, kept together.</p>
-            <p>
-              <strong>Illustrated conversation:</strong> “Find a MacBook Pro under £1,250, with at
-              least 32 GB memory and 1 TB storage.”
-            </p>
-            <p>
-              <strong>Actual Goodfinds interface:</strong> Your requirements, remembered. Budget,
-              specs and distance—in one search. Look closer: price, specs and availability for an
-              example listing. Review every word. Prepare a message. Keep the decision yours.
-            </p>
-            <p>
-              Goodfinds. Keep your search together. All demo data is fictional; no seller is
-              contacted.
+      <section class="features wrap" aria-label="A search that works around you">
+        <article
+          class="feature marketplace-feature"
+          id="marketplaces"
+          aria-labelledby="marketplaces-title"
+        >
+          <div class="marketplace-intro">
+            <div class="feature-copy">
+              <p class="marketplace-eyebrow">Marketplaces that fit where you shop.</p>
+              <h2 id="marketplaces-title">Find the one<br />worth waiting for.</h2>
+            </div>
+            <p class="marketplace-intro-copy">
+              The right model. Your size. A seller nearby. Tell Goodfinds what matters and let your
+              agent keep looking.
             </p>
           </div>
-        </details>
+          <label class="marketplace-country" hidden>
+            Examples for
+            <select data-example-country aria-label="Country for example searches">
+              <option value="other">Other / not specified</option>
+            </select>
+          </label>
+          <div
+            class="marketplaces"
+            data-marketplace-carousel
+            role="region"
+            aria-roledescription="carousel"
+            aria-label="Example marketplace searches"
+          >
+            <ul class="marketplace-list" hidden aria-label="Choose a marketplace example">
+              <li data-example-slot="aeron">
+                <button
+                  type="button"
+                  class="marketplace-choice"
+                  aria-pressed="true"
+                  aria-controls="example-aeron"
+                  data-marketplace="0"
+                  disabled
+                >
+                  <img src="media/marketplaces/facebook.png" width="28" height="28" alt="" />
+                  <span
+                    ><span class="marketplace-name">Facebook Marketplace</span
+                    ><span class="marketplace-product">Herman Miller Aeron</span></span
+                  >
+                </button>
+              </li>
+              <li data-example-slot="x100v">
+                <button
+                  type="button"
+                  class="marketplace-choice"
+                  aria-pressed="false"
+                  aria-controls="example-x100v"
+                  data-marketplace="1"
+                  disabled
+                >
+                  <img src="media/marketplaces/ebay.png" width="28" height="28" alt="" />
+                  <span
+                    ><span class="marketplace-name">eBay</span
+                    ><span class="marketplace-product">Fujifilm X100V</span></span
+                  >
+                </button>
+              </li>
+              <li data-example-slot="beta">
+                <button
+                  type="button"
+                  class="marketplace-choice"
+                  aria-pressed="false"
+                  aria-controls="example-beta"
+                  data-marketplace="2"
+                  disabled
+                >
+                  <img src="media/marketplaces/vinted.png" width="28" height="28" alt="" />
+                  <span
+                    ><span class="marketplace-name">Vinted</span
+                    ><span class="marketplace-product">Arc’teryx Beta</span></span
+                  >
+                </button>
+              </li>
+              <li data-example-slot="brompton">
+                <button
+                  type="button"
+                  class="marketplace-choice"
+                  aria-pressed="false"
+                  aria-controls="example-brompton"
+                  data-marketplace="3"
+                  disabled
+                >
+                  <img src="media/marketplaces/gumtree.png" width="28" height="28" alt="" />
+                  <span
+                    ><span class="marketplace-name">Gumtree</span
+                    ><span class="marketplace-product">Brompton C Line</span></span
+                  >
+                </button>
+              </li>
+              <li data-example-slot="vehicle">
+                <button
+                  type="button"
+                  class="marketplace-choice"
+                  aria-pressed="false"
+                  aria-controls="example-vehicle"
+                  data-marketplace="4"
+                  disabled
+                >
+                  <img src="media/marketplaces/autotrader.png" width="28" height="28" alt="" />
+                  <span
+                    ><span class="marketplace-name">Auto Trader UK</span
+                    ><span class="marketplace-product">2019 Toyota Camry</span></span
+                  >
+                </button>
+              </li>
+              <li data-example-slot="stratocaster">
+                <button
+                  type="button"
+                  class="marketplace-choice"
+                  aria-pressed="false"
+                  aria-controls="example-stratocaster"
+                  data-marketplace="5"
+                  disabled
+                >
+                  <img src="media/marketplaces/craigslist.png" width="28" height="28" alt="" />
+                  <span
+                    ><span class="marketplace-name">Craigslist</span
+                    ><span class="marketplace-product">Fender Stratocaster</span></span
+                  >
+                </button>
+              </li>
+            </ul>
+            <div class="marketplace-stage">
+              <div class="marketplace-slides">
+                <article
+                  class="marketplace-slide"
+                  id="example-aeron"
+                  data-example-slot="aeron"
+                  data-marketplace-name="Facebook Marketplace"
+                  role="group"
+                  aria-roledescription="slide"
+                  aria-label="Example search"
+                >
+                  <div class="marketplace-meta">
+                    <span>Furniture · Local collection</span
+                    ><span class="marketplace-count" aria-hidden="true">Example</span>
+                  </div>
+                  <div class="marketplace-product-layout">
+                    <div class="marketplace-details">
+                      <h3>A Herman Miller Aeron.<br />In your size.</h3>
+                      <ul class="marketplace-filters" aria-label="Example requirements">
+                        <li>Size B</li>
+                        <li>Adjustable arms</li>
+                        <li>Nearby</li>
+                      </ul>
+                      <p class="marketplace-reason">
+                        The right size, working adjustments, and a seller close enough for
+                        collection. Plenty to be particular about.
+                      </p>
+                    </div>
+                    <img
+                      class="marketplace-art"
+                      src="media/products/aeron.webp"
+                      width="600"
+                      height="400"
+                      loading="lazy"
+                      decoding="async"
+                      alt="Illustration of a graphite ergonomic mesh office chair"
+                    />
+                  </div>
+                  <blockquote class="marketplace-prompt">
+                    “Find me a size B Aeron with adjustable arms, within 20 miles.”
+                  </blockquote>
+                  <p class="marketplace-alternatives">
+                    <strong>Also worth looking for</strong>A vintage sideboard · A solid-wood dining
+                    table
+                  </p>
+                </article>
+                <article
+                  class="marketplace-slide"
+                  id="example-x100v"
+                  data-example-slot="x100v"
+                  data-marketplace-name="eBay"
+                  role="group"
+                  aria-roledescription="slide"
+                  aria-label="2 of 6: eBay"
+                  hidden
+                >
+                  <div class="marketplace-meta">
+                    <span>Photography · Model-specific</span
+                    ><span class="marketplace-count" aria-hidden="true">2 / 6</span>
+                  </div>
+                  <div class="marketplace-product-layout">
+                    <div class="marketplace-details">
+                      <h3>A Fujifilm X100V.<br />In silver.</h3>
+                      <ul class="marketplace-filters" aria-label="Example requirements">
+                        <li>X100V</li>
+                        <li>Silver</li>
+                        <li>Clean lens</li>
+                      </ul>
+                      <p class="marketplace-reason">
+                        A specific model, finish, and condition. Keep looking for the combination
+                        you want at a price that fits.
+                      </p>
+                    </div>
+                    <img
+                      class="marketplace-art"
+                      src="media/products/x100v.webp"
+                      width="600"
+                      height="400"
+                      loading="lazy"
+                      decoding="async"
+                      alt="Illustration of a silver and black compact camera"
+                    />
+                  </div>
+                  <blockquote class="marketplace-prompt">
+                    “Find me a silver Fujifilm X100V with a clean lens, charger, and clear photos of
+                    its condition.”
+                  </blockquote>
+                  <p class="marketplace-alternatives">
+                    <strong>Also worth looking for</strong>A Leica M6 · LEGO Corner Garage 10264
+                  </p>
+                </article>
+                <article
+                  class="marketplace-slide"
+                  id="example-beta"
+                  data-example-slot="beta"
+                  data-marketplace-name="Vinted"
+                  role="group"
+                  aria-roledescription="slide"
+                  aria-label="3 of 6: Vinted"
+                  hidden
+                >
+                  <div class="marketplace-meta">
+                    <span>Outerwear · The right fit</span
+                    ><span class="marketplace-count" aria-hidden="true">3 / 6</span>
+                  </div>
+                  <div class="marketplace-product-layout">
+                    <div class="marketplace-details">
+                      <h3>An Arc’teryx Beta.<br />Your colour. Your size.</h3>
+                      <ul class="marketplace-filters" aria-label="Example requirements">
+                        <li>Men’s medium</li>
+                        <li>Black</li>
+                        <li>Good condition</li>
+                      </ul>
+                      <p class="marketplace-reason">
+                        Size, colour, and condition make the match. A precise brief gives each new
+                        listing something useful to measure up to.
+                      </p>
+                    </div>
+                    <img
+                      class="marketplace-art"
+                      src="media/products/beta.webp"
+                      width="600"
+                      height="400"
+                      loading="lazy"
+                      decoding="async"
+                      alt="Illustration of a black hooded shell jacket"
+                    />
+                  </div>
+                  <blockquote class="marketplace-prompt">
+                    “Find me a black men’s Arc’teryx Beta in medium, with clear label photos and no
+                    disclosed fabric damage.”
+                  </blockquote>
+                  <p class="marketplace-alternatives">
+                    <strong>Also worth looking for</strong>A vintage Burberry trench · A Mulberry
+                    Bayswater
+                  </p>
+                </article>
+                <article
+                  class="marketplace-slide"
+                  id="example-brompton"
+                  data-example-slot="brompton"
+                  data-marketplace-name="Gumtree"
+                  role="group"
+                  aria-roledescription="slide"
+                  aria-label="4 of 6: Gumtree"
+                  hidden
+                >
+                  <div class="marketplace-meta">
+                    <span>Cycling · Local collection</span
+                    ><span class="marketplace-count" aria-hidden="true">4 / 6</span>
+                  </div>
+                  <div class="marketplace-product-layout">
+                    <div class="marketplace-details">
+                      <h3>A Brompton C Line.<br />Ready for your commute.</h3>
+                      <ul class="marketplace-filters" aria-label="Example requirements">
+                        <li>Six-speed</li>
+                        <li>Mudguards</li>
+                        <li>Local collection</li>
+                      </ul>
+                      <p class="marketplace-reason">
+                        Wait for the gearing, condition, and collection distance that work for you.
+                        Then arrange a closer look.
+                      </p>
+                    </div>
+                    <img
+                      class="marketplace-art"
+                      src="media/products/brompton.webp"
+                      width="600"
+                      height="400"
+                      loading="lazy"
+                      decoding="async"
+                      alt="Illustration of a green folding bicycle, unfolded"
+                    />
+                  </div>
+                  <blockquote class="marketplace-prompt">
+                    “Find me a six-speed Brompton C Line with mudguards, nearby, with its condition
+                    and service history described.”
+                  </blockquote>
+                  <p class="marketplace-alternatives">
+                    <strong>Also worth looking for</strong>A Festool Domino DF 500 · A Technics
+                    SL-1200MK2
+                  </p>
+                </article>
+                <article
+                  class="marketplace-slide"
+                  id="example-vehicle"
+                  data-example-slot="vehicle"
+                  data-marketplace-name="Auto Trader UK"
+                  role="group"
+                  aria-roledescription="slide"
+                  aria-label="5 of 6: Auto Trader UK"
+                  hidden
+                >
+                  <div class="marketplace-meta">
+                    <span>Cars · Year, trim, transmission</span
+                    ><span class="marketplace-count" aria-hidden="true">5 / 6</span>
+                  </div>
+                  <div class="marketplace-product-layout">
+                    <div class="marketplace-details">
+                      <h3>A 2019 Camry.<br />Exactly your spec.</h3>
+                      <ul class="marketplace-filters" aria-label="Example requirements">
+                        <li>2019</li>
+                        <li>Hybrid</li>
+                        <li>Automatic</li>
+                      </ul>
+                      <p class="marketplace-reason">
+                        The right year and trim are only the start. Keep service history, mileage,
+                        and budget in the brief too.
+                      </p>
+                    </div>
+                    <img
+                      class="marketplace-art"
+                      src="media/products/camry.webp"
+                      width="600"
+                      height="400"
+                      loading="lazy"
+                      decoding="async"
+                      alt="Illustration of a red Toyota Camry Hybrid saloon"
+                    />
+                  </div>
+                  <blockquote class="marketplace-prompt">
+                    “Find me a 2019 Toyota Camry Hybrid, automatic, with full service history.”
+                  </blockquote>
+                  <p class="marketplace-alternatives">
+                    <strong>Also worth looking for</strong>A 2016 Mazda MX-5 2.0 · A Toyota Land
+                    Cruiser
+                  </p>
+                </article>
+                <article
+                  class="marketplace-slide"
+                  id="example-stratocaster"
+                  data-example-slot="stratocaster"
+                  data-marketplace-name="Craigslist"
+                  role="group"
+                  aria-roledescription="slide"
+                  aria-label="6 of 6: Craigslist"
+                  hidden
+                >
+                  <div class="marketplace-meta">
+                    <span>Music · Model and condition</span
+                    ><span class="marketplace-count" aria-hidden="true">6 / 6</span>
+                  </div>
+                  <div class="marketplace-product-layout">
+                    <div class="marketplace-details">
+                      <h3>An American Standard Strat.<br />In sunburst.</h3>
+                      <ul class="marketplace-filters" aria-label="Example requirements">
+                        <li>American Standard</li>
+                        <li>Sunburst</li>
+                        <li>Original pickups</li>
+                      </ul>
+                      <p class="marketplace-reason">
+                        Model, finish, modifications, and location all matter. Find a promising
+                        listing with clear photos and a detailed description.
+                      </p>
+                    </div>
+                    <img
+                      class="marketplace-art"
+                      src="media/products/stratocaster.webp"
+                      width="600"
+                      height="400"
+                      loading="lazy"
+                      decoding="async"
+                      alt="Illustration of a sunburst electric guitar"
+                    />
+                  </div>
+                  <blockquote class="marketplace-prompt">
+                    “Find me a sunburst Fender American Standard Stratocaster with original pickups,
+                    with its condition and modifications described.”
+                  </blockquote>
+                  <p class="marketplace-alternatives">
+                    <strong>Also worth looking for</strong>Klipsch Cornwall II speakers · A Hobie
+                    Mirage Outback
+                  </p>
+                </article>
+              </div>
+            </div>
+            <p class="marketplace-note">
+              Example searches and illustrations, not live listings. Availability varies by
+              location.
+            </p>
+            <span
+              class="sr-only"
+              data-carousel-announcement
+              aria-live="polite"
+              aria-atomic="true"
+            ></span>
+          </div>
+        </article>
+
+        <article class="feature" aria-labelledby="feedback-title">
+          <div class="feature-copy">
+            <h2 id="feedback-title">More like this.<br />Less of that.</h2>
+            <p>
+              Shortlist a favourite. Pass on a listing. Tell your agent what made it a yes or a no,
+              so the next search gets closer to what you actually want.
+            </p>
+            <p>
+              “More like this” helps explore similar options. A clear must-have can become a search
+              rule. Just passing on one listing won’t rule out every item like it.
+            </p>
+            <p class="feature-note">
+              Your preferences stay visible. Changed your mind? You can undo your feedback.
+            </p>
+          </div>
+          <div
+            class="feedback-example"
+            aria-label="Example conversation refining a travel preference"
+          >
+            <div class="feedback-message">
+              <p>“This one’s too far away. I only want to travel up to 20 miles.”</p>
+            </div>
+            <div class="feedback-response">
+              <img src="media/logo.png" width="32" height="32" alt="Goodfinds" />
+              <p>Got it. I’ll keep your next search within 20 miles.</p>
+            </div>
+            <div class="preference-update">
+              <span>Travel distance</span
+              ><strong>Up to 20 miles <span aria-hidden="true">✓</span></strong>
+            </div>
+          </div>
+        </article>
+        <article class="feature" aria-labelledby="confidence-title">
+          <div class="feature-copy">
+            <h2 id="confidence-title">Know why it’s<br />worth a closer look.</h2>
+            <p>
+              A low price is only part of a good find. Your agent checks the listing against your
+              requirements, compares similar asking prices and keeps the evidence with it.
+            </p>
+            <p>
+              See what fits and what still needs checking. Then ask a better question, review a
+              message to the seller, or move on.
+            </p>
+            <p class="feature-note">
+              You review seller messages before they’re sent. You decide whether to buy.
+            </p>
+          </div>
+          <div
+            class="evidence-example"
+            aria-label="Example listing review showing verified details and outstanding questions"
+          >
+            <div class="evidence-heading">
+              <h3>16-inch MacBook Pro</h3>
+              <span><bdi data-example-amount="price">£1,100</bdi></span>
+            </div>
+            <dl class="evidence-details">
+              <div>
+                <dt><span aria-hidden="true">✓</span> Fits your brief</dt>
+                <dd>36 GB memory · 1 TB storage</dd>
+              </div>
+              <div>
+                <dt><span aria-hidden="true">✓</span> Within your budget</dt>
+                <dd>
+                  <bdi data-example-amount="saving">£150</bdi> below your
+                  <bdi data-example-amount="budget">£1,250</bdi> limit
+                </dd>
+              </div>
+              <div>
+                <dt><span aria-hidden="true">?</span> Still worth asking</dt>
+                <dd>Battery health and proof of purchase</dd>
+              </div>
+            </dl>
+          </div>
+        </article>
+      </section>
+      <section class="privacy wrap" id="privacy" aria-labelledby="privacy-title">
+        <div class="privacy-intro">
+          <p class="privacy-eyebrow">Built around your privacy</p>
+          <h2 id="privacy-title">On your computer.<br />Under your control.</h2>
+          <p class="privacy-copy">
+            Goodfinds runs on your computer and saves your searches, shortlists, and listing history
+            locally. It works through the browser you connect, using your existing marketplace
+            sessions.
+          </p>
+        </div>
+        <ul class="privacy-points">
+          <li>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <rect x="3" y="3" width="18" height="13" rx="2" />
+              <path d="M8 21h8m-4-5v5" />
+            </svg>
+            <div>
+              <h3>Saved on your device</h3>
+              <p>Your Goodfinds shopping data is stored locally.</p>
+            </div>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M3 8h18M7 5.5h.01M10 5.5h.01" />
+            </svg>
+            <div>
+              <h3>Your connected browser</h3>
+              <p>You choose the browser Goodfinds uses.</p>
+            </div>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <circle cx="12" cy="12" r="9" />
+              <path d="m8 12 3 3 5-6" />
+            </svg>
+            <div>
+              <h3>You decide</h3>
+              <p>Review seller messages before they’re sent.</p>
+            </div>
+          </li>
+        </ul>
       </section>
       <section class="start wrap" id="get-started" aria-labelledby="start-title">
         <img src="media/logo.png" alt="" width="48" height="48" />
         <h2 id="start-title">What are you looking for?</h2>
         <p>Bring your next search to Goodfinds.</p>
-        <a class="button" href="https://github.com/hubab1/goodfinds#run-locally"
-          >Get Goodfinds <span aria-hidden="true">↗</span></a
+        <a class="button" href="/downloads/"
+          >Download Goodfinds <span aria-hidden="true">↗</span></a
         >
-        <p class="availability">A local plugin for compatible MCP hosts · Version 0.1</p>
-        <details class="setup">
-          <summary>A few things to know before you start</summary>
-          <div>
-            <p>
-              Installed packages include the server and interface, with no Bun or Node installation
-              needed. Browser actions require compatible host tools. Automatic checks and alerts
-              need a configured host schedule, an awake device and a running host app.
-            </p>
-            <p>
-              Searches, evidence and conversations are stored locally. Connected browsing and AI use
-              your host app’s services and settings. You review seller messages before sending;
-              Goodfinds does not buy items for you.
-            </p>
-            <p>
-              Marketplace coverage varies.
-              <a href="https://github.com/hubab1/goodfinds/blob/main/docs/marketplace-validation.md"
-                >Read the integration details ↗</a
-              >
-            </p>
-          </div>
-        </details>
       </section>
     </main>
     <footer class="wrap">
@@ -196,7 +725,6 @@
         ><img src="media/logo.png" width="24" height="24" alt="" />Goodfinds</a
       >
       <p>Your next good find, found for you.</p>
-      <a href="https://github.com/hubab1/goodfinds">Source on GitHub ↗</a>
     </footer>
   </body>
 </html>

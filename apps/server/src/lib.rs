@@ -1,16 +1,20 @@
+pub mod alerts;
 pub mod assets;
 pub mod backup;
 pub mod cli;
 pub mod configuration;
 pub mod connections;
 pub mod contracts;
-pub mod ebay;
+pub mod diagnostics;
 pub mod error;
+pub mod events;
 pub mod http;
 pub mod listings;
 pub mod mcp;
 pub mod media;
 pub mod queries;
+pub mod recovery;
+pub mod runtime;
 pub mod searches;
 pub mod sellers;
 pub mod service;
@@ -19,3 +23,5 @@ pub mod snapshot;
 pub mod storage;
 pub mod util;
 pub mod workspace;
+
+mod regional;

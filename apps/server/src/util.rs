@@ -2,8 +2,21 @@ use crate::error::{Error, Result};
 use chrono::{DateTime, SecondsFormat, Utc};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
+#[cfg(feature = "test-support")]
+pub static TEST_CONTEXT: std::sync::Mutex<Value> = std::sync::Mutex::new(Value::Null);
+
 pub const DAY: i64 = 86_400_000;
 pub fn now() -> i64 {
+    #[cfg(feature = "test-support")]
+    if let Some(timestamp) = TEST_CONTEXT.lock().unwrap()["now"].as_i64() {
+        return timestamp;
+    }
+    #[cfg(feature = "test-support")]
+    if let Ok(value) = std::env::var("GOODFINDS_TEST_NOW")
+        && let Ok(timestamp) = value.parse()
+    {
+        return timestamp;
+    }
     Utc::now().timestamp_millis()
 }
 pub fn iso(value: i64) -> String {

@@ -2,7 +2,7 @@
 //! privately and published only after every source file has passed validation.
 use crate::{
     error::{Error, Result},
-    storage::Workspace,
+    storage::{SCHEMA_VERSION, Workspace},
     util,
 };
 use rusqlite::{Connection, OpenFlags};
@@ -19,7 +19,6 @@ use std::{
     time::Duration,
 };
 
-const SCHEMA_VERSION: u64 = 4;
 #[derive(Serialize, Deserialize)]
 struct BackupFile {
     path: String,
@@ -30,7 +29,7 @@ struct BackupFile {
 #[serde(deny_unknown_fields)]
 struct Manifest {
     format: u64,
-    schema_version: u64,
+    schema_version: i64,
     created_at: String,
     files: Vec<BackupFile>,
 }
@@ -107,11 +106,11 @@ fn private_permissions(path: &Path) -> Result<()> {
     let _ = path;
     Ok(())
 }
-fn verify_database(path: &Path, workspace: bool) -> Result<u64> {
+fn verify_database(path: &Path, workspace: bool) -> Result<i64> {
     regular(path)?;
     let db = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
     db.busy_timeout(Duration::from_secs(10))?;
-    let version = db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))? as u64;
+    let version = db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))?;
     if workspace && version != SCHEMA_VERSION {
         return fail("Unsupported workspace backup schema");
     }
@@ -373,6 +372,16 @@ pub fn restore_workspace(input: &Path, output: &Path) -> Result<Value> {
         if exists(&folder.join("connections.sqlite")) {
             verify_database(&folder.join("connections.sqlite"), false)?;
         }
+        // A restore can fork history. Force consumers to resynchronize instead
+        // of accepting a sequence from a different future of the same backup.
+        let db = Connection::open(folder.join("workspace.sqlite"))?;
+        crate::storage::initialize(&db)?;
+        db.execute(
+            "UPDATE coordination_stream SET stream_id=? WHERE id=1",
+            [util::id()],
+        )?;
+        db.close().map_err(|(_, e)| e)?;
+        fs::File::open(folder.join("workspace.sqlite"))?.sync_all()?;
         Ok(())
     })?;
     Ok(json!({"workspace":destination,"database":destination.join("workspace.sqlite")}))
@@ -452,10 +461,26 @@ mod tests {
         let target = dir.path().join("backup");
         let result = backup_workspace(&ws.root.join("workspace.sqlite"), &target).unwrap();
         assert_eq!(result["files"], 3);
+        let manifest: Value =
+            serde_json::from_slice(&fs::read(target.join("manifest.json")).unwrap()).unwrap();
+        assert_eq!(manifest["schema_version"], 1);
         let restore = dir.path().join("restored");
         restore_workspace(&target, &restore).unwrap();
         let restored = workspace(&restore);
+        assert_eq!(
+            verify_database(&restore.join("workspace.sqlite"), true).unwrap(),
+            1
+        );
         assert_eq!(restored.config["origin"], "Example town");
+        let stream = |db: &Connection| {
+            db.query_row(
+                "SELECT stream_id FROM coordination_stream WHERE id=1",
+                [],
+                |r| r.get::<_, String>(0),
+            )
+            .unwrap()
+        };
+        assert_ne!(stream(&restored.db), stream(&ws.db));
         assert_eq!(fs::read(restore.join("media").join(name)).unwrap(), bytes);
         let count: i64 = restored
             .db
@@ -607,5 +632,34 @@ mod tests {
         publish_new(&stage, &destination).unwrap();
         assert!(!stage.exists());
         assert_eq!(fs::read(destination.join("sentinel")).unwrap(), b"staged");
+    }
+    #[test]
+    fn old_schemas_cannot_be_backed_up_or_restored() {
+        for version in [2, 3, 4, 5] {
+            let dir = tempfile::tempdir().unwrap();
+            let ws = workspace(&dir.path().join("workspace"));
+            let source = ws.root.join("workspace.sqlite");
+            let backup = dir.path().join("backup");
+            backup_workspace(&source, &backup).unwrap();
+            let path = backup.join("manifest.json");
+            let mut manifest: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+            manifest["schema_version"] = json!(version);
+            fs::write(&path, serde_json::to_vec(&manifest).unwrap()).unwrap();
+            let target = dir.path().join("restored");
+            assert!(restore_workspace(&backup, &target).is_err());
+            assert!(!target.exists());
+
+            ws.db.pragma_update(None, "user_version", version).unwrap();
+            let unsupported = dir.path().join("unsupported-backup");
+            assert!(backup_workspace(&source, &unsupported).is_err());
+            assert!(!unsupported.exists());
+            assert_eq!(
+                ws.db
+                    .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                    .unwrap(),
+                version,
+                "rejection leaves the source version intact"
+            );
+        }
     }
 }

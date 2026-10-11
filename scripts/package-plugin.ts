@@ -1,5 +1,6 @@
 import { checkStateModelDocs } from "./state-model-docs.ts";
 import { buildTarget, executableName } from "./build-target.ts";
+import { claudePluginManifest, claudeServers, desktopManifest } from "./plugin-formats.ts";
 
 import {
   existsSync,
@@ -8,6 +9,7 @@ import {
   readdirSync,
   rmSync,
   copyFileSync,
+  cpSync,
   chmodSync,
   statSync,
   writeFileSync,
@@ -23,7 +25,10 @@ const manifest = z
     version: z.string(),
     description: z.string(),
     extensions: z.object({
-      "com.openai": z.object({ interface: z.record(z.string(), z.unknown()) }),
+      "com.openai": z.object({
+        interface: z.record(z.string(), z.unknown()),
+        onboardingSkill: z.string(),
+      }),
     }),
   })
   .loose()
@@ -52,13 +57,7 @@ function codexServers(servers: Record<string, Record<string, unknown>>) {
       {
         ...Object.fromEntries(Object.entries(server).filter(([key]) => key !== "type")),
         cwd: ".",
-        env_vars: [
-          "PATH",
-          "CODEX_HOME",
-          "GOODFINDS_WORKSPACE_DIR",
-          "GOODFINDS_EBAY_CLIENT_ID",
-          "GOODFINDS_EBAY_CLIENT_SECRET",
-        ],
+        env_vars: ["PATH", "CODEX_HOME", "GOODFINDS_WORKSPACE_DIR"],
       },
     ]),
   );
@@ -86,10 +85,10 @@ writeFileSync(
 mkdirSync(resolve(root, ".codex-plugin"), { recursive: true });
 writeFileSync(
   resolve(root, ".codex-plugin/plugin.json"),
-  `${JSON.stringify({ name: manifest.name, version: manifest.version, description: manifest.description, author: { name: "Goodfinds development" }, skills: "./skills", mcpServers: ".mcp.json", interface: { ...manifest.extensions["com.openai"].interface, developerName: "Local development", capabilities: ["Interactive", "Read", "Write"] } }, null, 2)}\n`,
+  `${JSON.stringify({ name: manifest.name, version: manifest.version, description: manifest.description, author: { name: "Goodfinds development" }, skills: "./skills", mcpServers: ".mcp.json", extensions: { "com.openai": { onboardingSkill: manifest.extensions["com.openai"].onboardingSkill } }, interface: { ...manifest.extensions["com.openai"].interface, developerName: "Local development", capabilities: ["Interactive", "Read", "Write"] } }, null, 2)}\n`,
 );
 const local = resolve(root, "dist", manifest.name),
-  archive = resolve(root, "dist", `${manifest.name}-${manifest.version}-${buildTarget}.zip`);
+  archive = resolve(root, "dist", `${manifest.name}-${manifest.version}-codex-${buildTarget}.zip`);
 rmSync(local, { recursive: true, force: true });
 mkdirSync(local, { recursive: true });
 const files: { source: string; target: string }[] = [
@@ -142,23 +141,78 @@ writeFileSync(
   resolve(local, ".mcp.json"),
   `${JSON.stringify({ mcpServers: codexServers(packagedServers) }, null, 2)}\n`,
 );
-rmSync(archive, { force: true });
-const zipCommand =
-  process.platform === "win32"
-    ? [
-        "powershell.exe",
-        "-NoProfile",
-        "-NonInteractive",
-        "-Command",
-        `Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory('${local.replaceAll("'", "''")}', '${archive.replaceAll("'", "''")}', [System.IO.Compression.CompressionLevel]::Optimal, $false)`,
-      ]
-    : ["zip", "-q", "-r", archive, "."];
-const zip = Bun.spawn(zipCommand, {
-  cwd: local,
-  stdout: "inherit",
-  stderr: "inherit",
-});
-if ((await zip.exited) !== 0) throw new Error("Could not create the local plugin ZIP");
+async function zipPackage(directory: string, destination: string) {
+  rmSync(destination, { force: true });
+  const zipCommand =
+    process.platform === "win32"
+      ? [
+          "powershell.exe",
+          "-NoProfile",
+          "-NonInteractive",
+          "-Command",
+          `Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory('${directory.replaceAll("'", "''")}', '${destination.replaceAll("'", "''")}', [System.IO.Compression.CompressionLevel]::Optimal, $false)`,
+        ]
+      : ["zip", "-q", "-r", destination, "."];
+  const zip = Bun.spawn(zipCommand, {
+    cwd: directory,
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+  if ((await zip.exited) !== 0) throw new Error("Could not create the local plugin ZIP");
+}
+await zipPackage(local, archive);
+
+// Separate roots prevent Claude from reading Codex-only launch fields, and vice versa.
+const claudeLocal = resolve(root, "dist", `${manifest.name}-claude`);
+rmSync(claudeLocal, { recursive: true, force: true });
+mkdirSync(resolve(claudeLocal, ".claude-plugin"), { recursive: true });
+for (const folder of ["server", "skills", "assets"])
+  cpSync(resolve(local, folder), resolve(claudeLocal, folder), { recursive: true });
+const metadata = {
+  name: manifest.name,
+  version: manifest.version,
+  description: manifest.description,
+};
+function writeJson(directory: string, path: string, value: unknown) {
+  writeFileSync(resolve(directory, path), `${JSON.stringify(value, null, 2)}\n`);
+}
+writeJson(claudeLocal, ".claude-plugin/plugin.json", claudePluginManifest(metadata));
+writeJson(claudeLocal, ".mcp.json", claudeServers(buildTarget));
+const claudeArchive = resolve(
+  root,
+  "dist",
+  `${manifest.name}-${manifest.version}-claude-${buildTarget}.zip`,
+);
+await zipPackage(claudeLocal, claudeArchive);
+
+const desktopLocal = resolve(root, "dist", `${manifest.name}-claude-desktop`);
+rmSync(desktopLocal, { recursive: true, force: true });
+mkdirSync(desktopLocal, { recursive: true });
+for (const folder of ["server", "assets"])
+  cpSync(resolve(local, folder), resolve(desktopLocal, folder), { recursive: true });
+writeJson(desktopLocal, "manifest.json", desktopManifest(metadata, buildTarget));
+const desktopArchive = resolve(
+  root,
+  "dist",
+  `${manifest.name}-${manifest.version}-claude-desktop-${buildTarget}.mcpb`,
+);
+await zipPackage(desktopLocal, desktopArchive);
 process.stdout.write(
-  `${JSON.stringify({ archive, local_package: local, target: buildTarget, runtime: "native-rust", executable_bytes: statSync(resolve(local, "server", executable)).size, files: files.length, status: "local prototype; not submitted or publicly approved", path: relative(root, archive) }, null, 2)}\n`,
+  `${JSON.stringify(
+    {
+      packages: [
+        { host: "codex", archive, local_package: local },
+        { host: "claude", archive: claudeArchive, local_package: claudeLocal },
+        { host: "claude-desktop", archive: desktopArchive, local_package: desktopLocal },
+      ],
+      target: buildTarget,
+      runtime: "native-rust",
+      executable_bytes: statSync(resolve(local, "server", executable)).size,
+      files: files.length,
+      status: "local prototype; not submitted or publicly approved",
+      path: relative(root, archive),
+    },
+    null,
+    2,
+  )}\n`,
 );

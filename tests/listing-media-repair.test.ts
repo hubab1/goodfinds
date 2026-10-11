@@ -5,13 +5,13 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Database } from "bun:sqlite";
-import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
+import { createNativeServer } from "./helpers/native-mcp.ts";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 import { z } from "zod";
 
 void test("media repair preserves listing facts and survives later refreshes and older collectors", async (t) => {
   const data = await mkdtemp(resolve(tmpdir(), "goodfinds-media-repair-"));
-  const { server, calls } = createGoodfindsServer(seedWorkspace(data));
+  const { server, calls } = createNativeServer(seedWorkspace(data));
   t.after(async () => {
     await server.close();
     await rm(data, { recursive: true, force: true });

@@ -1,61 +1,62 @@
-import { useCallback, useState } from "react";
-import { ArrowDown, Check, LoaderCircle, RefreshCw, Settings2, Sparkles } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
+import { ArrowDown, Check, RefreshCw, Settings2, Sparkles } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { SavedSearch } from "@goodfinds/contracts/state";
 import type { SearchDraft } from "@goodfinds/contracts/search-definition";
 import { SettingsForm } from "@/features/settings/settings-page";
 import { SearchEditor } from "@/features/searches/search-editor";
-import goodfindsLogo from "../../../assets/logo.png?inline";
+import { SearchDeleteDialog } from "@/features/searches/search-delete-dialog";
+import { GoodfindsLogo } from "@/goodfinds-logo";
 import { useWorkspace } from "@/app/use-workspace";
+import { WorkspaceStartup } from "@/app/workspace-startup";
 import { Searches } from "@/features/searches/searches-page";
 import { Deals } from "@/features/listings/listings-page";
 import { Activity } from "@/app/activity-page";
+import { FeedbackSaveStatus } from "@/features/listings/feedback-save-status";
 
 type Editor = { search: SavedSearch | undefined; draft?: SearchDraft; revision: string };
 export function GoodfindsApp() {
   const [view, setView] = useState("searches");
   const [editor, setEditor] = useState<Editor>();
+  const [deleting, setDeleting] = useState<string>();
+  const deleteFocus = useRef<HTMLElement | null>(null);
   const [listingSelection, setListingSelection] = useState<{
     searchId: string;
     unseen: boolean;
     visit: number;
   }>();
   const showSample = useCallback(() => setView("deals"), []);
-  const { state, busy, error, notice, mode, action, searchNow, recordSeen, clearError } =
-    useWorkspace(showSample);
+  const showSearch = useCallback((searchId: string, unseen = false) => {
+    setListingSelection((current) => ({ searchId, unseen, visit: (current?.visit ?? 0) + 1 }));
+    setView("deals");
+  }, []);
+  const {
+    state,
+    busy,
+    error,
+    notice,
+    mode,
+    action,
+    searchNow,
+    recordSeen,
+    clearError,
+    feedbackSaves,
+  } = useWorkspace(showSample, showSearch);
   if (!state)
     return (
-      <div className="mx-auto max-w-xl p-8">
-        <Card>
-          <CardContent className="space-y-4 py-6">
-            {error ? (
-              <>
-                <h1 className="text-xl font-semibold">Goodfinds couldn’t open</h1>
-                <p className="text-sm text-muted-foreground">{error}</p>
-                <Button
-                  disabled={busy}
-                  onClick={() => {
-                    void action("get_goodfinds_workspace", {});
-                  }}
-                >
-                  Try again
-                </Button>
-              </>
-            ) : (
-              <p className="flex items-center gap-3">
-                <LoaderCircle className="size-5 animate-spin" aria-hidden="true" />
-                Opening your saved searches…
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <WorkspaceStartup
+        error={error}
+        busy={busy}
+        onRetry={() => {
+          void action("get_goodfinds_workspace", {});
+        }}
+      />
     );
   const props = { state, busy, action };
+  const deletingSearch = state.searches.find((search) => search.id === deleting);
   return (
     <div className="@container mx-auto max-w-5xl px-5 pb-6 @lg:px-8" aria-busy={busy}>
       <header className="flex flex-wrap items-center justify-between gap-3 border-b py-5">
@@ -68,31 +69,28 @@ export function GoodfindsApp() {
             setView("searches");
           }}
         >
-          <img
-            src={goodfindsLogo}
-            alt=""
-            width={36}
-            height={36}
-            className="size-9 shrink-0 rounded-lg"
-          />
+          <GoodfindsLogo />
           Goodfinds
         </button>
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={busy}
-            onClick={() => {
-              void action(
-                mode === "sample" ? "get_goodfinds_workspace" : "load_goodfinds_sample_workspace",
-                {
-                  mode: mode === "sample" ? "live" : "sample",
-                },
-              );
-            }}
-          >
-            {mode === "sample" ? "My searches" : "Try sample data"}
-          </Button>
+          <FeedbackSaveStatus {...feedbackSaves} />
+          {import.meta.env["DEV"] && (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={busy}
+              onClick={() => {
+                void action(
+                  mode === "sample" ? "get_goodfinds_workspace" : "load_goodfinds_sample_workspace",
+                  {
+                    mode: mode === "sample" ? "live" : "sample",
+                  },
+                );
+              }}
+            >
+              {mode === "sample" ? "My searches" : "Try sample data"}
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -195,15 +193,14 @@ export function GoodfindsApp() {
         <TabsContent value="searches">
           <Searches
             {...props}
-            onListings={(searchId, unseen) => {
-              setListingSelection((current) => ({
-                searchId,
-                unseen,
-                visit: (current?.visit ?? 0) + 1,
-              }));
-              setView("deals");
+            onListings={showSearch}
+            onDelete={(search, button) => {
+              clearError();
+              deleteFocus.current = button;
+              setDeleting(search.id);
             }}
             onSearch={(search) => {
+              if (search) showSearch(search.id);
               void searchNow(search);
             }}
             resume={(draft) => {
@@ -233,16 +230,24 @@ export function GoodfindsApp() {
       </Tabs>
       {editor && (
         <SearchEditor
+          config={state.config}
           search={editor.search}
           {...(editor.draft ? { draft: editor.draft } : {})}
           revision={editor.revision}
           busy={busy}
           error={error}
           action={action}
-          removable={state.searches.length > 1}
           close={() => {
             setEditor(undefined);
           }}
+        />
+      )}
+      {deletingSearch && (
+        <SearchDeleteDialog
+          {...props}
+          search={deletingSearch}
+          returnFocus={deleteFocus}
+          close={() => setDeleting(undefined)}
         />
       )}
     </div>

@@ -1,5 +1,4 @@
 import { seedWorkspace } from "./helpers/workspace.ts";
-import { createEbayClient } from "./reference-server/src/platform/ebay.ts";
 import { revisionFor } from "./helpers/revisions.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -7,7 +6,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Effect } from "effect";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
 import {
   searchDefinitionSchema,
   savedSearchSchema,
@@ -15,26 +14,22 @@ import {
 } from "@goodfinds/contracts/search-definition";
 import { locationSchema, accessAvailable, postalLabel } from "@goodfinds/contracts/integrations";
 import { feedbackEventSchema } from "@goodfinds/contracts/discovery";
-import { learnedCriteria } from "./reference-server/src/searches/learning.ts";
-import {
-  workspaceConfigurationSchema,
-  listingObservationSchema,
-} from "./reference-server/src/workspace/model.ts";
-import { searchCohort } from "./reference-server/src/searches/definition.ts";
-import { ebayEvidence, priceMinor } from "./reference-server/src/connections/ebay.ts";
+import { learnedCriteria } from "./helpers/native-domain.ts";
+import { workspaceConfigurationSchema, listingObservationSchema } from "./helpers/native-domain.ts";
+import { searchCohort } from "./helpers/native-domain.ts";
 import { deviceLocation, estimateIP, lookupPostal } from "../apps/ui/src/lib/location.ts";
-import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
+import { createNativeServer } from "./helpers/native-mcp.ts";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { ElicitRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
-import { NOT_SURE } from "./reference-server/src/searches/interview.ts";
+import { NOT_SURE } from "./helpers/native-domain.ts";
 import { money } from "../apps/ui/src/lib/presentation.ts";
 import { z } from "zod";
 
 void test("one-use location pages restrict actions, enforce revisions and reject replay", async (t) => {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-location-page-"));
-  const { server, calls } = createGoodfindsServer(seedWorkspace(folder));
+  const { server, calls } = createNativeServer(seedWorkspace(folder));
   t.after(async () => {
     await server.close();
     rmSync(folder, { recursive: true, force: true });
@@ -47,7 +42,7 @@ void test("one-use location pages restrict actions, enforce revisions and reject
   } = z.object({ result: z.object({ url: z.string() }) }).parse(result.structuredContent);
   const page = await fetch(url);
   assert.equal(page.status, 200);
-  const token = (await page.text()).match(/token:"([a-f0-9]+)"/u)?.[1];
+  const token = (await page.text()).match(/"token":"([a-f0-9]+)"/u)?.[1];
   assert.ok(token);
   const post = (name: string, args: unknown) =>
     fetch(new URL("/api/tool", url), {
@@ -63,7 +58,7 @@ void test("one-use location pages restrict actions, enforce revisions and reject
     expected_entity_revision: state.revisions.settings,
     settings: { origin: "Not allowed" },
   });
-  assert.equal(bad.status, 400);
+  assert.equal(bad.status, 403);
   const settings = {
     location: {
       source: "manual",
@@ -162,7 +157,7 @@ function config() {
 void test("browser capability and marketplace login stay separate, scoped and stale-safe", (t) => {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-sessions-"));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  const store = new WorkspaceStore(seedWorkspace(folder));
+  const store = new NativeWorkspace(seedWorkspace(folder));
   let state = Effect.runSync(store.request("get_workspace")).state;
   const report = {
     browser: "external",
@@ -240,12 +235,12 @@ void test("browser capability and marketplace login stay separate, scoped and st
     ["signed_out", "signed_in"],
   );
   assert.equal(
-    Effect.runSync(new WorkspaceStore(seedWorkspace(folder)).request("get_workspace")).state.config
+    Effect.runSync(new NativeWorkspace(seedWorkspace(folder)).request("get_workspace")).state.config
       .platform_sessions.length,
     2,
   );
   assert.equal(
-    Effect.runSync(new WorkspaceStore(folder, "sample").request("get_workspace")).state.config
+    Effect.runSync(new NativeWorkspace(folder, "sample").request("get_workspace")).state.config
       .platform_sessions.length,
     0,
   );
@@ -254,7 +249,7 @@ void test("browser capability and marketplace login stay separate, scoped and st
 void test("location confirmation retains coordinates, clearing removes them, and origin edits invalidate them", (t) => {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-location-"));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  const store = new WorkspaceStore(seedWorkspace(folder));
+  const store = new NativeWorkspace(seedWorkspace(folder));
   let state = Effect.runSync(store.request("get_workspace")).state;
   const location = {
     source: "postal",
@@ -362,7 +357,7 @@ void test("listing damage does not ban a model, explicit rules apply within scop
 void test("feedback persists with its original wording and is isolated from live data", (t) => {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-feedback-"));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  const sample = new WorkspaceStore(folder, "sample");
+  const sample = new NativeWorkspace(folder, "sample");
   let state = Effect.runSync(sample.request("load_sample_workspace")).state;
   const laptop = state.searches[0],
     listing = state.listings.find((item) => item.product === laptop?.product);
@@ -385,12 +380,12 @@ void test("feedback persists with its original wording and is isolated from live
   assert.equal(event.scope, "search");
   assert.equal(event.rule, undefined);
   assert.equal(
-    Effect.runSync(new WorkspaceStore(folder, "sample").request("get_workspace")).state.config
+    Effect.runSync(new NativeWorkspace(folder, "sample").request("get_workspace")).state.config
       .feedback.length,
     1,
   );
   assert.equal(
-    Effect.runSync(new WorkspaceStore(seedWorkspace(folder)).request("get_workspace")).state.config
+    Effect.runSync(new NativeWorkspace(seedWorkspace(folder)).request("get_workspace")).state.config
       .feedback.length,
     0,
   );
@@ -496,80 +491,15 @@ void test("postal lookup preserves leading zeros and returns ambiguous places fo
   await assert.rejects(lookupPostal("GB", "BT1 1AA", fetcher), /Enter your town/u);
 });
 
-void test("eBay uses application OAuth, fixed-price filters, token caching and honest pagination", async () => {
-  const calls: string[] = [];
-  const fetcher: (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch> = async (
-    input,
-    init,
-  ) => {
-    const url = fetchUrl(input);
-    calls.push(url);
-    if (url.includes("oauth2/token")) {
-      assert.equal(init?.method, "POST");
-      return Response.json({ access_token: "test-token", expires_in: 7200 });
-    }
-    assert.equal(new Headers(init?.headers).get("X-EBAY-C-MARKETPLACE-ID"), "EBAY_GB");
-    assert.equal(new Headers(init?.headers).get("Authorization"), "Bearer test-token");
-    assert.match(url, /buyingOptions%3A%7BFIXED_PRICE%7D/u);
-    return Response.json({
-      total: 2,
-      next: "another-page",
-      itemSummaries: [
-        {
-          itemId: "v1|123|0",
-          title: "Coffee machine",
-          itemWebUrl: "https://www.ebay.co.uk/itm/123",
-          price: { value: "200.00", currency: "GBP" },
-          buyingOptions: ["FIXED_PRICE"],
-        },
-      ],
-    });
-  };
-  const ebay = createEbayClient({ clientId: "test-id", clientSecret: "test-secret", fetcher });
-  const page = await ebay.search({ query: "espresso machine" });
-  await ebay.search({ query: "Barista Pro" });
-  assert.equal(calls.filter((url) => url.includes("oauth2/token")).length, 1);
-  assert.equal(page.pagination_complete, false);
-  assert.equal(page.items[0]?.price_minor, 20000);
-  assert.equal(page.items[0]?.listing_id, "123");
-  assert.equal(page.items[0]?.variation_id, null);
-  const auction = ebayEvidence({
-    itemId: "v1|123|0",
-    title: "Auction",
-    itemWebUrl: "https://www.ebay.co.uk/itm/123",
-    price: { value: "10", currency: "GBP" },
-    buyingOptions: ["AUCTION"],
-  });
-  assert.equal(auction.price_minor, null);
-  assert.equal(priceMinor("10.005", "GBP"), null);
-  assert.equal(priceMinor("200", "JPY"), 200);
-  assert.equal(priceMinor("200", "BHD"), null);
+void test("marketplace prices retain currency-specific minor units", () => {
   assert.equal(money(200, "JPY"), "JP¥200");
   assert.equal(money(20000, "GBP"), "£200");
-  assert.throws(
-    () =>
-      ebayEvidence({
-        itemId: "v1|123|0",
-        title: "x",
-        itemWebUrl: "https://attacker.example/itm/123",
-      }),
-    /Unexpected/u,
-  );
-  assert.throws(
-    () =>
-      ebayEvidence({
-        itemId: "v1|123|0",
-        title: "x",
-        itemWebUrl: "https://www.ebay.co.uk/itm/456",
-      }),
-    /disagree/u,
-  );
 });
 
 void test("native not-sure persists uncertainty without inventing an answer and repeated decisions are rejected", async (t) => {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-unsure-"));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  const { server } = createGoodfindsServer(seedWorkspace(folder)),
+  const { server } = createNativeServer(seedWorkspace(folder)),
     client = new Client(
       { name: "Unsure buyer", version: "1" },
       { capabilities: { elicitation: { form: {} } } },

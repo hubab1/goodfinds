@@ -1,11 +1,13 @@
+import { currencyDivisor } from "@goodfinds/contracts/regional";
+import { isMarketplaceUrl, MARKETPLACES } from "@goodfinds/contracts/integrations";
 export function money(minor: number | null | undefined, currency = "GBP"): string {
-  const divisor = currency === "JPY" ? 1 : 100;
+  const divisor = currencyDivisor(currency);
   return minor == null
     ? "Unknown price"
     : new Intl.NumberFormat("en-GB", {
         style: "currency",
         currency,
-        maximumFractionDigits: minor % divisor ? 2 : 0,
+        maximumFractionDigits: minor % divisor ? Math.log10(divisor) : 0,
       }).format(minor / divisor);
 }
 export function storage(gb: number | null | undefined): string {
@@ -40,45 +42,12 @@ export function facebookUrl(value: string | null | undefined): string | undefine
   }
 }
 export function marketplaceUrl(value: string | null | undefined): string | undefined {
-  if (!value) return undefined;
-  try {
-    const url = new URL(value);
-    const hosts = [
-      "facebook.com",
-      "ebay.com",
-      "ebay.co.uk",
-      "ebay.de",
-      "ebay.fr",
-      "ebay.ca",
-      "ebay.com.au",
-      "vinted.co.uk",
-      "vinted.com",
-      "vinted.fr",
-      "vinted.de",
-      "gumtree.com",
-      "craigslist.org",
-      "autotrader.co.uk",
-    ];
-    return url.protocol === "https:" &&
-      !url.username &&
-      !url.password &&
-      hosts.some((host) => url.hostname === host || url.hostname.endsWith(`.${host}`))
-      ? url.href
-      : undefined;
-  } catch {
-    return undefined;
-  }
+  return value && isMarketplaceUrl(value) ? value : undefined;
 }
 export function sourceName(source: string | undefined): string {
-  const names: Record<string, string> = {
-    facebook_marketplace: "Facebook Marketplace",
-    ebay: "eBay",
-    vinted: "Vinted",
-    gumtree: "Gumtree",
-    craigslist: "Craigslist",
-    autotrader: "Auto Trader",
-  };
-  return names[source ?? "facebook_marketplace"] ?? "Marketplace";
+  return (
+    MARKETPLACES.find((m) => m.id === (source ?? "facebook_marketplace"))?.name ?? "Marketplace"
+  );
 }
 export function evidenceText(value: unknown): string {
   return typeof value === "string" ? value : (JSON.stringify(value) ?? "Unknown");

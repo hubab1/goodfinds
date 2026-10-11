@@ -10,42 +10,87 @@ import { copyFile, mkdir, mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { z } from "zod";
-import { executionPolicy, WORKER_ROUTING_GUIDANCE } from "@goodfinds/contracts/worker-execution";
+import { executionPolicy } from "@goodfinds/contracts/worker-execution";
+import { GOODFINDS_MCP_INSTRUCTIONS } from "@goodfinds/contracts/mcp-catalog";
 import { connectionCheckResultSchema } from "@goodfinds/contracts/connection-checks";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
+import { v0_3 } from "@anthropic-ai/mcpb/schemas";
+import { getMcpConfigForManifest } from "@anthropic-ai/mcpb/node";
+import { pluginHosts } from "./plugin-formats.ts";
 
 const root = resolve(process.argv[2] ?? "dist/goodfinds-marketplace");
+const host = z.enum(pluginHosts).parse(process.argv[3] ?? "codex");
 const schema = z.object({
   mcpServers: z.record(
     z.string(),
     z.object({ command: z.string(), args: z.array(z.string()), cwd: z.string().optional() }),
   ),
 });
-const portable = schema.parse(
-  JSON.parse(await readFile(resolve(root, "mcp.json"), "utf8")) as unknown,
-);
-const codex = schema.parse(
-  JSON.parse(await readFile(resolve(root, ".mcp.json"), "utf8")) as unknown,
-);
-const commands = (servers: typeof codex) =>
+const readJson = async (file: string): Promise<unknown> =>
+  JSON.parse(await readFile(resolve(root, file), "utf8")) as unknown;
+const commands = (servers: z.infer<typeof schema>) =>
   Object.fromEntries(
     Object.entries(servers.mcpServers).map(([name, { command, args }]) => [
       name,
       { command, args },
     ]),
   );
-if (JSON.stringify(commands(portable)) !== JSON.stringify(commands(codex)))
-  throw new Error("Portable and Codex launch configurations differ");
-const reference = await readFile(
-  resolve(root, "skills/marketplace-shopping/references/state-model.md"),
-  "utf8",
-);
-const sourceReference = await readFile(
-  resolve(import.meta.dir, "../skills/marketplace-shopping/references/state-model.md"),
-  "utf8",
-);
-if (reference !== sourceReference) throw new Error("Packaged state reference differs from source");
-const launch = Object.values(codex.mcpServers)[0];
+let launch: { command: string; args: string[]; cwd?: string | undefined } | undefined;
+if (host === "claude-desktop") {
+  const manifest = v0_3.McpbManifestSchema.parse(await readJson("manifest.json"));
+  const config = manifest.server.mcp_config;
+  if (manifest.server.type !== "binary" || !config)
+    throw new Error("Desktop extension must launch the native binary");
+  launch = { command: config.command.replaceAll("${__dirname}", root), args: config.args ?? [] };
+} else {
+  const servers = schema.parse(await readJson(".mcp.json"));
+  if (host === "codex") {
+    const manifest = z
+      .object({
+        extensions: z.object({
+          "com.openai": z.object({ onboardingSkill: z.literal("./skills/setup/SKILL.md") }),
+        }),
+      })
+      .parse(await readJson(".codex-plugin/plugin.json"));
+    await stat(resolve(root, manifest.extensions["com.openai"].onboardingSkill));
+    const portable = schema.parse(await readJson("mcp.json"));
+    if (JSON.stringify(commands(portable)) !== JSON.stringify(commands(servers)))
+      throw new Error("Portable and Codex launch configurations differ");
+  } else {
+    z.object({ skills: z.literal("./skills/"), mcpServers: z.literal("./.mcp.json") }).parse(
+      await readJson(".claude-plugin/plugin.json"),
+    );
+    z.object({
+      mcpServers: z.record(
+        z.string(),
+        z
+          .object({
+            type: z.literal("stdio"),
+            command: z.string(),
+            args: z.array(z.string()),
+          })
+          .strict(),
+      ),
+    })
+      .strict()
+      .parse(await readJson(".mcp.json"));
+  }
+  const server = Object.values(servers.mcpServers)[0];
+  if (server)
+    launch = { ...server, command: server.command.replaceAll("${CLAUDE_PLUGIN_ROOT}", root) };
+}
+if (host !== "claude-desktop") {
+  const reference = await readFile(
+    resolve(root, "skills/marketplace-shopping/references/state-model.md"),
+    "utf8",
+  );
+  const sourceReference = await readFile(
+    resolve(import.meta.dir, "../skills/marketplace-shopping/references/state-model.md"),
+    "utf8",
+  );
+  if (reference !== sourceReference)
+    throw new Error("Packaged state reference differs from source");
+}
 if (!launch) throw new Error("Packaged MCP server missing");
 const data = await mkdtemp(resolve(tmpdir(), "goodfinds-package-smoke-"));
 const environment = {
@@ -57,6 +102,20 @@ const environment = {
 };
 const client = new Client({ name: "Goodfinds package smoke", version: "1.0.0" });
 try {
+  if (host === "claude-desktop") {
+    // Resolve the installed manifest using Anthropic's own resolver, including user config.
+    const config = await getMcpConfigForManifest({
+      manifest: v0_3.McpbManifestSchema.parse(await readJson("manifest.json")),
+      extensionPath: root,
+      systemDirs: { HOME: data },
+      userConfig: { workspace_directory: environment.GOODFINDS_WORKSPACE_DIR },
+      pathSeparator: process.platform === "win32" ? "\\" : "/",
+    });
+    if (!config || config.env?.["GOODFINDS_WORKSPACE_DIR"] !== environment.GOODFINDS_WORKSPACE_DIR)
+      throw new Error("Desktop workspace configuration did not resolve");
+    launch = { command: config.command, args: config.args ?? [] };
+    Object.assign(environment, config.env);
+  }
   // Copy only the executable, so neither repository files nor adjacent assets can rescue it.
   const isolated = resolve(
     data,
@@ -84,15 +143,16 @@ try {
     new StdioClientTransport({
       command: launch.command,
       args: launch.args,
-      cwd: resolve(root, launch.cwd ?? "."),
+      // Claude launches absolute bundle paths from an unrelated working directory.
+      cwd: host === "codex" ? resolve(root, launch.cwd ?? ".") : data,
       env: environment,
     }),
   );
   if (client.getServerVersion()?.version !== GOODFINDS_VERSION)
     throw new Error("Packaged server version differs from the current plugin release");
   const { tools } = await client.listTools();
-  if (!client.getInstructions()?.includes(WORKER_ROUTING_GUIDANCE))
-    throw new Error("Packaged server model routing instructions are missing");
+  if (client.getInstructions() !== GOODFINDS_MCP_INSTRUCTIONS)
+    throw new Error("Packaged server skill routing instructions are missing");
   for (const name of [
     "open_goodfinds_panel",
     "get_goodfinds_settings",
@@ -111,7 +171,6 @@ try {
     "update_goodfinds_search_run",
     "save_goodfinds_seller_message_draft",
     "set_goodfinds_monitoring",
-    "report_goodfinds_host_schedule",
     "start_goodfinds_connection_check",
     "get_goodfinds_connection_check",
     "claim_goodfinds_connection_check",
@@ -161,19 +220,16 @@ try {
   );
   if (empty.searches.length || empty.config.origin_confirmed)
     throw new Error("Fresh live workspaces must not contain demo searches or a confirmed location");
-  const example = z
-    .object({ searches: z.array(z.unknown()) })
-    .parse(
-      JSON.parse(
-        await readFile(
-          resolve(root, "skills/marketplace-shopping/assets/example-workspace.json"),
-          "utf8",
-        ),
-      ),
-    );
+  // The fixture comes from the executable's embedded sample, including for MCPB bundles.
+  const sample = stateFromToolResult(
+    await client.callTool({ name: "get_goodfinds_workspace", arguments: { mode: "sample" } }),
+  );
   const seeded = await client.callTool({
     name: "save_goodfinds_search",
-    arguments: { search: example.searches[0], expected_entity_revision: empty.revisions.absent },
+    arguments: {
+      search: sample.config.searches[0],
+      expected_entity_revision: empty.revisions.absent,
+    },
   });
   if (seeded.isError) throw new Error("Could not save the first smoke-test search");
   const context = await client.callTool({ name: "get_goodfinds_search_context", arguments: {} });
@@ -183,17 +239,14 @@ try {
     !Object.values(parsed.search_workflows).some((view) =>
       view.actions.some(
         (action) =>
-          action.execution.profile === "collection" &&
+          action.execution.profile === "browser_collection" &&
           JSON.stringify(action.execution.spawn) ===
-            JSON.stringify(executionPolicy("collection").spawn),
+            JSON.stringify(executionPolicy("browser_collection").spawn),
       ),
     )
   )
     throw new Error("Packaged search dispatch model settings are missing");
   const search = parsed.searches[0];
-  const sample = stateFromToolResult(
-    await client.callTool({ name: "get_goodfinds_workspace", arguments: { mode: "sample" } }),
-  );
   const check = await client.callTool({
     name: "start_goodfinds_connection_check",
     arguments: {
@@ -245,7 +298,7 @@ try {
   });
   if (!resource.contents.length) throw new Error("Packaged panel missing");
   process.stdout.write(
-    `${JSON.stringify({ status: "passed", root, tools: tools.length, context: "readable", panel: "readable", search_covers: covers.length, state_model: "packaged", workflow_guards: "checked", path: "empty", standalone_doctor: doctor.status, executable_bytes: (await stat(isolated)).size })}\n`,
+    `${JSON.stringify({ status: "passed", host, root, tools: tools.length, context: "readable", panel: "readable", search_covers: covers.length, state_model: host === "claude-desktop" ? "companion plugin" : "packaged", workflow_guards: "checked", path: "empty", standalone_doctor: doctor.status, executable_bytes: (await stat(isolated)).size })}\n`,
   );
 } finally {
   await client.close();

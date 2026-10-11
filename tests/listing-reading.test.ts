@@ -6,17 +6,11 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
-import { Database } from "bun:sqlite";
 import { Clock, Effect } from "effect";
 import { z } from "zod";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
-import {
-  initializeWorkspaceDatabase,
-  WORKSPACE_SCHEMA_VERSION,
-} from "./reference-server/src/platform/database-schema.ts";
-import { discoverySummary } from "./reference-server/src/platform/listing-discovery-sqlite.ts";
-import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
-import { backendLayer } from "./reference-server/src/entrypoints/backend.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
+import { createNativeServer } from "./helpers/native-mcp.ts";
+import { nativeOptions } from "./helpers/native-mcp.ts";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 import { operations } from "@goodfinds/contracts/operations";
 import { revisionFor } from "./helpers/revisions.ts";
@@ -26,7 +20,7 @@ import { relativeTime, exactTime } from "../apps/ui/src/lib/relative-time.ts";
 function fixture(t: TestContext) {
   const dir = mkdtempSync(resolve(tmpdir(), "goodfinds-reading-"));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
-  const store = new WorkspaceStore(seedWorkspace(dir));
+  const store = new NativeWorkspace(seedWorkspace(dir));
   let now = Date.parse("2026-10-07T12:00:00.000Z");
   const clock: Clock.Clock = {
     currentTimeMillisUnsafe: () => now,
@@ -135,7 +129,7 @@ void test("seen receipts persist independently for each search, and rechecks do 
     "2026-10-07T13:00:00.000Z",
   );
   assert.equal(state.searches.find((s) => s.id === f.search.id)?.unseen_count, 2);
-  state = Effect.runSync(new WorkspaceStore(seedWorkspace(f.dir)).request("get_workspace")).state;
+  state = Effect.runSync(new NativeWorkspace(seedWorkspace(f.dir)).request("get_workspace")).state;
   assert.equal(
     state.listings.find((l) => l.key === "manual:201")?.seen_in_searches?.[0]?.seen_at,
     seenAt,
@@ -143,7 +137,9 @@ void test("seen receipts persist independently for each search, and rechecks do 
   assert.equal(state.searches.find((s) => s.id === other.id)?.unseen_count, 1);
   state = f.seen("manual:201", f.search.id, false);
   assert.equal(state.searches.find((s) => s.id === f.search.id)?.unseen_count, 3);
-  const sample = Effect.runSync(new WorkspaceStore(f.dir, "sample").request("get_workspace")).state;
+  const sample = Effect.runSync(
+    new NativeWorkspace(f.dir, "sample").request("get_workspace"),
+  ).state;
   assert.equal(
     sample.listings.some((l) => l.key === "manual:201"),
     false,
@@ -241,57 +237,12 @@ void test("claiming sets the actual start time once; renewing and queued runs ca
   assert.equal(renewed.searches[0]?.last_searched_at, run.started_at);
 });
 
-void test("version 3 upgrade preserves discoveries and finds actual runs beyond the progress limit", () => {
-  const db = new Database(":memory:");
-  try {
-    db.run(
-      "CREATE TABLE listings(listing_key TEXT, provenance TEXT); CREATE TABLE search_runs(id TEXT, search_id TEXT, document_json TEXT); CREATE TABLE listing_search_discoveries(listing_key TEXT,search_id TEXT,run_id TEXT,run_started_at TEXT,recorded_at TEXT); PRAGMA user_version=3;",
-    );
-    const at = "2026-10-01T09:00:00.000Z";
-    db.run("INSERT INTO search_runs VALUES(?,?,?)", [
-      randomUUID(),
-      "coffee",
-      JSON.stringify({ phase: "completed", created_at: at }),
-    ]);
-    for (let i = 0; i < 60; i++)
-      db.run("INSERT INTO search_runs VALUES(?,?,?)", [
-        randomUUID(),
-        "coffee",
-        JSON.stringify({ phase: "cancelled", created_at: "2026-10-07T11:00:00.000Z" }),
-      ]);
-    const key = randomUUID();
-    db.run("INSERT INTO listings VALUES(?,?)", ["manual:1", "manual"]);
-    db.run("INSERT INTO listing_search_discoveries VALUES(?,?,?,?,?)", [
-      "manual:1",
-      "coffee",
-      key,
-      at,
-      at,
-    ]);
-    initializeWorkspaceDatabase(db);
-    initializeWorkspaceDatabase(db);
-    assert.equal(
-      db.query<{ user_version: number }, []>("PRAGMA user_version").get()?.user_version,
-      WORKSPACE_SCHEMA_VERSION,
-    );
-    assert.equal(
-      db.query<{ count: number }, []>("SELECT COUNT(*) AS count FROM listing_seen").get()?.count,
-      0,
-    );
-    const summary = Effect.runSync(discoverySummary(db, "manual"));
-    assert.equal(summary.lastSearched.get("coffee"), at);
-    assert.equal(summary.byListing.get("manual:1")?.[0]?.run_id, key);
-  } finally {
-    db.close();
-  }
-});
-
 void test("MCP exposes seen status and filters to agents with the same durable panel behavior", async (t) => {
   const f = fixture(t);
   f.ingest(["201"]);
-  const { server, calls } = createGoodfindsServer(
+  const { server, calls } = createNativeServer(
     f.dir,
-    backendLayer(f.dir, null, () => Promise.resolve(null)),
+    nativeOptions(f.dir, null, () => Promise.resolve(null)),
   );
   t.after(() => server.close());
   const mark = calls.get("set_goodfinds_listing_seen");
@@ -307,7 +258,10 @@ void test("MCP exposes seen status and filters to agents with the same durable p
 void test("relative timestamps cover past, future, missing and historical dates with exact hover text", () => {
   const now = Date.parse("2026-10-07T12:00:00.000Z");
   assert.equal(relativeTime("2026-10-07T11:59:40.000Z", now), "just now");
-  assert.equal(relativeTime("2026-10-07T11:58:00.000Z", now), "2 minutes ago");
+  assert.equal(relativeTime("2026-10-07T11:59:00.000Z", now), "1 min ago");
+  assert.equal(relativeTime("2026-10-07T11:58:00.000Z", now), "2 mins ago");
+  assert.equal(relativeTime("2026-10-07T12:01:00.000Z", now), "in 1 min");
+  assert.equal(relativeTime("2026-10-07T12:02:00.000Z", now), "in 2 mins");
   assert.equal(relativeTime("2026-10-07T09:00:00.000Z", now), "3 hours ago");
   assert.equal(relativeTime("2026-10-05T12:00:00.000Z", now), "2 days ago");
   assert.equal(relativeTime("2026-10-07T14:00:00.000Z", now), "in 2 hours");

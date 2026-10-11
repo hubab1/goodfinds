@@ -25,8 +25,8 @@ async fn run() -> Result<()> {
         Ok(())
     } else if argv.first().is_some_and(|arg| {
         [
-            "doctor", "call", "client", "demo", "export", "backup", "restore", "evaluate",
-            "status", "ack", "--help",
+            "schema", "doctor", "call", "client", "demo", "export", "backup", "restore",
+            "evaluate", "status", "ack", "--help",
         ]
         .contains(&arg.as_str())
     }) {

@@ -6,7 +6,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
+import { createNativeServer } from "./helpers/native-mcp.ts";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 import { rentalCoverFor, rentalCovers } from "@goodfinds/contracts/rental-cover";
 import { SEARCH_TEMPLATES } from "@goodfinds/contracts/search-definition";
@@ -19,7 +19,6 @@ import {
 } from "@goodfinds/contracts/search-cover-presets";
 import { z } from "zod";
 import { operations } from "@goodfinds/contracts/operations";
-import coverSources from "@goodfinds/contracts/data/search-cover-sources.json" with { type: "json" };
 
 void test("Mac families require workspace photos and generic vehicle illustrations do not satisfy named models", () => {
   for (const [category, product] of [
@@ -67,7 +66,6 @@ void test("Mac families require workspace photos and generic vehicle illustratio
         kind: "generated",
         alt: vehicleCovers.sedan.alt,
         source_name: vehicleCovers.sedan.source_name,
-        prompt: vehicleCovers.sedan.prompt,
       },
     })?.product,
     "Ford Focus",
@@ -108,13 +106,7 @@ void test("marketplace defaults recognize item types without guessing a broad fu
     );
   for (const product of ["furniture", "baby", "garden", "constructor"])
     assert.equal(bundledSearchCoverFor({ product, values: {} }), undefined);
-  const {
-    category: _category,
-    file: _file,
-    generated_at: _date,
-    label: _label,
-    ...cover
-  } = marketplaceCovers.sofa;
+  const { category: _category, file: _file, label: _label, ...cover } = marketplaceCovers.sofa;
   assert.equal(
     searchCoverFollowUp({
       id: "named-sofa",
@@ -157,7 +149,7 @@ void test("rental defaults follow explicit search countries and keep ambiguous p
 
 void test("identified products return required photo follow-up until a local cover is attached, and reuse it after budget edits", async (t) => {
   const data = await mkdtemp(resolve(tmpdir(), "goodfinds-required-cover-"));
-  const { server, calls } = createGoodfindsServer(seedWorkspace(data));
+  const { server, calls } = createNativeServer(seedWorkspace(data));
   t.after(async () => {
     await server.close();
     await rm(data, { recursive: true, force: true });
@@ -283,7 +275,7 @@ void test("identified products return required photo follow-up until a local cov
 
 void test("the generic cover catalog serves matching local assets and a named vehicle replaces its illustration", async (t) => {
   const data = await mkdtemp(resolve(tmpdir(), "goodfinds-generic-covers-"));
-  const { server, calls } = createGoodfindsServer(seedWorkspace(data));
+  const { server, calls } = createNativeServer(seedWorkspace(data));
   t.after(async () => {
     await server.close();
     await rm(data, { recursive: true, force: true });
@@ -342,19 +334,6 @@ void test("the generic cover catalog serves matching local assets and a named ve
     }),
   );
   assert.ok(totalBytes <= 300_000, "The bundled cover catalog must stay below 300 KB");
-  await Promise.all(
-    Object.entries(coverSources.media_id_aliases).map(async ([oldId, currentId]) => {
-      assert.ok(all.some((option) => option.cover.media_id === currentId));
-      const image = (await call("get_goodfinds_image", { media_id: oldId })).content[0];
-      assert.ok(image && image.type === "image");
-      assert.equal(image.mimeType, "image/webp");
-      assert.equal(
-        createHash("sha256").update(Buffer.from(image.data, "base64")).digest("hex"),
-        currentId,
-        "Previously saved cover IDs must resolve to the matching optimized illustration",
-      );
-    }),
-  );
   const state = stateFromToolResult(await call("get_goodfinds_workspace", {}));
   const original = state.config.searches[0];
   assert.ok(original);
@@ -388,38 +367,12 @@ void test("the generic cover catalog serves matching local assets and a named ve
   );
   assert.deepEqual(attached.search?.cover, cover);
   assert.equal(attached.cover_follow_up, null);
-  const previousId = Object.entries(coverSources.media_id_aliases).find(
-    ([, currentId]) => currentId === cover.media_id,
-  )?.[0];
-  assert.ok(previousId);
-  const oldCover = { ...cover, media_id: previousId };
-  const legacy = operations.set_search_cover.output.parse(
-    (
-      await call("set_goodfinds_search_cover", {
-        search_id: search.id,
-        expected_entity_revision: attached.revisions.searches[search.id],
-        cover: oldCover,
-      })
-    ).structuredContent,
-  );
-  const restored = stateFromToolResult(await call("get_goodfinds_workspace", {}));
-  assert.deepEqual(restored.searches.find((item) => item.id === search.id)?.cover, oldCover);
-  assert.equal(
-    searchCoverFollowUp({
-      id: search.id,
-      product: "motorbike",
-      discovery: { scope: "exact", reference_model: "Honda CB500F", model_attribute: "model" },
-      cover: oldCover,
-    })?.product,
-    "Honda CB500F",
-    "Legacy illustrations must still require a photo for a named model",
-  );
   const named = operations.save_search.output.parse(
     (
       await call("save_goodfinds_search", {
-        expected_entity_revision: legacy.revisions.searches[search.id],
+        expected_entity_revision: attached.revisions.searches[search.id],
         search: {
-          ...legacy.search,
+          ...attached.search,
           discovery: { scope: "exact", reference_model: "Honda CB500F" },
         },
       })
@@ -431,7 +384,7 @@ void test("the generic cover catalog serves matching local assets and a named ve
 
 void test("regional rental covers are available locally, attach to searches and reset after an area edit", async (t) => {
   const data = await mkdtemp(resolve(tmpdir(), "goodfinds-regional-covers-"));
-  const { server, calls } = createGoodfindsServer(seedWorkspace(data));
+  const { server, calls } = createNativeServer(seedWorkspace(data));
   t.after(async () => {
     await server.close();
     await rm(data, { recursive: true, force: true });

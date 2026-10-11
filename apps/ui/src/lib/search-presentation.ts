@@ -127,7 +127,7 @@ export function searchLocation(
   };
 }
 
-export function searchBudget(search: SavedSearch): string {
+function searchPriceThreshold(search: SavedSearch) {
   const limits = search.definition.fields
     .filter(
       (field) =>
@@ -135,9 +135,25 @@ export function searchBudget(search: SavedSearch): string {
         field.match.operator === "lte" &&
         isVisible(field, search.values, search.definition),
     )
-    .map((field) => search.values[field.id])
-    .filter((value): value is number => typeof value === "number");
-  return limits.length
-    ? money(Math.min(...limits), search.definition.price.currency)
-    : "No price limit";
+    .flatMap((field) => {
+      const value = search.values[field.id];
+      return typeof value === "number"
+        ? [{ value, preferred: field.match?.importance === "preferred" }]
+        : [];
+    });
+  const required = limits.filter((limit) => !limit.preferred);
+  return (required.length ? required : limits).reduce<(typeof limits)[number] | undefined>(
+    (lowest, limit) => (!lowest || limit.value < lowest.value ? limit : lowest),
+    undefined,
+  );
+}
+
+export function searchBudget(search: SavedSearch): string {
+  const threshold = searchPriceThreshold(search);
+  return threshold ? money(threshold.value, search.definition.price.currency) : "No price limit";
+}
+
+export function searchBudgetLabel(search: SavedSearch): string | null {
+  const threshold = searchPriceThreshold(search);
+  return threshold ? (threshold.preferred ? "Target" : "Up to") : null;
 }

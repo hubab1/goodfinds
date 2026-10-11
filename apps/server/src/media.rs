@@ -33,6 +33,19 @@ pub fn mime(bytes: &[u8], videos: bool) -> Result<&'static str> {
     if bytes.get(0..4) == Some(b"RIFF") && bytes.get(8..12) == Some(b"WEBP") {
         return Ok("image/webp");
     }
+    if bytes.len() >= 16 && bytes.get(4..8) == Some(b"ftyp") {
+        let size = u32::from_be_bytes(bytes[0..4].try_into().unwrap()) as usize;
+        if size >= 16
+            && size <= bytes.len()
+            && size.is_multiple_of(4)
+            && (bytes.get(8..12) == Some(b"avif")
+                || bytes[16..size]
+                    .chunks_exact(4)
+                    .any(|brand| brand == b"avif"))
+        {
+            return Ok("image/avif");
+        }
+    }
     if videos && bytes.len() >= 24 && bytes.get(4..8) == Some(b"ftyp") {
         let size = u32::from_be_bytes(bytes[0..4].try_into().unwrap()) as usize;
         let brands = String::from_utf8_lossy(&bytes[8..bytes.len().min(size).max(8)]);
@@ -52,9 +65,9 @@ pub fn mime(bytes: &[u8], videos: bool) -> Result<&'static str> {
         return Ok("video/webm");
     }
     Err(Error::validation(if videos {
-        "Use downloaded JPEG, PNG, WebP, MP4 or WebM files. Other file types are not supported."
+        "Use downloaded JPEG, PNG, WebP, AVIF, MP4 or WebM files. Other file types are not supported."
     } else {
-        "Use downloaded JPEG, PNG or WebP images. Other file types are not supported."
+        "Use downloaded JPEG, PNG, WebP or AVIF images. Other file types are not supported."
     }))
 }
 fn media_bytes(path: &Path, limit: u64) -> Result<Vec<u8>> {
@@ -226,6 +239,11 @@ mod tests {
     fn detects_types_and_rejects_lookalikes() {
         assert_eq!(mime(&[255, 216, 255], false).unwrap(), "image/jpeg");
         assert!(mime(b"<svg></svg>", false).is_err());
+        let avif = b"\x00\x00\x00\x18ftypavif\x00\x00\x00\x00avifmif1";
+        assert_eq!(mime(avif, false).unwrap(), "image/avif");
+        assert_eq!(mime(avif, true).unwrap(), "image/avif");
+        assert!(mime(&avif[..20], true).is_err());
+        assert!(mime(b"\x00\x00\x00\x10ftypmif1avif", false).is_err());
         assert!(valid_id("../private").is_err());
     }
     #[test]

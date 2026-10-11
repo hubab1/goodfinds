@@ -1,0 +1,167 @@
+[
+  {
+    "source": "cargurus",
+    "country": "US",
+    "listing_id": "459673970",
+    "url": "https://www.cargurus.com/details/459673970",
+    "profile": "https://www.cargurus.com/Cars/m-Paul-Miller-Volkswagen-of-Bernardsville-sp334461",
+    "query": "Volkswagen Tiguan",
+    "category": "vehicle",
+    "price_minor": 2032400,
+    "currency": "USD",
+    "location": "Bernardsville, NJ",
+    "description": "2020 Volkswagen Tiguan SEL 4Motion. 46,974 miles, 8-speed automatic.",
+    "attributes": {
+      "year": 2020,
+      "mileage": 46974,
+      "transmission": "automatic"
+    },
+    "expected_photos": 34
+  },
+  {
+    "source": "poshmark",
+    "country": "US",
+    "listing_id": "6577c0f3ac1f7629f1c445fe",
+    "url": "https://poshmark.com/listing/NIKE-HOODIE-SWEATSHIRT-6577c0f3ac1f7629f1c445fe",
+    "profile": "https://poshmark.com/closet/palmtree2ndhand",
+    "query": "nike hoodie",
+    "category": "clothing",
+    "price_minor": 5500,
+    "currency": "USD",
+    "location": null,
+    "description": "NIKE HOODIE SWEATSHIRT",
+    "attributes": {
+      "size": "XXL",
+      "color": "black"
+    },
+    "expected_photos": 4
+  },
+  {
+    "source": "depop",
+    "country": "US",
+    "listing_id": "pxague_szn-nike-cream-hoodie-size-xxl-f2d2",
+    "url": "https://www.depop.com/products/pxague_szn-nike-cream-hoodie-size-xxl-f2d2/",
+    "profile": "https://www.depop.com/plague_szn/",
+    "query": "nike hoodie",
+    "category": "clothing",
+    "price_minor": 900,
+    "currency": "USD",
+    "location": null,
+    "description": "Nike cream hoodie size XXL fits like xl #swoosh #athletic",
+    "attributes": {
+      "size": "XXL",
+      "color": "cream"
+    },
+    "expected_photos": 3
+  },
+  {
+    "source": "depop",
+    "country": "GB",
+    "listing_id": "johnbo2645-nike-hoodie-with-black-nike-f4b1",
+    "url": "https://www.depop.com/products/johnbo2645-nike-hoodie-with-black-nike-f4b1/",
+    "profile": "https://www.depop.com/johnboy645/",
+    "query": "nike hoodie",
+    "category": "clothing",
+    "price_minor": 1200,
+    "currency": "GBP",
+    "location": null,
+    "description": "Nike hoodie with black Nike swoosh and text repeating all over white background. Size small.",
+    "attributes": {
+      "size": "S",
+      "color": "white"
+    },
+    "expected_photos": 3
+  },
+  {
+    "source": "mercari",
+    "country": "US",
+    "listing_id": "m32963257828",
+    "url": "https://www.mercari.com/us/item/m32963257828/",
+    "profile": "https://www.mercari.com/u/user666003016/",
+    "query": "nike hoodie",
+    "category": "clothing",
+    "price_minor": 4950,
+    "currency": "USD",
+    "location": "Oregon",
+    "description": "New with tags! Men's size XXL Nike hoodie",
+    "attributes": {
+      "size": "XXL",
+      "condition": "new"
+    },
+    "expected_photos": 6
+  },
+  {
+    "source": "cars_com",
+    "country": "US",
+    "listing_id": "92353b66-069f-47b0-a250-20a82f4ecd40",
+    "url": "https://www.cars.com/vehicledetail/92353b66-069f-47b0-a250-20a82f4ecd40/",
+    "profile": "https://www.cars.com/dealers/5377316/advantage-toyota-of-river-oaks/",
+    "query": "Toyota Camry",
+    "category": "vehicle",
+    "price_minor": 2570800,
+    "currency": "USD",
+    "location": "Calumet City, IL",
+    "description": "2025 Toyota Camry LE. 47,869 miles, automatic transmission. Seller notes list Apple CarPlay and Android Auto.",
+    "attributes": {
+      "year": 2025,
+      "mileage": 47869,
+      "transmission": "automatic"
+    },
+    "expected_photos": 24
+  },
+  {
+    "source": "autotrader_us",
+    "country": "US",
+    "listing_id": "791592297",
+    "url": "https://www.autotrader.com/cars-for-sale/vehicle/791592297",
+    "profile": "https://www.autotrader.com/car-dealers/wayne-nj/1359430/paul-miller-bmw",
+    "query": "Toyota Camry",
+    "category": "vehicle",
+    "price_minor": 2429900,
+    "currency": "USD",
+    "location": "Wayne, NJ",
+    "description": "2022 Toyota Camry LE AWD, Cold Weather Package. 37,397 miles. 8-Speed Automatic Transmission.",
+    "attributes": {
+      "year": 2022,
+      "mileage": 37397,
+      "transmission": "automatic"
+    },
+    "expected_photos": 27
+  },
+  {
+    "source": "craigslist",
+    "country": "US",
+    "listing_id": "4u3335L4DXxRkPY13X6yV2",
+    "url": "https://www.craigslist.org/view/d/chicago-2018-ford-focus-se/4u3335L4DXxRkPY13X6yV2",
+    "profile": null,
+    "query": "Ford Focus",
+    "category": "vehicle",
+    "price_minor": 300000,
+    "currency": "USD",
+    "location": "Chicago",
+    "description": "Fictional regression fixture using observed Craigslist URL formats.",
+    "attributes": {
+      "year": 2018,
+      "transmission": "automatic"
+    },
+    "expected_photos": 15
+  },
+  {
+    "source": "craigslist",
+    "country": "US",
+    "listing_id": "7964309691",
+    "url": "https://chicago.craigslist.org/chc/cto/d/chicago-fixture-focus/7964309691.html",
+    "profile": null,
+    "query": "Ford Focus",
+    "category": "vehicle",
+    "price_minor": 300000,
+    "currency": "USD",
+    "location": "Chicago",
+    "description": "Fictional regression fixture using observed Craigslist URL formats.",
+    "attributes": {
+      "year": 2018,
+      "transmission": "automatic"
+    },
+    "expected_photos": 15
+  }
+]

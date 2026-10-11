@@ -27,6 +27,7 @@ export const listingQuerySchema = z
       .optional(),
     result_type: z.enum(["all", "promising", "good_deals"]).default("all"),
     seen: z.enum(["all", "unseen", "seen"]).default("all"),
+    shortlisted: z.boolean().default(false),
     include_dismissed: z.boolean().default(false),
     include_excluded: z.boolean().default(false),
     sort: z
@@ -84,6 +85,7 @@ export function selectListings<L extends SelectableListing>(
     sellerFilters: SellerFilters;
     result_type?: ListingQuery["result_type"];
     seen?: ListingQuery["seen"];
+    shortlisted?: boolean;
     include_dismissed?: boolean;
     include_excluded?: boolean;
     sort?: ListingQuery["sort"];
@@ -103,6 +105,11 @@ export function selectListings<L extends SelectableListing>(
   return state.listings
     .filter((listing) => {
       if (search && listing.product !== search.product) return false;
+      if (
+        options.shortlisted &&
+        !shortlistEvents(listing, search ? [search] : state.searches, state.config.feedback).length
+      )
+        return false;
       if (options.seen && options.seen !== "all") {
         if (!listingSearchIds(listing, search ? [search] : state.searches).length) return false;
         const unseen =
@@ -278,6 +285,20 @@ export function matchesListingCount(
     if (range.max === undefined && (range.min === undefined || count >= range.min)) return true;
   }
   return undefined;
+}
+
+export function shortlistEvents(
+  listing: Pick<Listing, "key" | "product">,
+  searches: Pick<SavedSearch, "id" | "product">[],
+  feedback: FeedbackEvent[],
+): FeedbackEvent[] {
+  const related = searches.filter((search) => search.product === listing.product);
+  return feedback.filter(
+    (event) =>
+      event.action === "shortlist" &&
+      event.listing_key === listing.key &&
+      related.some((search) => appliesToSearch(event, search)),
+  );
 }
 
 export function listingIsDismissed(

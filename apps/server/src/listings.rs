@@ -111,42 +111,28 @@ pub fn source_url(source: &str, value: &str) -> bool {
     let Ok(url) = Url::parse(value) else {
         return false;
     };
-    let hosts: &[&str] = match source {
-        "facebook_marketplace" => &["facebook.com"],
-        "ebay" => &[
-            "ebay.com",
-            "ebay.co.uk",
-            "ebay.de",
-            "ebay.fr",
-            "ebay.ca",
-            "ebay.com.au",
-        ],
-        "vinted" => &["vinted.co.uk", "vinted.com", "vinted.fr", "vinted.de"],
-        "gumtree" => &["gumtree.com"],
-        "craigslist" => &["craigslist.org"],
-        "autotrader" => &["autotrader.co.uk"],
-        _ => &[],
-    };
+    let hosts = crate::regional::source_domains(source);
+    let exact = contracts::data("REGIONAL_MARKETS")["exactHosts"]
+        .as_array()
+        .is_some_and(|items| items.iter().any(|v| v == source));
     url.scheme() == "https"
         && url.username().is_empty()
         && url.password().is_none()
         && hosts.iter().any(|h| {
-            url.host_str()
-                .is_some_and(|host| host == *h || host.ends_with(&format!(".{h}")))
+            url.host_str().is_some_and(|host| {
+                host == h
+                    || host == format!("www.{h}")
+                    || (!exact && host.ends_with(&format!(".{h}")))
+            })
         })
 }
 fn item_url(source: &str, listing_id: &str, value: &str, demo: bool) -> Result<String> {
     let url = Url::parse(value).map_err(|_| Error::validation("Invalid item URL"))?;
     let path = url.path().trim_end_matches('/');
-    let pattern = match source {
-        "facebook_marketplace" => r"^/marketplace/item/(\d+)$",
-        "ebay" => r"^/itm/(?:[^/]+/)?(\d+)$",
-        "vinted" => r"^/items/(\d+)(?:-[^/]+)?$",
-        "gumtree" => r"^/p/(?:[^/]+/)+(\d+)$",
-        "craigslist" => r"^/(?:[^/]+/)+(\d+)\.html$",
-        "autotrader" => r"^/car-details/(\d+)$",
-        _ => return fail("Unsupported marketplace"),
-    };
+    let patterns = contracts::data("LISTING_PATH_PATTERNS");
+    let pattern = patterns[source]
+        .as_str()
+        .ok_or_else(|| Error::validation("Unsupported marketplace"))?;
     let valid = if demo {
         url.scheme() == "https"
             && url.host_str() == Some("example.invalid")
@@ -154,12 +140,11 @@ fn item_url(source: &str, listing_id: &str, value: &str, demo: bool) -> Result<S
             && url.password().is_none()
     } else {
         !listing_id.is_empty()
-            && listing_id.bytes().all(|c| c.is_ascii_digit())
             && source_url(source, value)
             && Regex::new(pattern)
                 .unwrap()
                 .captures(path)
-                .is_some_and(|c| c.get(1).is_some_and(|m| m.as_str() == listing_id))
+                .is_some_and(|c| c.iter().skip(1).flatten().any(|m| m.as_str() == listing_id))
     };
     if !valid {
         return fail(
@@ -898,6 +883,7 @@ fn observations(ws: &Workspace, key: Option<&str>) -> Result<Vec<Value>> {
         row["check_outcome"] = default(&row["check_outcome"], json!("success"));
         out.push(row);
     }
+    crate::diagnostics::count("observations_loaded", out.len());
     out.sort_by_key(|r| {
         (
             t(&r["observed_at"]),
@@ -934,10 +920,11 @@ fn apply_history(row: &mut Value, history: &[Value], events: Vec<Value>) {
     row["duration"] = json!({"lower_days":(active-start)as f64/DAY as f64,"upper_days":end.map(|e|(t(&e["observed_at"])-start)as f64/DAY as f64),"unfinished":end.is_none(),"outcome":end.map(|e|s(&e["availability"])).unwrap_or("active_or_unknown"),"basis":"First observed availability episode; publication and transaction times may be earlier"});
 }
 fn apply_captures(ws: &Workspace, rows: &mut [Value]) -> Result<()> {
+    let keys = json!(rows.iter().map(|r| &r["key"]).collect::<Vec<_>>()).to_string();
     for capture in documents(
         ws,
-        "SELECT document_json FROM listing_media_captures ORDER BY captured_at,rowid",
-        &[],
+        "SELECT document_json FROM listing_media_captures WHERE listing_key IN (SELECT value FROM json_each(?)) ORDER BY captured_at,rowid",
+        &[&keys],
     )? {
         let Some(row) = rows.iter_mut().find(|r| r["key"] == capture["listing_key"]) else {
             continue;
@@ -1049,13 +1036,42 @@ fn root_key(parents: &mut HashMap<String, String>, key: &str) -> String {
     }
 }
 pub fn load(ws: &Workspace) -> Result<Vec<Value>> {
+    load_selection(ws, None, None, true)
+}
+// Current rows retain the entire selected product population. Historical detail
+// is fetched only by full snapshots and exact listing reads.
+pub fn load_current(ws: &Workspace, products: Option<&[Value]>) -> Result<Vec<Value>> {
+    load_selection(ws, products, None, false)
+}
+fn load_selection(
+    ws: &Workspace,
+    products: Option<&[Value]>,
+    key: Option<&str>,
+    history_detail: bool,
+) -> Result<Vec<Value>> {
+    let _measurement = crate::diagnostics::stage("listing_load");
+    crate::diagnostics::count("listing_loads", 1);
     let provenance = if ws.mode == "sample" {
         "synthetic"
     } else {
         "manual"
     };
-    let mut stmt=ws.db.prepare("SELECT listing_key,document_json,first_observed_at,last_observed_at FROM listings WHERE provenance=? ORDER BY rowid")?;
-    let mut cursor = stmt.query([provenance])?;
+    let mut sql="SELECT listing_key,document_json,first_observed_at,last_observed_at FROM listings WHERE provenance=?".to_owned();
+    let products = products.map(|p| json!(p).to_string());
+    let mut parameters: Vec<&dyn ToSql> = vec![&provenance];
+    if let Some(ref key) = key {
+        sql.push_str(" AND listing_key=?");
+        parameters.push(key);
+    }
+    if let Some(ref products) = products {
+        sql.push_str(
+            " AND json_extract(document_json,'$.product') IN (SELECT value FROM json_each(?))",
+        );
+        parameters.push(products);
+    }
+    sql.push_str(" ORDER BY rowid");
+    let mut stmt = ws.db.prepare(&sql)?;
+    let mut cursor = stmt.query(parameters.as_slice())?;
     let mut rows = Vec::new();
     while let Some(entry) = cursor.next()? {
         let data: String = entry.get(1)?;
@@ -1065,10 +1081,18 @@ pub fn load(ws: &Workspace) -> Result<Vec<Value>> {
         row["last_observed_at"] = json!(entry.get::<_, String>(3)?);
         rows.push(row);
     }
+    crate::diagnostics::count("listings_loaded", rows.len());
     apply_captures(ws, &mut rows)?;
     apply_journeys(ws, &mut rows)?;
     let mut parents = HashMap::new();
-    for row in &rows {
+    // Relationships can be declared by a row outside this product or page.
+    // Read the global graph projection to preserve transitive entity identities.
+    let graph = documents(
+        ws,
+        "SELECT json_object('key',listing_key,'relationships',json_extract(document_json,'$.relationships')) FROM listings WHERE provenance=? ORDER BY rowid",
+        &[&provenance],
+    )?;
+    for row in &graph {
         root_key(&mut parents, s(&row["key"]));
         for relation in arr(&row["relationships"]) {
             if relation["confidence"] == "confirmed" {
@@ -1087,21 +1111,37 @@ pub fn load(ws: &Workspace) -> Result<Vec<Value>> {
             }
         }
     }
-    let history = observations(ws, None)?;
+    let history = if history_detail {
+        observations(ws, key)?
+    } else {
+        vec![]
+    };
+    let keys = json!(rows.iter().map(|r| &r["key"]).collect::<Vec<_>>()).to_string();
+    let mut found: HashMap<String, Vec<Value>> = HashMap::new();
+    let mut seen: HashMap<String, Vec<Value>> = HashMap::new();
+    let mut discoveries = ws.db.prepare("SELECT listing_key,search_id,run_id,run_started_at,recorded_at FROM listing_search_discoveries WHERE listing_key IN (SELECT value FROM json_each(?)) ORDER BY listing_key,search_id")?;
+    for record in discoveries.query_map([&keys], |r| Ok((r.get::<_,String>(0)?, json!({"search_id":r.get::<_,String>(1)?,"run_id":r.get::<_,String>(2)?,"run_started_at":r.get::<_,String>(3)?,"recorded_at":r.get::<_,Option<String>>(4)?}))))? {
+        let (key, record) = record?;
+        found.entry(key).or_default().push(record);
+    }
+    let mut reads = ws.db.prepare("SELECT listing_key,search_id,seen_at FROM listing_seen WHERE listing_key IN (SELECT value FROM json_each(?)) ORDER BY listing_key,search_id")?;
+    for record in reads.query_map([&keys], |r| {
+        Ok((
+            r.get::<_, String>(0)?,
+            json!({"search_id":r.get::<_,String>(1)?,"seen_at":r.get::<_,String>(2)?}),
+        ))
+    })? {
+        let (key, record) = record?;
+        seen.entry(key).or_default().push(record);
+    }
     for row in &mut rows {
         let key = s(&row["key"]).to_owned();
         row["entity_key"] = json!(root_key(&mut parents, &key));
-        let mut found=ws.db.prepare("SELECT search_id,run_id,run_started_at,recorded_at FROM listing_search_discoveries WHERE listing_key=?")?;
-        row["first_found_runs"]=json!(found.query_map([&key],|r|Ok(json!({"search_id":r.get::<_,String>(0)?,"run_id":r.get::<_,String>(1)?,"run_started_at":r.get::<_,String>(2)?,"recorded_at":r.get::<_,Option<String>>(3)?})))?.collect::<std::result::Result<Vec<_>,_>>()?);
-        let mut seen = ws
-            .db
-            .prepare("SELECT search_id,seen_at FROM listing_seen WHERE listing_key=?")?;
-        row["seen_in_searches"] = json!(
-            seen.query_map([&key], |r| Ok(
-                json!({"search_id":r.get::<_,String>(0)?,"seen_at":r.get::<_,String>(1)?})
-            ))?
-            .collect::<std::result::Result<Vec<_>, _>>()?
-        );
+        row["first_found_runs"] = json!(found.remove(&key).unwrap_or_default());
+        row["seen_in_searches"] = json!(seen.remove(&key).unwrap_or_default());
+        if !history_detail {
+            continue;
+        }
         let events = documents(
             ws,
             "SELECT document_json FROM listing_events WHERE listing_key=? ORDER BY observed_at DESC,id",
@@ -1117,7 +1157,9 @@ pub fn load(ws: &Workspace) -> Result<Vec<Value>> {
     Ok(rows)
 }
 pub fn find(ws: &Workspace, key: &str) -> Result<Option<Value>> {
-    Ok(load(ws)?.into_iter().find(|r| r["key"] == key))
+    Ok(load_selection(ws, None, Some(key), true)?
+        .into_iter()
+        .next())
 }
 pub fn distinct(rows: &[Value]) -> Vec<Value> {
     let mut groups: Vec<(String, Vec<Value>)> = Vec::new();
@@ -1414,13 +1456,29 @@ pub fn quality(row: &Value, config: &Value, now: i64, peers: &[Value]) -> Value 
         vec!["No confirmed active observation"]
     };
     let price_reasons: Vec<_> = stock.iter().chain(price.iter()).cloned().collect();
+    let mut alert_reasons = price_reasons.clone();
+    if row["collection_stage"] == "discovery" {
+        alert_reasons.push("Provisional discovery needs verification".into());
+    }
+    if row["provenance"] != "synthetic" {
+        if row["image_review"]["complete"] != true {
+            alert_reasons.push("Every listing image needs inspection".into());
+        }
+        if (!arr(&row["videos"]).is_empty()
+            || n(&row["video_review"]["total_videos"]) > 0.
+            || n(&row["media_capture"]["expected_videos"]) > 0.)
+            && row["video_review"]["complete"] != true
+        {
+            alert_reasons.push("Every listing video needs inspection".into());
+        }
+    }
     let mut eligibility = json!({});
     for (name, reasons) in [
         ("arrival_rate", json!(publication)),
         ("current_stock", json!(stock)),
         ("price_baseline", json!(price_reasons)),
         ("duration_analysis", json!(duration)),
-        ("deal_alert", json!(price_reasons)),
+        ("deal_alert", json!(alert_reasons)),
     ] {
         eligibility[name] = json!({"eligible":arr(&reasons).is_empty(),"reasons":reasons});
     }
@@ -1862,7 +1920,7 @@ pub fn evaluate_listing(
     }
     decision
 }
-fn rule_hash(search: &Value, config: &Value) -> String {
+pub fn rule_hash(search: &Value, config: &Value) -> String {
     let mut search = search.clone();
     remove(&mut search, "enabled");
     remove(&mut search, "cover");
@@ -1882,16 +1940,18 @@ pub fn pending_alerts(ws: &Workspace) -> Result<Value> {
 pub fn acknowledge(ws: &mut Workspace, ids: &[String]) -> Result<usize> {
     for id in ids {
         if !ws.db.query_row(
-            "SELECT EXISTS(SELECT 1 FROM deal_alerts WHERE id=? AND status='pending')",
+            "SELECT EXISTS(SELECT 1 FROM deal_alerts WHERE id=? AND status IN ('pending','delivered'))",
             [id],
             |r| r.get::<_, bool>(0),
         )? {
-            return fail("Each acknowledgement must refer to a pending alert");
+            return fail("Each acknowledgement must refer to a pending or already delivered alert");
         }
     }
     for id in ids {
-        ws.db
-            .execute("UPDATE deal_alerts SET status='delivered' WHERE id=?", [id])?;
+        ws.db.execute(
+            "UPDATE deal_alerts SET status='delivered' WHERE id=? AND status='pending'",
+            [id],
+        )?;
     }
     Ok(ids.len())
 }
@@ -2215,9 +2275,14 @@ pub fn reading_summary(
     json!({"unseen_count":unseen,"seen_count":related.len()-unseen,"last_searched_at":last_searched,"latest_found_at":latest})
 }
 fn attach_capture(ws: &mut Workspace, input: &Value) -> Result<()> {
-    let mut input = input.clone();
-    remove(&mut input, "mode");
-    let mut capture = contracts::parse("listingMediaInput", &input)?;
+    // Operation receipts and revisions belong to the outer command boundary.
+    let mut fields = json!({});
+    for key in ["listing_key", "photos", "videos", "media_capture"] {
+        if let Some(value) = input.get(key) {
+            fields[key] = value.clone();
+        }
+    }
+    let mut capture = contracts::parse("listingMediaInput", &fields)?;
     let captured = if truth(&capture["media_capture"]["captured_at"]) {
         time(s(&capture["media_capture"]["captured_at"]))?
     } else {
@@ -2360,7 +2425,7 @@ pub fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> 
             if let Some(run_id) = args["run_id"].as_str()
                 && let Some(check) = crate::searches::scheduled_import_check(ws, run_id)?
             {
-                return Ok(json!({"scheduled_check":check}));
+                return Ok(json!({"scheduled_check":check,"import_receipt":null}));
             }
             if args["observations"]
                 .as_array()
@@ -2818,22 +2883,14 @@ pub fn listing_workflow(row: &Value, state: &Value, now: i64, search_id: &Value)
             false,
         ),
     ];
-    let mut prerequisites = Vec::<Value>::new();
     let mut actions = Vec::new();
-    let mut allowed = Vec::new();
     for (event, operation, tool, inputs, codes, collection) in definitions {
         let conditions: Vec<_> = codes
             .iter()
             .map(|c| guards[*c]["recovery"].clone())
             .collect();
-        for c in &conditions {
-            if !prerequisites.contains(c) {
-                prerequisites.push(c.clone());
-            }
-        }
         let blockers:Vec<_>=codes.iter().filter(|c|event!="feedback"||**c!="search_input"||search_id.is_null()||related.is_empty()).map(|c|json!({"code":c,"message":guards[*c]["message"],"recovery":guards[*c]["recovery"],"kind":"input"})).collect();
-        allowed.push(tool);
-        actions.push(json!({"event":event,"operation":operation,"tool":tool,"availability":if blockers.is_empty(){"available"}else{"requires_input"},"required_inputs":inputs,"conditions":conditions,"blockers":blockers,"execution":if collection{json!({"profile":"collection","spawn":{"model":"gpt-6-luna","reasoning_effort":"xhigh","fork_turns":"none"}})}else{json!({"profile":"chat","spawn":{}})}}));
+        actions.push(json!({"event":event,"operation":operation,"tool":tool,"availability":if blockers.is_empty(){"available"}else{"requires_input"},"required_inputs":inputs,"conditions":conditions,"blockers":blockers,"execution":contracts::data("executionPolicies")[if collection{"browser_collection"}else{"chat"}]}));
     }
     let conversation = arr(&state["seller_conversations"])
         .iter()
@@ -2843,7 +2900,7 @@ pub fn listing_workflow(row: &Value, state: &Value, now: i64, search_id: &Value)
     let mut media = media_state(row, now);
     media["image_reviewed"] = default(&row["image_review"]["complete"], json!(false));
     media["video_reviewed"] = default(&row["video_review"]["complete"], json!(false));
-    json!({"state":"listing","actions":actions,"allowed_actions":allowed,"prerequisites":prerequisites,"availability":{"state":if ["active","reserved"].contains(&s(&row["availability"])){s(&row["availability"])}else if !truth(&row["availability"])||row["availability"]=="unknown"{"unknown"}else{"unavailable"},"observed":default(&row["availability"],json!("unknown"))},"evidence":{"state":if conflict{"conflicting"}else if row["collection_stage"]=="discovery"{"discovery"}else if checks.iter().any(|c|c["state"]!="confirmed"){"needs_check"}else{"resolved"},"checks":checks,"quality":row["quality"]},"media":media,"assessments":assessment,"conversation_phase":default(&conversation["phase"],json!("not_contacted")),"buying_outcome":default(&conversation["outcome"],json!("open"))})
+    json!({"state":"listing","actions":actions,"availability":{"state":if ["active","reserved"].contains(&s(&row["availability"])){s(&row["availability"])}else if !truth(&row["availability"])||row["availability"]=="unknown"{"unknown"}else{"unavailable"},"observed":default(&row["availability"],json!("unknown"))},"evidence":{"state":if conflict{"conflicting"}else if row["collection_stage"]=="discovery"{"discovery"}else if checks.iter().any(|c|c["state"]!="confirmed"){"needs_check"}else{"resolved"},"checks":checks,"quality":row["quality"]},"media":media,"assessments":assessment,"conversation_phase":default(&conversation["phase"],json!("not_contacted")),"buying_outcome":default(&conversation["outcome"],json!("open"))})
 }
 pub const QUERIES: &[&str] = &[
     "list_listings",
@@ -2876,7 +2933,10 @@ pub fn query(ws: &Workspace, action: &str, args: &Value, state: &Value) -> Resul
         );
     }
     if action == "get_listing" {
-        let mut row = find(ws, s(&args["listing_key"]))?
+        let mut row = arr(&state["listings"])
+            .iter()
+            .find(|r| r["key"] == args["listing_key"])
+            .cloned()
             .ok_or_else(|| Error::validation("Choose a saved listing"))?;
         row["quality"] = quality(&row, &ws.config, ws.now, &[]);
         return Ok(
@@ -2918,6 +2978,15 @@ pub fn query(ws: &Workspace, action: &str, args: &Value, state: &Value) -> Resul
                 .iter()
                 .filter(|s| s["product"] == row["product"])
                 .collect();
+            if q["shortlisted"] == true
+                && !arr(&ws.config["feedback"]).iter().any(|event| {
+                    event["action"] == "shortlist"
+                        && event["listing_key"] == row["key"]
+                        && related.iter().any(|search| feedback_applies(event, search))
+                })
+            {
+                return false;
+            }
             if q["seen"] != "all" {
                 let inbox: Vec<_> = related.iter().filter(|s| associated(row, s)).collect();
                 if inbox.is_empty() {

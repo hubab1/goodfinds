@@ -1,8 +1,10 @@
 # Observation contract
 
-The helper accepts a JSON array of normalized observations. Extract numbers and classifications from listing evidence; preserve uncertain fields as null or `unknown`. Example fixtures are in `../assets/demo-listings.json`.
+The helper accepts a JSON array of normalized observations. Extract numbers and classifications from listing evidence; preserve uncertainty using the field's advertised schema. For unknown gallery counts, omit `image_review`/`video_review` or set the whole review to null; `total_images`/`total_videos` inside an existing review must be observed integers. Example fixtures are in `../assets/demo-listings.json`.
 
 For MCP imports, apply the request-ID and retry rules in [tool contracts](tool-contracts.md). Each batch has its own durable evaluateObservations receipt.
+
+Imports are observations, not field patches. Each correction includes the required source/identity, title and product category from the current browser pass. Start with that pass's latest complete observation and change the corrected field and its evidence; retain the verified detail/gallery fields. Keep corrections inside the owned run before marking it completed. A discovery-card payload must not replace a just-verified record merely to correct its availability. Older stored facts still need a fresh page check before receiving a new observation timestamp.
 
 ## Discovery, verification and complete setup costs
 
@@ -16,7 +18,7 @@ Each observation has these fields:
 
 | Field                                               | Meaning                                                                                                                                                                                                            |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `source`                                            | `facebook_marketplace`, `ebay`, `vinted`, `gumtree`, `craigslist`, or `autotrader` (UK)                                                                                                                            |
+| `source`                                            | `facebook_marketplace`, `ebay`, `vinted`, `gumtree`, `craigslist`, `autotrader` (UK), `cargurus` (US), `poshmark` (US), `depop`, `mercari` (US), `cars_com` (US), or `autotrader_us`                               |
 | `provenance`                                        | `manual` for supplied or user-requested browser observations, or `synthetic` for a demo                                                                                                                            |
 | `collection_method`, `observed_at`                  | `user_requested_browser` for listings inspected in the signed-in browser, plus an ISO timestamp with timezone                                                                                                      |
 | `listing_id`, `url`                                 | Stable listing ID and canonical item URL                                                                                                                                                                           |
@@ -76,9 +78,9 @@ The helper stores immutable observation payloads and rebuildable events for firs
 
 ## Shared fields and identity
 
-Use stable numeric live item IDs and canonical item URLs from the declared platform. Facebook keys retain their existing identity; other sources have separate namespaces, so equal numeric IDs do not collide. Supported item paths are Facebook `/marketplace/item/ID/`, eBay `/itm/ID` or `/itm/slug/ID`, Vinted `/items/ID-slug`, Gumtree `/p/category/slug/ID`, regional Craigslist item paths ending `/ID.html`, and UK Auto Trader `/car-details/ID`. Query strings and tracking fragments are stripped. Synthetic records use `example.invalid` in their isolated workspace. These mappings accept supplied observations; they do not create unattended platform collectors.
+Use stable public listing IDs and canonical item URLs from the declared platform; IDs may be numeric, UUIDs, hex IDs or product slugs. See [public listing identifiers](#public-listing-identifiers) for the new marketplaces. Facebook keys retain their existing identity; other sources have separate namespaces, so equal IDs do not collide. Supported item paths are Facebook `/marketplace/item/ID/`, eBay `/itm/ID` or `/itm/slug/ID`, Vinted `/items/ID-slug`, Gumtree `/p/category/slug/ID`, regional Craigslist item paths ending `/ID.html`, and UK Auto Trader `/car-details/ID`. Query strings and tracking fragments are stripped. Synthetic records use `example.invalid` in their isolated workspace. These mappings accept supplied observations; they do not create unattended platform collectors.
 
-Optional shared context includes `country`, `category_id`, `category_path`, `discovery_surface`, `seller_id`, `seller_type`, `bundle_type`, `location_precision`, plus bounded JSON objects `seller`, `logistics`, `interest`, and `terms`. Preserve labelled ratings/review counts, shipping and collection arrangements, negotiability, accessories, warranty or visible interest counts with source wording. Unsupported or hidden values remain unknown. Never treat a platform popularity counter as a direct measure of buyer demand.
+Optional shared context includes `country`, `category_id`, `category_path`, `discovery_surface`, `seller_id`, `seller_type`, `bundle_type`, `location_precision`, plus bounded JSON objects `seller`, `logistics`, `interest`, and `terms`. The shared context fields before those objects are strings, null or omitted. Store `category_path` as one observed breadcrumb string, such as `Men > Shirts > Sweatshirts & Hoodies`, never an array. Preserve labelled ratings/review counts, shipping and collection arrangements, negotiability, accessories, warranty or visible interest counts with source wording. Unsupported or hidden values remain unknown. Never treat a platform popularity counter as a direct measure of buyer demand.
 
 `field_evidence` maps each field to an object with `state: observed|inferred|unknown|unsupported|not_inspected|conflicting` and supporting context, such as raw text, source reference and precision. Conflicting evidence requires review. Use explicit `relationships` objects with `source`, `listing_id`, `kind: relist_of|cross_post_of|duplicate_of`, `confidence: confirmed|probable`, and `evidence`. Only confirmed identity links collapse observations into one item for statistics. Similar titles/photos alone are probable and stay visible. Distinct specifications, bundles, seller types, quantities, condition, currencies and periods stay separate in comparison cohorts.
 
@@ -88,7 +90,7 @@ These distinctions guide evidence collection; they do not establish a working co
 
 | Platform       | Interpretation and source                                                                                                                                                                                                                                                                                                                         |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| eBay           | `itemOriginDate` is first availability, while `itemCreationDate` is listing creation; they can differ. Keep the exact field meaning. Bids, reference prices and end dates do not establish a completed sale. [Browse release notes](https://developer.ebay.com/api-docs/buy/browse/static/release-notes.html)                                     |
+| eBay           | Preserve a visible listed/relisted date with its exact label. An auction end date is not a listing date. Bids and reference prices do not establish an outright asking price or completed sale.                                                                                                                                                   |
 | Vinted         | A reservation can hide an unsold item from other members. Do not infer a sale from disappearance. Item price, Buyer Protection and shipping remain separate cost components. [Reservation help](https://www.vinted.co.uk/help/59-reserving-an-item)                                                                                               |
 | Gumtree        | Expiry and deletion can remove unsold ads. Offer presets are proposed offers, not earlier asking prices. [Ad management](https://www.gumtree.com/info/safety/p/advice-guides/repost-delete-edit-your-gumtree-ad/)                                                                                                                                 |
 | Craigslist     | Renewal can move an existing post to the top; that recency is not original publication. Separate wanted requests and nominal prices from sale inventory. [Renewal help](https://www.craigslist.org/about/help/posting/modify/renew)                                                                                                               |
@@ -97,6 +99,8 @@ These distinctions guide evidence collection; they do not establish a working co
 ## Search coverage and market statistics
 
 Pass optional `search_coverage` beside `observations` to `import_goodfinds_listing_observations`. The standalone helper accepts the same JSON array with `--search-coverage /absolute/path/search-coverage.json`. A coverage record requires the saved `search_id`, source, query, filters object, sort, timezone-aware `started_at` and `finished_at`, `status: success|partial|failed`, and `pagination_complete`. `result_count` and `inspected_count` can be unknown/null; do not replace an unknown total with zero. Notes may explain limits. A zero-observation evaluation can still record a failed search.
+
+A run's progress query and an imported coverage record have different schemas. Update the returned query through `update_goodfinds_search_run`; do not paste it into `search_coverage`. In particular, `marketplace`, `query_id`, `unique_relevant_count` and `evidence` are not import-coverage fields. Read the import schema once before constructing that first batch. A validation error means nothing was saved; correct the fields before retrying, while keeping the worker lease current.
 
 ```json
 {
@@ -152,3 +156,7 @@ Sources checked on 4 October 2026:
 - [ChatGPT browser profiles](https://learn.chatgpt.com/codex/browser?surface=app)
 - [Scheduled tasks](https://learn.chatgpt.com/codex/automations)
 - [Meta's explanation of automated collection](https://about.fb.com/news/2021/04/how-we-combat-scraping/)
+
+## Public listing identifiers
+
+Use the identifier carried by the canonical detail URL. CarGurus US and Autotrader US use numeric IDs; Cars.com uses a UUID; Poshmark uses the final 24-character hex ID; Mercari includes the leading `m`; Depop uses the entire product slug, including underscores/hyphens. Do not force these IDs to numbers or substitute an internal product ID for Depop's URL slug. Query strings and fragments are removed on import. US and UK Auto Trader are distinct sources. The import rejects a source/URL/ID mismatch.

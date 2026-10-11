@@ -7,10 +7,15 @@
   },
   "skills": "./skills",
   "mcpServers": ".mcp.json",
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/setup/SKILL.md"
+    }
+  },
   "interface": {
     "displayName": "Goodfinds",
     "shortDescription": "Find, compare and follow up on listings",
-    "longDescription": "Find and compare marketplace listings from saved buying briefs. Adapt search questions to the buyer, retain sourced evidence and alternatives, and follow recurring searches through the host scheduler. Compare equivalent asking prices and review locally saved photos, videos and listing history. Prepare seller messages, offers and collection arrangements for buyer review; interrupted sends require reconciliation. Browser permission, marketplace sign-in and listing contact routes are checked separately. Facebook seller messaging uses verified host browser controls; other observed marketplace routes support native-form handoffs and user-reported history. eBay browsing requires application credentials. Includes an isolated fictional sample workspace. Includes its runtime for macOS/Linux; no Bun or Node installation is needed. Requires host browser controls. Recurring checks respect saved timing and quiet hours, and require the device awake and the host app running.",
+    "longDescription": "Find and compare marketplace listings from saved buying briefs. Adapt search questions to the buyer, retain sourced evidence and alternatives, and follow recurring searches through the host scheduler. Compare equivalent asking prices and review locally saved photos, videos and listing history. Prepare seller messages, offers and collection arrangements for buyer review; interrupted sends require reconciliation. Browser permission, marketplace sign-in and listing contact routes are checked separately. Facebook seller messaging uses verified host browser controls; other observed marketplace routes support native-form handoffs and user-reported history. All marketplaces use the selected host browser for browsing and evidence import. Includes an isolated fictional sample workspace. Includes its runtime for macOS/Linux; no Bun or Node installation is needed. Requires host browser controls. Recurring checks respect saved timing and quiet hours, and require the device awake and the host app running.",
     "category": "Productivity",
     "logo": "./assets/logo.png",
     "composerIcon": "./assets/logo.png",

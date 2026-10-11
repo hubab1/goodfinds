@@ -2,16 +2,14 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import assert from "node:assert/strict";
-import { Database } from "bun:sqlite";
 import { Effect } from "effect";
-import { createGoodfindsServer } from "./reference-server/src/entrypoints/mcp.ts";
-import { initializeWorkspaceDatabase } from "./reference-server/src/platform/database-schema.ts";
-import { ruleHash, validateConfiguration } from "./reference-server/src/listings/evaluation.ts";
+import { createNativeServer } from "./helpers/native-mcp.ts";
+import { ruleHash, validateConfiguration } from "./helpers/native-domain.ts";
 import exampleWorkspace from "../skills/marketplace-shopping/assets/example-workspace.json";
 import { operations } from "@goodfinds/contracts/operations";
 
 void test("the unreleased API exposes canonical tools and rejects former mutation arguments", async (t) => {
-  const { calls, server } = createGoodfindsServer();
+  const { calls, server } = createNativeServer();
   t.after(() => server.close());
   for (const name of calls.keys()) assert.match(name, /^[a-z]+_goodfinds_[a-z_]+$/u);
   for (const name of [
@@ -41,34 +39,6 @@ void test("the unreleased API exposes canonical tools and rejects former mutatio
   );
 });
 
-void test("workspace initialization is idempotent and refuses noncanonical data without rewriting it", () => {
-  const empty = new Database(":memory:");
-  try {
-    initializeWorkspaceDatabase(empty);
-    empty.run("INSERT INTO workspace_settings VALUES(1,'{}',1)");
-    initializeWorkspaceDatabase(empty);
-    assert.deepEqual(empty.query("SELECT document_json FROM workspace_settings").get(), {
-      document_json: "{}",
-    });
-  } finally {
-    empty.close();
-  }
-  const old = new Database(":memory:");
-  try {
-    old.run(
-      "CREATE TABLE workspace_config(id INTEGER, data TEXT); INSERT INTO workspace_config VALUES(1,'preserved')",
-    );
-    assert.throws(() => initializeWorkspaceDatabase(old), /Unsupported workspace schema/u);
-    assert.deepEqual(old.query("SELECT data FROM workspace_config").get(), { data: "preserved" });
-    assert.equal(
-      old.query("SELECT name FROM sqlite_master WHERE name='workspace_settings'").get(),
-      null,
-    );
-  } finally {
-    old.close();
-  }
-});
-
 void test("representative covers cannot change deal rules while budget changes do", () => {
   const config = Effect.runSync(validateConfiguration(exampleWorkspace));
   const search = config.searches[0];
@@ -96,7 +66,7 @@ void test("representative covers cannot change deal rules while budget changes d
 });
 
 void test("skill references use only tools advertised by the current server", (t) => {
-  const { calls, server } = createGoodfindsServer();
+  const { calls, server } = createNativeServer();
   t.after(() => server.close());
   const root = resolve("skills/marketplace-shopping");
   for (const file of new Bun.Glob("**/*.md").scanSync(root)) {

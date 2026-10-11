@@ -1,6 +1,6 @@
-import { selectListings } from "@goodfinds/contracts/listing-query";
+import { selectListings, shortlistEvents } from "@goodfinds/contracts/listing-query";
 import type { ListingQuery } from "@goodfinds/contracts/listing-query";
-import { ListingFeedback, LearnedPreferences } from "@/features/listings/listing-feedback";
+import { LearnedPreferences } from "@/features/listings/listing-feedback";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,7 +13,11 @@ import { ListingFilters } from "@/features/listings/seller-filters";
 import type { RecordSeen } from "@/features/listings/listing-seen";
 import { unseenSearchIds } from "@goodfinds/contracts/listing-reading";
 import { Empty } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import type { ViewProps } from "@/app/feature-props";
+import { SearchResultsHeader } from "@/features/searches/search-results-header";
+import { ACTIVE_SEARCH_PHASES } from "@goodfinds/contracts/search-workflow";
+import { Bookmark } from "lucide-react";
 
 const EMPTY_DECISIONS: Decision[] = [];
 export function Deals({
@@ -32,8 +36,11 @@ export function Deals({
     if (selection) heading.current?.focus();
   }, [selection]);
   const [unseenOnly, setUnseenOnly] = useState(selection?.unseen ?? false);
+  const [shortlistedOnly, setShortlistedOnly] = useState(false);
   const [seenThisVisit, setSeenThisVisit] = useState<Set<string>>(() => new Set());
   const selectedSearch = state.searches.find((item) => item.id === filter);
+  const selectedRun = state.search_runs.find((run) => run.search_id === selectedSearch?.id);
+  const searching = selectedRun && ACTIVE_SEARCH_PHASES.has(selectedRun.phase);
   const [sellerKey, setSellerKey] = useState<string>();
   const [sellerSearchId, setSellerSearchId] = useState<string>();
   const [sellerOpen, setSellerOpen] = useState(false);
@@ -52,10 +59,16 @@ export function Deals({
     );
     setSellerOpen(true);
   };
-  const [disregardedId, setDisregardedId] = useState<string | null>(null);
-  const disregarded = state.config.feedback.find(
-    (event) => event.id === disregardedId && !event.undone,
+  const [disregardedEvent, setDisregardedEvent] = useState<
+    GoodfindsState["config"]["feedback"][number] | null
+  >(null);
+  const latestDisregard = state.config.feedback.findLast(
+    (event) =>
+      event.search_id === disregardedEvent?.search_id &&
+      event.listing_key === disregardedEvent?.listing_key &&
+      event.action === "dismiss",
   );
+  const disregarded = latestDisregard && !latestDisregard.undone ? latestDisregard : undefined;
   const [sellerFilters, setSellerFilters] = useState(EMPTY_SELLER_FILTERS);
   const [sort, setSort] = useState<ListingQuery["sort"]>("recommended");
   const filteringSeller = sellerFilterCount(sellerFilters) > 0;
@@ -89,13 +102,26 @@ export function Deals({
     [state.searches, selectedSearch?.id],
   );
   const unseenCount = available.filter(isUnseen).length;
+  const shortlisted = useMemo(
+    () =>
+      available.filter(
+        (listing) =>
+          shortlistEvents(
+            listing,
+            selectedSearch ? [selectedSearch] : state.searches,
+            state.config.feedback,
+          ).length > 0,
+      ),
+    [available, selectedSearch, state.searches, state.config.feedback],
+  );
+  const filtered = shortlistedOnly ? shortlisted : available;
   // Keep cards in place while their automatic receipt saves; clearing a count must not move the list.
   const tracked = useMemo(
     () =>
       unseenOnly
-        ? available.filter((listing) => isUnseen(listing) || seenThisVisit.has(listing.key))
-        : available,
-    [available, unseenOnly, seenThisVisit, isUnseen],
+        ? filtered.filter((listing) => isUnseen(listing) || seenThisVisit.has(listing.key))
+        : filtered,
+    [filtered, unseenOnly, seenThisVisit, isUnseen],
   );
   const onSeen = useCallback<RecordSeen>(
     (pairs) => {
@@ -121,50 +147,36 @@ export function Deals({
   const sample = state.mode === "sample";
   const renderListings = (listings: typeof tracked) =>
     listings.map((listing) => (
-      <div key={listing.key} className="space-y-2">
-        <ListingCard
-          listing={listing}
-          decisions={decisionsByListing.get(listing.key) ?? EMPTY_DECISIONS}
-          sample={sample}
-          searches={state.searches}
-          seller_conversation={sellerByListing.get(listing.key)}
-          state={state}
-          onNegotiate={(button) => openSellerConversation(listing.key, button)}
-          busy={busy}
-          action={action}
-          preferredWatchId={selectedSearch?.id}
-          onDisregarded={setDisregardedId}
-          onSeen={onSeen}
-        />
-        {selectedSearch && (
-          <ListingFeedback
-            listing={listing}
-            search={selectedSearch}
-            state={state}
-            busy={busy}
-            action={action}
-          />
-        )}
-      </div>
+      <ListingCard
+        key={listing.key}
+        listing={listing}
+        decisions={decisionsByListing.get(listing.key) ?? EMPTY_DECISIONS}
+        sample={sample}
+        searches={state.searches}
+        seller_conversation={sellerByListing.get(listing.key)}
+        state={state}
+        onNegotiate={(button) => openSellerConversation(listing.key, button)}
+        busy={busy}
+        action={action}
+        preferredWatchId={selectedSearch?.id}
+        onDisregarded={setDisregardedEvent}
+        onSeen={onSeen}
+      />
     ));
   return (
     <section className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1
-            ref={heading}
-            tabIndex={-1}
-            className="text-2xl font-semibold tracking-tight outline-none"
-          >
-            Your finds
-          </h1>
-          <p className="mt-1 text-sm">Listings saved from your searches.</p>
-        </div>
-        <p className="hidden text-xs @lg:block">
-          {state.counts.active_searches} active{" "}
-          {state.counts.active_searches === 1 ? "search" : "searches"}
-        </p>
-      </div>
+      <PageHeader
+        title="Your finds"
+        subtitle="Listings saved from your searches."
+        headingRef={heading}
+        headingTabIndex={-1}
+        actions={
+          <p className="hidden text-xs text-muted-foreground @lg:block">
+            {state.counts.active_searches} active{" "}
+            {state.counts.active_searches === 1 ? "search" : "searches"}
+          </p>
+        }
+      />
       <ListingFilters
         searches={state.searches}
         search={filter}
@@ -180,15 +192,11 @@ export function Deals({
       />
       {selectedSearch && (
         <>
-          <ListingTrends
-            key={selectedSearch.id}
+          <SearchResultsHeader
             search={selectedSearch}
-            history={selectedSearch.market_history}
-            listings={tracked}
-            decisions={state.decisions}
-            searches={state.searches}
-            now={now}
-            sample={sample}
+            run={selectedRun}
+            busy={busy}
+            action={action}
           />
           <LearnedPreferences search={selectedSearch} state={state} busy={busy} action={action} />
         </>
@@ -218,7 +226,7 @@ export function Deals({
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => setDisregardedId(null)}
+              onClick={() => setDisregardedEvent(null)}
               aria-label="Dismiss confirmation"
             >
               Close
@@ -256,9 +264,18 @@ export function Deals({
               Good deals <span className="ml-1 text-xs">{deals.length}</span>
             </TabsTrigger>
           </TabsList>
+          <Button
+            size="sm"
+            aria-pressed={shortlistedOnly}
+            title="Listings you’ve bookmarked"
+            onClick={() => setShortlistedOnly((value) => !value)}
+          >
+            <Bookmark fill={shortlistedOnly ? "currentColor" : "none"} aria-hidden="true" />
+            Shortlisted <span className="tabular-nums">{shortlisted.length}</span>
+          </Button>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-md bg-black px-3 py-2 text-xs text-white hover:underline aria-pressed:ring-2 aria-pressed:ring-black aria-pressed:ring-offset-2"
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-xs text-primary-foreground hover:underline aria-pressed:ring-2 aria-pressed:ring-ring aria-pressed:ring-offset-2 aria-pressed:ring-offset-background"
             aria-pressed={unseenOnly}
             title="Listings you haven’t viewed yet"
             onClick={() => {
@@ -278,19 +295,33 @@ export function Deals({
           ) : (
             <Empty
               title={
-                unseenOnly
-                  ? "You’re all caught up"
-                  : filteringSeller
-                    ? "No listings match your filters"
-                    : "No listings yet"
+                shortlistedOnly
+                  ? "No shortlisted listings"
+                  : unseenOnly
+                    ? "You’re all caught up"
+                    : filteringSeller
+                      ? "No listings match your filters"
+                      : searching
+                        ? "Your search is getting started"
+                        : selectedRun?.phase === "completed"
+                          ? "No listings found in this search"
+                          : "No listings yet"
               }
             >
               <p className="max-w-sm text-sm leading-relaxed">
-                {unseenOnly
-                  ? "No new listings match your filters."
-                  : filteringSeller
-                    ? "Change or clear your seller filters to see more listings."
-                    : "Listings will appear here after your next search."}
+                {shortlistedOnly
+                  ? unseenOnly || filteringSeller
+                    ? "No shortlisted listings match your filters."
+                    : "Use the bookmark on a listing to keep it here."
+                  : unseenOnly
+                    ? "No new listings match your filters."
+                    : filteringSeller
+                      ? "Change or clear your seller filters to see more listings."
+                      : searching
+                        ? "The first finds will appear here automatically. You can keep this panel open or continue in chat."
+                        : selectedRun?.phase === "completed"
+                          ? "Check the search summary in chat, or adjust your requirements and search again."
+                          : "Listings will appear here after your next search."}
               </p>
             </Empty>
           )}
@@ -308,7 +339,7 @@ export function Deals({
                   ? "Change or clear your seller filters to see more deals."
                   : "Good deals need to meet your requirements and cost less than similar listings. You can still browse everything in All listings."}
               </p>
-              {!filteringSeller && !sample && (
+              {import.meta.env["DEV"] && !filteringSeller && !sample && (
                 <Button
                   size="sm"
                   disabled={busy}
@@ -327,6 +358,19 @@ export function Deals({
           )}
         </TabsContent>
       </Tabs>
+      {selectedSearch && (
+        <ListingTrends
+          key={selectedSearch.id}
+          search={selectedSearch}
+          history={selectedSearch.market_history}
+          listings={tracked}
+          decisions={state.decisions}
+          searches={state.searches}
+          now={now}
+          sample={sample}
+          hideEmpty
+        />
+      )}
       {sellerListing && (
         <SellerConversationPanel
           key={`${state.mode}:${sellerListing.key}:${sellerSearchId ?? "all"}`}

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { regionalPreferencesSchema } from "./regional-preferences.ts";
 import { listingSeenSchema } from "./listing-reading.ts";
 import { workflowSchema, sellerWorkflowSchema } from "./workflow-schema.ts";
 import { revisionsSchema } from "./revisions.ts";
@@ -33,6 +34,7 @@ export type SearchInput = z.infer<typeof searchInputSchema>;
 
 export const settingsSchema = z
   .object({
+    regional_preferences: regionalPreferencesSchema.optional(),
     origin: z.string().trim().min(1).max(200).optional(),
     location: locationSchema.nullable().optional(),
     platforms: z.partialRecord(marketplaceSchema, marketplaceSettingsSchema).optional(),
@@ -321,15 +323,17 @@ export const stateSchema = z.object({
   device_browser: deviceBrowserSchema.nullable().default(null),
   next_steps: z.array(buyingNextStepSchema).default([]),
   search_runs: z.array(searchRunSchema).default([]),
+  search_run_refresh_keys: z.record(z.string(), z.string()).default({}),
   search_workflows: z.record(z.string(), workflowSchema).default({}),
   search_run_workflows: z.record(z.string(), workflowSchema).default({}),
   seller_workflow: sellerWorkflowSchema.nullable().default(null),
   seller_conversations: z.array(sellerConversationSummarySchema).default([]),
   seller_conversation: conversationSchema.nullable().default(null),
-  api_connections: z
-    .object({ ebay_credentials_configured: z.boolean() })
-    .default({ ebay_credentials_configured: false }),
   access_context: z.string().default("unknown"),
+  workspace_id: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .optional(),
   revision: z.string().regex(/^[a-f0-9]{64}$/),
   revisions: revisionsSchema,
   mode: modeSchema,

@@ -6,9 +6,9 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Effect } from "effect";
-import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
-import { backendLayer } from "../reference-server/src/entrypoints/backend.ts";
-import { WorkspaceStore } from "../reference-server/src/platform/workspace-sqlite.ts";
+import { createNativeServer } from "./native-mcp.ts";
+import { nativeOptions } from "./native-mcp.ts";
+import { NativeWorkspace } from "./native-workspace.ts";
 
 const dom = new Window({
   url: "https://panel.example",
@@ -206,7 +206,7 @@ Object.defineProperty(globalThis, "clearTimeout", {
 
 // Exercise real app navigation and MCP persistence in an isolated workspace under StrictMode.
 const dir = mkdtempSync(resolve(tmpdir(), "goodfinds-reading-ui-"));
-const store = new WorkspaceStore(seedWorkspace(dir));
+const store = new NativeWorkspace(seedWorkspace(dir));
 const state = Effect.runSync(store.request("get_workspace")).state;
 const search = state.searches[0];
 assert.ok(search);
@@ -226,9 +226,9 @@ Effect.runSync(
     })),
   }),
 );
-const { server, calls } = createGoodfindsServer(
+const { server, calls } = createNativeServer(
   dir,
-  backendLayer(dir, null, () => Promise.resolve(null)),
+  nativeOptions(dir, null, () => Promise.resolve(null)),
 );
 window.__GOODFINDS_PREVIEW__ = { token: "fixture" };
 const called: string[] = [];

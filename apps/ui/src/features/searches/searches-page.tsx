@@ -7,6 +7,7 @@ import type { SavedSearch } from "@goodfinds/contracts/state";
 import type { SearchDraft } from "@goodfinds/contracts/search-definition";
 import { SearchListRow } from "@/features/searches/search-list-row";
 import { Empty } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import type { ViewProps } from "@/app/feature-props";
 
 export function Searches({
@@ -17,42 +18,42 @@ export function Searches({
   resume,
   onSearch,
   onListings,
+  onDelete,
 }: ViewProps & {
   edit: (search?: SavedSearch) => void;
   resume: (draft: SearchDraft) => void;
   onSearch: (search?: SavedSearch) => void;
   onListings: (searchId: string, unseen: boolean) => void;
+  onDelete: (search: SavedSearch, button: HTMLElement) => void;
 }) {
   return (
     <section className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold">Your searches</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Keep track of what you're looking for.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            disabled={busy || state.mode === "sample" || state.counts.active_searches === 0}
-            aria-label="Search all enabled searches"
-            title="Search all enabled searches"
-            onClick={() => onSearch()}
-          >
-            <Search aria-hidden="true" />
-            Search all
-          </Button>
-          <Button
-            disabled={busy}
-            onClick={() => {
-              edit();
-            }}
-          >
-            <Plus aria-hidden="true" />
-            New search
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Your searches"
+        subtitle="Keep track of what you’re looking for."
+        actions={
+          <>
+            <Button
+              disabled={busy || state.mode === "sample" || state.counts.active_searches === 0}
+              aria-label="Search all enabled searches"
+              title="Search all enabled searches"
+              onClick={() => onSearch()}
+            >
+              <Search aria-hidden="true" />
+              Search all
+            </Button>
+            <Button
+              disabled={busy}
+              onClick={() => {
+                edit();
+              }}
+            >
+              <Plus aria-hidden="true" />
+              New search
+            </Button>
+          </>
+        }
+      />
       {state.drafts.length > 0 && (
         <div className="space-y-3">
           <h3 className="font-medium">Unfinished searches</h3>
@@ -119,6 +120,7 @@ export function Searches({
               edit={() => edit(search)}
               onSearch={() => onSearch(search)}
               onListings={(unseen) => onListings(search.id, unseen)}
+              onDelete={(button) => onDelete(search, button)}
             />
           ))}
         </ul>

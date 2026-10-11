@@ -5,8 +5,8 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { ElicitRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
-import { NO_PREFERENCE } from "../tests/reference-server/src/searches/interview.ts";
+import { createNativeServer } from "../tests/helpers/native-mcp.ts";
+import { NO_PREFERENCE } from "../tests/helpers/native-domain.ts";
 import { answersSchema, searchDefinitionSchema } from "@goodfinds/contracts/search-definition";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 
@@ -41,7 +41,7 @@ export async function runBuyerTrial(
   refinementFields?: string[],
 ) {
   const data = await mkdtemp(resolve(tmpdir(), "goodfinds-buyer-trial-"));
-  const { server } = createGoodfindsServer(data);
+  const { server } = createNativeServer(data);
   const client = new Client(
     { name: "Simulated buyer", version: "1.0.0" },
     { capabilities: { elicitation: { form: {} } } },

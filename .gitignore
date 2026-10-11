@@ -1,9 +1,13 @@
 __pycache__/
+# Local working files and internal documentation in .local/docs/.
 .local/
 output/
 dist/
 .DS_Store
 node_modules/
+.wrangler/
+.dev.vars
+.dev.vars.*
 formal/.lake/
 
 # Local credentials and machine-specific settings.
@@ -33,3 +37,6 @@ formal/.lake/
 
 # Rust build artifacts.
 /apps/server/target/
+
+# Deployment-generated public release metadata.
+/website/downloads/release.json

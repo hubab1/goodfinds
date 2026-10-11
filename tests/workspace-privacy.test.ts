@@ -5,16 +5,16 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Effect } from "effect";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
-import { backupWorkspace, restoreWorkspace } from "./reference-server/src/platform/backup.ts";
-import { createGoodfindsServer } from "./reference-server/src/entrypoints/mcp.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
+import { backupWorkspace, restoreWorkspace } from "./helpers/native-workspace.ts";
+import { createNativeServer } from "./helpers/native-mcp.ts";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 import exampleConfig from "../skills/marketplace-shopping/assets/example-workspace.json" with { type: "json" };
 
 function fixture(t: TestContext) {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-privacy-"));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  return { folder, store: new WorkspaceStore(folder) };
+  return { folder, store: new NativeWorkspace(folder) };
 }
 
 void test("a fresh live workspace remains empty across settings edits, restart and backup restore", (t) => {
@@ -31,14 +31,16 @@ void test("a fresh live workspace remains empty across settings edits, restart a
       settings: { origin: "Fictional test town" },
     }),
   ).state;
-  const restarted = Effect.runSync(new WorkspaceStore(folder).request("get_workspace")).state;
+  const restarted = Effect.runSync(new NativeWorkspace(folder).request("get_workspace")).state;
   assert.equal(restarted.revision, edited.revision);
   assert.deepEqual(restarted.searches, []);
   const backup = resolve(folder, "backup");
   Effect.runSync(backupWorkspace(store.databasePath, backup));
   const restored = resolve(folder, "restored");
   Effect.runSync(restoreWorkspace(backup, restored));
-  const restoredState = Effect.runSync(new WorkspaceStore(restored).request("get_workspace")).state;
+  const restoredState = Effect.runSync(
+    new NativeWorkspace(restored).request("get_workspace"),
+  ).state;
   assert.deepEqual(restoredState.searches, []);
   assert.equal(restoredState.config.origin, "Fictional test town");
 });
@@ -80,7 +82,7 @@ void test("the first search can be drafted, saved, removed and stay absent after
   ).state;
   assert.deepEqual(removed.searches, []);
   assert.deepEqual(
-    Effect.runSync(new WorkspaceStore(folder).request("get_workspace")).state.searches,
+    Effect.runSync(new NativeWorkspace(folder).request("get_workspace")).state.searches,
     [],
   );
 });
@@ -114,7 +116,7 @@ void test("new demo workspaces do not copy live searches, locations or drafts", 
     }),
   ).state;
   const sample = Effect.runSync(
-    new WorkspaceStore(folder, "sample").request("load_sample_workspace"),
+    new NativeWorkspace(folder, "sample").request("load_sample_workspace"),
   ).state;
   assert.doesNotMatch(JSON.stringify(sample), /PRIVATE-FIXTURE|private-fixture/);
   assert.equal(sample.config.origin, "Example origin");
@@ -122,7 +124,7 @@ void test("new demo workspaces do not copy live searches, locations or drafts", 
   assert.equal(sample.listings.length, 20);
   assert.deepEqual(sample.drafts, []);
   assert.equal(
-    Effect.runSync(new WorkspaceStore(folder).request("get_workspace")).state.revision,
+    Effect.runSync(new NativeWorkspace(folder).request("get_workspace")).state.revision,
     before.revision,
   );
 });
@@ -133,7 +135,7 @@ void test("demo initialization never opens an existing live database", (t) => {
   const bytes = "This live file is deliberately not a readable SQLite database.";
   writeFileSync(live, bytes);
   const sample = Effect.runSync(
-    new WorkspaceStore(folder, "sample").request("get_workspace"),
+    new NativeWorkspace(folder, "sample").request("get_workspace"),
   ).state;
   assert.equal(sample.searches.length, 2);
   assert.equal(readFileSync(live, "utf8"), bytes);
@@ -141,7 +143,7 @@ void test("demo initialization never opens an existing live database", (t) => {
 
 void test("the MCP panel response exposes an empty live workspace and a separate fictional demo", async (t) => {
   const { folder } = fixture(t);
-  const { server, calls } = createGoodfindsServer(folder);
+  const { server, calls } = createNativeServer(folder);
   t.after(() => server.close());
   const get = calls.get("get_goodfinds_workspace");
   assert.ok(get);

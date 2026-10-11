@@ -7,10 +7,10 @@ Source builds require Bun for the UI and contract generator, a Rust toolchain, a
 ```sh
 bun install --frozen-lockfile
 bun run package
-bun scripts/smoke-plugin.ts
+bun run package:check
 ```
 
-Packaging builds the UI and native contracts before compiling the release executable. Each ZIP contains one target and records its Rust target triple in its filename and `server/build.json`. `GOODFINDS_BUILD_TARGET` selects a different target:
+Packaging builds the UI and native contracts before compiling the release executable once. It emits separate Codex and Claude plugin ZIPs plus a Claude Desktop MCP bundle (`.mcpb`). Each archive contains one target and records its Rust target triple in its filename and `server/build.json`. `GOODFINDS_BUILD_TARGET` selects a different target:
 
 | System      | CPU              | Target                       |
 | ----------- | ---------------- | ---------------------------- |
@@ -36,6 +36,32 @@ Release builds remap the build machine's home and repository paths in compiler d
 
 There is no single executable that runs across macOS, Windows and Linux. The scripts produce separate archives, with `goodfinds.exe` in Windows packages. A universal macOS executable requires separately compiled Apple silicon and Intel slices; the current packaging scripts do not combine them. Release hosting should offer the appropriate archive for each supported target.
 
-The smoke test copies only the executable to a temporary directory and starts it with an empty `PATH`. It verifies the native doctor command, MCP tool and UI resources, embedded images, clean live workspaces, and workflow guards. Source build dependencies and adjacent repository files cannot satisfy that test.
+## Choose the host package
 
-[Native CI](../.github/workflows/native.yml) builds and tests the current architecture of GitHub's Linux, macOS and Windows runners, then uploads each ZIP as a workflow artifact. It does not publish a release or establish coverage for other CPU architectures.
+**Codex:** extract `goodfinds-marketplace-<version>-codex-<target>.zip` and load it through local plugin support. The unpacked build remains at `dist/goodfinds-marketplace`. Its `.codex-plugin/plugin.json` points to `.mcp.json`, which retains Codex's `cwd` and environment forwarding. `plugin.json` and `mcp.json` remain available for portable hosts. The source checkout's Codex manifests are also refreshed by packaging.
+
+**Claude Code:** extract `goodfinds-marketplace-<version>-claude-<target>.zip`, or use the unpacked build:
+
+```sh
+claude --plugin-dir /absolute/path/to/dist/goodfinds-marketplace-claude
+```
+
+The archive has `.claude-plugin/plugin.json`, the shopping skill, and a standard stdio `.mcp.json`. Its command uses `${CLAUDE_PLUGIN_ROOT}` so it works from any working directory, including install paths containing spaces. It has no Codex-only launch fields. For Claude's account plugin UI, upload this ZIP through **Customize → Plugins**. Claude's current documentation says plugin-local servers run in Cowork and Claude Code, while Chat requires a separate local connection. An OS-specific binary must match the environment executing it; a macOS build is not a Linux Cowork build. Do not infer Cowork compatibility from a successful Desktop Chat test.
+
+**Claude Desktop Chat:** choose the matching `goodfinds-marketplace-<version>-claude-desktop-<target>.mcpb`. Open **Settings → Extensions → Advanced settings → Install extension**, select the file, and configure the workspace folder. The bundle's `manifest.json` is validated against Anthropic's pinned MCPB schema during packaging. It launches the same native server through `${__dirname}` and requires no language runtime. The MCPB connects tools and panel resources; install the companion Claude plugin ZIP through Customize for the shopping skill. Open a fresh chat after installation.
+
+Desktop extensions default to `${HOME}/.local/share/goodfinds`, matching Codex. Choose a separate folder when testing to keep fixture data isolated. Changing hosts does not migrate or erase data. Reinstalling an updated bundle preserves the configured external workspace. MCPB platform compatibility specifies the OS; users must still choose the CPU/ABI in the filename. Producing a Linux MCPB does not claim that Claude Desktop is available on Linux.
+
+Claude Desktop Chat supports the panel and saved shopping data, but does not run plugin subagents. Goodfinds currently requires native background workers and compatible browser controls for Facebook Marketplace discovery, so installing both Chat packages does not make live searches available there. Cowork requires a paid Claude plan; verify its server execution environment and browser access before promising discovery. Claude Code also needs its own working browser route. A queued run with no worker and no query activity is a failed search-initiation test, not a successful search.
+
+Collection model overrides fall back to the host's current model when unavailable. Do not claim a connection check, search or schedule succeeded without the corresponding host capability and observed result. Never activate real marketplace monitoring or contact sellers as an installation test. A buyer-authorized one-off live test should save the one-off preference, leave recurring monitoring off, and record an actual blocker if no worker can launch.
+
+Formats and install behavior follow [Anthropic's MCPB specification](https://github.com/anthropics/mcpb/blob/main/MANIFEST.md), [Claude's plugin reference](https://code.claude.com/docs/en/plugins-reference), [Desktop extension installation](https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop), [plugin support by Claude surface](https://support.claude.com/en/articles/13837440-use-plugins-in-claude), and [Cowork requirements](https://support.claude.com/en/articles/13345190-get-started-with-claude-cowork).
+
+## Validate the archives
+
+`bun run package:check` extracts all three actual archives to temporary folders with spaces in their paths and runs the same smoke suite against each host's manifest. Claude launches from an unrelated working directory. The test also copies only the executable to another temporary directory and runs its doctor command with an empty `PATH`. It verifies MCP tools and UI resources, embedded images, clean live workspaces, and workflow guards. Source dependencies and adjacent repository files cannot satisfy that standalone test. Test data stays in temporary workspaces.
+
+For a single unpacked build, use `bun scripts/smoke-plugin.ts <directory> <host>`, where host is `codex`, `claude` or `claude-desktop`. The default remains `dist/goodfinds-marketplace codex`. Protocol smoke checks are separate from testing the real host UI. In Claude Desktop, verify the extension is enabled, invoke its tools in a fresh chat, and open the panel; use a separate workspace for edits.
+
+[Native CI](../.github/workflows/native.yml) builds and tests the current architecture of GitHub's Linux, macOS and Windows runners, then validates and uploads both ZIP formats and the MCPB as workflow artifacts. It does not publish a release or establish coverage for other CPU architectures or live desktop hosts.

@@ -1,3 +1,4 @@
+import { regionalPreferencesSchema, localeHintsSchema, regionalContextSchema } from "./regional.ts";
 import { operationNames, isOperationName } from "./tool-names.ts";
 export { operationForTool, isOperationName } from "./tool-names.ts";
 import {
@@ -21,6 +22,7 @@ import { listingSeenInputSchema } from "./listing-reading.ts";
 import { modeSchema, settingsSchema, stateSchema, listingSchema } from "./state.ts";
 import {
   searchInputSchema,
+  searchDefinitionSchema,
   draftInputSchema,
   savedSearchSchema,
   savedDraftSchema,
@@ -29,10 +31,10 @@ import { searchCoverSchema, searchCoverFollowUpSchema } from "./search-cover.ts"
 import { searchCommands, searchRunSchema } from "./search-workflow.ts";
 import {
   monitoringPreferenceSchema,
-  hostScheduleReportSchema,
+  initialMonitoringSchema,
   monitoringSummarySchema,
 } from "./monitoring.ts";
-import { accessReportSchema, sessionReportSchema } from "./integrations.ts";
+import { accessReportSchema, sessionReportSchema, marketplaceSchema } from "./integrations.ts";
 import { listingContactReportSchema } from "./marketplace-actions.ts";
 import { feedbackInputSchema, feedbackEventSchema } from "./discovery.ts";
 import { journeyReportSchema } from "./journeys.ts";
@@ -41,8 +43,12 @@ import { listingMediaInput } from "./listing-media.ts";
 import { sellerCommands, conversationSchema, sellerActionSchema } from "./seller-conversation.ts";
 import { connectionCheckObservationSchema } from "./connection-checks.ts";
 import { revisionSchema, revisionsSchema } from "./revisions.ts";
+import { recoveryInputShape, searchRecoverySchema } from "./recovery.ts";
+import { hostCapabilityReportSchema, runtimeContextSchema } from "./runtime.ts";
 const mode = modeSchema.default("live");
-const expected_entity_revision = revisionSchema;
+const expected_entity_revision = revisionSchema.describe(
+  "Copy the target resource's token from revisions in a fresh context/settings read. New identity: revisions.absent. Existing search: revisions.searches[id]; draft: revisions.drafts[id]; settings: revisions.settings. The top-level revision is a workspace snapshot, not an entity token.",
+);
 export const receiptSchema = z.object({
   request_id: z.uuid(),
   operation: z.string(),
@@ -61,6 +67,16 @@ const common = {
   revisions: revisionsSchema,
   receipt: receiptSchema.optional(),
 };
+const alertCursor = z.object({ created_at: z.iso.datetime(), id: z.uuid() }).strict();
+const pendingAlert = stateSchema.shape.decisions.element.extend({
+  id: z.uuid(),
+  created_at: z.iso.datetime(),
+  status: z.literal("pending"),
+  search_id: z.string(),
+  search_name: z.string(),
+  mode: modeSchema,
+  kind: z.enum(["first_qualification", "price_drop"]),
+});
 export const stateSummarySchema = z
   .object({
     mode: modeSchema,
@@ -90,6 +106,7 @@ export const errorSchema = z.object({
   code: z.enum([
     "validation_error",
     "revision_conflict",
+    "cursor_gap",
     "missing_search",
     "storage_error",
     "media_error",
@@ -135,7 +152,11 @@ function command<S extends z.ZodRawShape, O extends z.ZodRawShape>(
         context_id: z.string().optional(),
         request_id: z.uuid().optional(),
         expected_entity_revision: revisionSchema.optional(),
-        expected_draft_revision: revisionSchema.optional(),
+        expected_draft_revision: revisionSchema
+          .describe(
+            "When save_goodfinds_search includes draft_id, copy revisions.drafts[draft_id] here. expected_entity_revision still refers to the destination search (revisions.absent for a new search).",
+          )
+          .optional(),
       })
       .extend(shape)
       .strict(),
@@ -210,9 +231,10 @@ const sellerMutationOutput = sellerOutput.extend({
 });
 const importOutput = z.object({
   ...common,
-  import_receipt: z.object({ evaluation_id: z.string(), observed_count: z.number() }),
+  import_receipt: z.object({ evaluation_id: z.string(), observed_count: z.number() }).nullable(),
   search_run: searchRunSchema.nullable(),
   workflow: workflowSchema,
+  scheduled_check: z.object({ allowed: z.boolean() }).loose().optional(),
 });
 
 function seller_conversation<S extends z.ZodRawShape, O extends z.ZodRawShape>(
@@ -237,8 +259,81 @@ function seller_conversation<S extends z.ZodRawShape, O extends z.ZodRawShape>(
   };
 }
 
+const eventCursor = z
+  .object({ stream_id: z.uuid(), sequence: z.number().int().nonnegative() })
+  .strict();
 export const operations = {
-  get_workspace: command(operationNames.get_workspace, { mode }, stateOutput, true, false),
+  list_coordination_events: query(
+    operationNames.list_coordination_events,
+    { after: eventCursor.optional(), limit: z.number().int().min(1).max(100).default(20) },
+    z.object({
+      events: z.array(
+        z.object({
+          sequence: z.number().int(),
+          kind: z.enum(["search_run.completed", "search_run.interrupted", "alert.created"]),
+          created_at: z.iso.datetime(),
+          resource: z.object({
+            run_id: z.uuid().optional(),
+            alert_id: z.uuid().optional(),
+            search_id: z.string(),
+            listing_key: z.string().optional(),
+            version: z.number().int().optional(),
+            phase: searchRunSchema.shape.phase.optional(),
+          }),
+        }),
+      ),
+      cursor: eventCursor,
+      has_more: z.boolean(),
+    }),
+  ),
+  get_search_recovery: query(
+    operationNames.get_search_recovery,
+    recoveryInputShape,
+    searchRecoverySchema,
+  ),
+  get_runtime_context: query(
+    operationNames.get_runtime_context,
+    {},
+    runtimeContextSchema.extend({ revisions: revisionsSchema }),
+  ),
+  report_host_capabilities: command(
+    operationNames.report_host_capabilities,
+    {
+      mode,
+      request_id: z.uuid(),
+      expected_entity_revision,
+      context_id: z.string(),
+      report: hostCapabilityReportSchema,
+    },
+    runtimeContextSchema.extend(common),
+  ),
+  list_pending_alerts: query(
+    operationNames.list_pending_alerts,
+    {
+      search_id: z.string().optional(),
+      limit: z.number().int().min(1).max(50).default(20),
+      after: alertCursor.optional(),
+    },
+    z.object({ alerts: z.array(pendingAlert), next_cursor: alertCursor.nullable() }),
+  ),
+  acknowledge_alerts: command(
+    operationNames.acknowledge_alerts,
+    { mode, request_id: z.uuid(), alert_ids: z.array(z.uuid()).min(1).max(50) },
+    z.object({ ...common, alert_ids: z.array(z.uuid()), status: z.literal("delivered") }),
+  ),
+  get_workspace: command(
+    operationNames.get_workspace,
+    {
+      mode,
+      search_id: z
+        .string()
+        .optional()
+        .describe("Open this saved search's live listings in the panel."),
+    },
+    stateOutput,
+    true,
+    false,
+  ),
   get_settings: query(
     operationNames.get_settings,
     {},
@@ -247,6 +342,7 @@ export const operations = {
         revision: revisionSchema,
         revisions: revisionsSchema,
         access_context: z.string(),
+        origin_confirmed: z.boolean(),
         settings: settingsSchema.loose(),
       })
       .loose(),
@@ -296,6 +392,41 @@ export const operations = {
     false,
     false,
   ),
+  get_setup_context: query(
+    operationNames.get_setup_context,
+    {
+      preferences: regionalPreferencesSchema
+        .optional()
+        .describe(
+          "Explicit regional choices for this brief; omitted fields use saved preferences and locale hints.",
+        ),
+      hints: localeHintsSchema
+        .optional()
+        .describe(
+          "Available client locale/country hints only. These are suggestions, not confirmed location.",
+        ),
+      category: z
+        .string()
+        .optional()
+        .describe(
+          "Product category, not the model name: use vehicle for named cars such as Golf GTI or Toyota Camry. Returns its starter template and country-specific marketplaces; omit for the compact template catalog.",
+        ),
+    },
+    z.object({
+      ...common,
+      access_context: z.string(),
+      origin_confirmed: z.boolean(),
+      device_browser: stateSchema.shape.device_browser,
+      settings: settingsSchema,
+      regional_context: regionalContextSchema,
+      search_index: z.array(
+        savedSearchSchema.pick({ id: true, name: true, product: true, enabled: true }),
+      ),
+      draft_index: z.array(savedDraftSchema.pick({ id: true, name: true })),
+      template_catalog: z.array(z.object({ category: z.string(), title: z.string() })),
+      templates: z.array(searchDefinitionSchema),
+    }),
+  ),
   get_search_context: query(
     operationNames.get_search_context,
     { search_id: z.string().optional() },
@@ -304,6 +435,18 @@ export const operations = {
         revision: revisionSchema,
         revisions: revisionsSchema,
         access_context: z.string(),
+        regional_preferences: regionalPreferencesSchema.optional(),
+        marketplace_routes: z
+          .record(
+            z.string(),
+            z.array(
+              z.object({
+                id: marketplaceSchema,
+                url: z.url().nullable(),
+              }),
+            ),
+          )
+          .default({}),
         searches: z.array(
           savedSearchSchema.extend({
             unseen_count: stateSchema.shape.searches.element.shape.unseen_count,
@@ -494,9 +637,20 @@ export const operations = {
     operationNames.save_search,
     {
       mode,
-      expected_entity_revision,
-      search: z.union([searchInputSchema, savedSearchSchema]),
+      expected_entity_revision: expected_entity_revision.describe(
+        "Destination search revision: revisions.absent for a new search, or revisions.searches[search.id] for an existing search. When promoting a draft, this is still the SEARCH token; pass its DRAFT token separately as expected_draft_revision. Never use the top-level workspace revision.",
+      ),
+      search: z
+        .union([searchInputSchema, savedSearchSchema])
+        .describe(
+          "A JSON object with name, product, definition and values; not a JSON-encoded string. A complete buying brief can be saved directly without creating a draft first.",
+        ),
       draft_id: z.string().optional(),
+      initial_monitoring: initialMonitoringSchema
+        .optional()
+        .describe(
+          "New searches only: defaults to recurring at the saved cadence (two hours in a new workspace). Use once for an explicit one-off request. Existing monitoring is preserved on edits; use set_goodfinds_monitoring to change it.",
+        ),
     },
     searchOutput,
     false,
@@ -534,13 +688,6 @@ export const operations = {
     searchOutput,
     false,
     true,
-  ),
-  report_host_schedule: command(
-    operationNames.report_host_schedule,
-    { mode, expected_entity_revision, report: hostScheduleReportSchema },
-    searchOutput,
-    false,
-    false,
   ),
   set_search_enabled: command(
     operationNames.set_search_enabled,
@@ -618,7 +765,21 @@ export const operations = {
     operationNames.import_listing_observations,
     {
       mode: z.literal("live").default("live"),
-      observations: z.array(z.record(z.string(), z.unknown())).max(500),
+      observations: z
+        .array(
+          z
+            .object({
+              category_path: z
+                .string()
+                .max(2000)
+                .nullish()
+                .describe(
+                  'Observed category breadcrumb as one string, for example "Men > Shirts > Sweatshirts & Hoodies". Omit or use null when unknown; do not send an array.',
+                ),
+            })
+            .loose(),
+        )
+        .max(500),
       run_id: z.uuid().optional(),
       worker_id: z.uuid().optional(),
       search_coverage: z.array(z.record(z.string(), z.unknown())).max(50).optional(),
@@ -646,7 +807,10 @@ export const operations = {
       mode,
       expected_entity_revision,
       context_id: z.string(),
-      reports: z.array(connectionCheckObservationSchema).min(1).max(6),
+      reports: z
+        .array(connectionCheckObservationSchema)
+        .min(1)
+        .max(marketplaceSchema.options.length),
     },
     evidenceOutput,
   ),

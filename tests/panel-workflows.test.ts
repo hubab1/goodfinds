@@ -6,7 +6,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Effect } from "effect";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
 import { operationForTool } from "@goodfinds/contracts/tool-names";
 import { requestSearches } from "../apps/ui/src/features/searches/search-actions.ts";
 import type { Action } from "../apps/ui/src/lib/actions.ts";
@@ -29,7 +29,7 @@ void actionTypes;
 function fixture(t: TestContext) {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-panel-workflows-"));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  const store = new WorkspaceStore(seedWorkspace(folder));
+  const store = new NativeWorkspace(seedWorkspace(folder));
   const state = Effect.runSync(store.request("get_workspace")).state;
   const search = state.searches[0];
   assert.ok(search);

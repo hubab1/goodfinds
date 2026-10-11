@@ -75,6 +75,13 @@ export const connectionCheckWorkerSchema = z
 export const connectionCheckTargetSchema = z
   .object({
     marketplace: marketplaceSchema,
+    url: z
+      .url()
+      .nullable()
+      .optional()
+      .describe(
+        "Resolved regional homepage. Null means no supported country route; do not substitute another country.",
+      ),
     browser: browserSchema,
     browser_id: z.string().trim().min(1).max(200).nullable(),
   })
@@ -94,14 +101,14 @@ export const connectionCheckRunSchema = z
   .object({
     id: z.uuid(),
     request_id: z.uuid(),
-    version: z.number().int().positive().default(1),
+    version: z.number().int().positive(),
     context_id: z.string(),
     status: z.enum(connectionCheckStatuses),
-    worker: connectionCheckWorkerSchema.nullable().default(null),
+    worker: connectionCheckWorkerSchema.nullable(),
     message: z.string().max(300),
     created_at: z.iso.datetime(),
     updated_at: z.iso.datetime(),
-    targets: z.array(connectionCheckTargetSchema).max(6),
+    targets: z.array(connectionCheckTargetSchema).max(marketplaceSchema.options.length),
     results: z
       .array(
         z
@@ -113,7 +120,7 @@ export const connectionCheckRunSchema = z
           })
           .strict(),
       )
-      .max(6),
+      .max(marketplaceSchema.options.length),
   })
   .strict();
 export type ConnectionCheckRun = z.infer<typeof connectionCheckRunSchema>;
@@ -129,7 +136,11 @@ export const startConnectionCheckSchema = z
     mode: z.enum(["live", "sample"]).default("live"),
     expected_entity_revision: z.string().regex(/^[a-f0-9]{64}$/),
     request_id: z.uuid(),
-    marketplaces: z.array(marketplaceSchema).min(1).max(6).optional(),
+    marketplaces: z
+      .array(marketplaceSchema)
+      .min(1)
+      .max(marketplaceSchema.options.length)
+      .optional(),
   })
   .strict();
 export const readConnectionCheckSchema = z
@@ -154,7 +165,10 @@ export const renewConnectionCheckSchema = cancelConnectionCheckSchema.extend({
 });
 export const completeConnectionCheckSchema = versionedCheckSchema.extend({
   worker_id: z.uuid(),
-  observations: z.array(connectionCheckObservationSchema).min(1).max(6),
+  observations: z
+    .array(connectionCheckObservationSchema)
+    .min(1)
+    .max(marketplaceSchema.options.length),
 });
 export const interruptConnectionCheckSchema = versionedCheckSchema.extend({
   worker_id: z.uuid().optional(),

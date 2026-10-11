@@ -9,7 +9,7 @@ import { z } from "zod";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { isToolVisibilityAppOnly } from "@modelcontextprotocol/ext-apps/app-bridge";
-import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
+import { createNativeServer } from "./helpers/native-mcp.ts";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 import {
   selectListings,
@@ -19,7 +19,7 @@ import {
 
 async function fixture(t: TestContext) {
   const data = await mkdtemp(resolve(tmpdir(), "goodfinds-parity-"));
-  const { server, calls } = createGoodfindsServer(seedWorkspace(data));
+  const { server, calls } = createNativeServer(seedWorkspace(data));
   t.after(async () => {
     await server.close();
     await rm(data, { recursive: true, force: true });
@@ -48,7 +48,7 @@ void test("every named panel action has a registered model action or a media equ
   );
   const sources = await Promise.all(files.map((file) => readFile(resolve(folder, file), "utf8")));
   for (const text of sources) {
-    for (const match of text.matchAll(/["']([a-z_]*goodfinds[a-z_]*)["']/gu)) {
+    for (const match of text.matchAll(/["']([a-z]+_goodfinds_[a-z_]+)["']/gu)) {
       if (match[1]) names.add(match[1]);
     }
   }

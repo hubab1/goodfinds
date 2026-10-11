@@ -1,0 +1,1383 @@
+[
+  {
+    "name": "get_goodfinds_tool_schema",
+    "description": "Read the full input schema and guidance for one tool.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "open_goodfinds_panel",
+    "title": "Goodfinds",
+    "description": "Open Goodfinds beside the conversation; pass search_id to show that search\u2019s live listings. Manage buying searches, compare listings, and see current linked Codex schedule status. Refreshes linked schedules without activating or resuming them.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      },
+      "openai/ui": {
+        "entrypoints": [
+          {
+            "type": "thread"
+          },
+          {
+            "type": "global"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "start_goodfinds_connection_check",
+    "title": "Request marketplace check",
+    "description": "Queue a read-only check of selected enabled marketplaces in their saved browser routes. This tool does not launch or browse. The parent must dispatch a native background subagent using references/background-work.md#connection-checks and the returned execution settings, then return promptly. Reuse a running worker; if delegation fails, interrupt the queued check as unavailable without foreground browsing. Use a fresh request_id for new work and the same ID for retries.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "get_goodfinds_connection_check",
+    "title": "Read marketplace check progress",
+    "description": "Read one durable connection check, or the latest in the current access context. Queued means dispatch is pending; only a worker claim establishes running. Check current status before each browser step. Expired, cancelled or changed-context checks cannot accept results.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "claim_goodfinds_connection_check",
+    "title": "Claim marketplace check",
+    "description": "Called by the dispatched native subagent before browser work. Claim the exact queued check with its current version, fresh worker_id and actual host-provided agent_id. Reuse a matching existing claim; never invent a native identity. Optional execution records actual host-reported model/effort. Identity is caller-reported, not host attestation.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "renew_goodfinds_connection_check",
+    "title": "Renew marketplace check worker",
+    "description": "Renew the owning worker's connection-check lease at least once a minute and before/after slow browser steps. Read the returned version before completion. A cancelled or expired claim cannot be revived; keep the main chat available.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "complete_goodfinds_connection_check",
+    "title": "Save marketplace check observations",
+    "description": "The claimed subagent saves paired observed browser-access and sign-in evidence for the selected routes using its worker_id and current version. Verify actual host/browser/profile identity; public access does not prove sign-in. Unsupported targets may be omitted and remain unknown. Do not use standalone access/session reporting tools to bypass this job's cancellation and ownership checks.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "interrupt_goodfinds_connection_check",
+    "title": "Record marketplace check interruption",
+    "description": "Record the actual delegation/browser limitation or failure. The parent may stop an unclaimed queued check; a running check requires the owning worker_id. Use unavailable for missing delegation or browser capability. Preserve previous account evidence and selected routes; do not perform a foreground fallback.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "cancel_goodfinds_connection_check",
+    "title": "Cancel marketplace check",
+    "description": "Cancel a queued or running connection check. The worker must stop at its next status/lease check and close only its own tabs. Further result writes are rejected. Does not sign out, change permissions or discard previous evidence.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "get_goodfinds_setup_context",
+    "title": "Start a buying brief",
+    "description": "Read setup in one compact call: settings and scoped revision tokens, saved search/draft names for reuse, and a template catalog. Pass category for its starter definition. Read regional_context before asking questions: explicit preferences override saved preferences, then optional client locale/country hints. Templates use the resolved currency; unresolved currency returns no template. Preserve explicit currency symbols/codes and save regional_context country/locale/fulfilment in search.market. Use returned regional marketplace URLs. Accept the buyer's stated city or area and update an older origin directly. A complete brief saves directly with save_goodfinds_search; new searches default to recurring checks every two hours unless saved timing or an explicit one-off choice applies. Host scheduling must still be verified. Read get_goodfinds_search_context with search_id only when resuming an existing brief.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "get_goodfinds_settings",
+    "title": "Read settings",
+    "description": "Read all panel-editable preferences and the current revision for save_goodfinds_settings: location, browser, marketplace choices, check frequency, quiet hours, time zone and price comparisons. Includes scoped browser/sign-in observations. Does not change permissions or schedules.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "list_goodfinds_activity",
+    "title": "Read recent activity",
+    "description": "Read the Activity panel's recent checks and current monitoring summary, with pagination. For active background workers use list_goodfinds_search_runs. Read-only; never starts or resumes a search.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "get_goodfinds_monitoring",
+    "title": "Read current monitoring status",
+    "description": "Read current status of the linked Codex automations, including external pauses, removal and unavailable status. Returns compact monitoring summaries without listing evidence. Read-only: does not create, resume or modify schedules. Unlinked searches still need host schedule discovery through the marketplace-shopping scheduling guidance.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "list_goodfinds_next_steps",
+    "title": "Read recommended next actions",
+    "description": "Read the attention queue, prepared draft text, conditional candidates and fulfilled buying goals. Works in chat without the panel. Recommendations do not authorize sending or purchase commitments.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "prepare_goodfinds_next_steps",
+    "title": "Prepare the next buying action",
+    "description": "Rank suitable or conditional saved candidates and prepare an unsent opening message for the strongest candidate. Idempotent; preserves edited drafts and existing conversations. Search completion does this automatically. Does not contact sellers.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "get_goodfinds_search_context",
+    "title": "Read buying brief and query plan",
+    "description": "Read compact settings, saved brief, research, query plans, resumable runs and monitoring choice/host receipts without listing histories. Includes required cover_follow_ups for identified products without photos, search_workflows and search_run_workflows action descriptors with input requirements and blocker recovery, plus absolute storage paths for scheduled prompts. Includes last_searched_at, latest_found_at and independent unseen/seen counts. Reading this context does not mark listings seen. Use its scoped revisions map for edits. Use get_goodfinds_setup_context for new setup; pass search_id here for an existing brief.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "list_goodfinds_listings",
+    "title": "Read listing summaries",
+    "description": "Read the same listing groups and seller filters as the panel. Filter by saved search, seller's current listing-count limits and joined-by year, or choose all, promising or good_deals. Use shortlisted: true to return bookmarked listings, scoped to search_id when supplied. Disregarded listings are hidden unless include_dismissed is true. Excluded models and aliases are hidden even in all results unless include_excluded is true. Use seen: unseen or seen to filter buyer reading status independently for each search; reading this tool never clears unseen status. Filtering precedes pagination; stale/unknown seller counts cannot satisfy a hard filter. Sort recent (last checked), recommended, price_low/price_high within currency/rent-period groups, or found_newest/found_oldest (first found, unchanged by rechecks). Returns compact specifications, seller context, match reasons and saved media counts; read get_goodfinds_listing for complete evidence/history.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "set_goodfinds_listing_seen",
+    "title": "Mark listings seen or unseen",
+    "description": "Save the buyer\u2019s seen status for explicit listing/search pairs. Seen is independent per search and survives rechecks and restarts. Set seen: false to mark unseen. Agent browsing or reading tools never marks listings seen automatically; use this only when the buyer asks or when the panel observes the buyer viewing a card.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "get_goodfinds_listing",
+    "title": "Read listing evidence",
+    "description": "Read one saved listing, its verification checks, setup costs, photo/video references, media-capture failures and history on demand. Includes independent workflow dimensions and action blockers; pass search_id for scoped suitability, dismissal and next steps.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "list_goodfinds_journey_checks",
+    "title": "Read missing journey estimates",
+    "description": "Read town-grouped Google Maps checks for relevant saved listings. Local cached routes are reused automatically; confirmed text origins work without coordinates. Scope by search_id and paginate. Check the driving route in the selected browser and save its visible duration, actual timestamp and evidence with record_goodfinds_journey_check. Do not use straight-line distance as driving time.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "record_goodfinds_journey_check",
+    "title": "Save a checked driving estimate",
+    "description": "Save an observed Google Maps driving route without refreshing listing availability, price, photos or observation times. Pass the queue origin_key and destination, all matching listing_keys, visible minutes, source_url, evidence and checked_at. Town-level routes share a local cache. Traffic estimates expire after 24 hours; explicit typical estimates after seven days. Changed origins invalidate cached results. This tool does not contact sellers.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "list_goodfinds_media_repairs",
+    "title": "Read incomplete listing galleries",
+    "description": "Read a paginated recovery queue for saved listings with missing or unconfirmed gallery capture, including photos/videos saved, expected totals, failures and retry times. Scope by search_id. Ready entries can be revisited after provisional discovery; failed captures wait 24 hours between automatic retries. An explicit buyer-requested reconciliation can retry sooner. Use attach_goodfinds_listing_media to save recovered files without changing listing facts or review coverage.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "check_goodfinds_scheduled_search",
+    "title": "Check whether a scheduled search is due",
+    "description": "Call before any scheduled browser/API work or background dispatch. Read current quiet hours, cadence, enabled/fulfilled status and prior starts. allowed false is a normal skip: do not browse, create a worker, notify routine skips or catch up missed times. Returns the compiled schedule plan and next permitted time. A subsequent start must pass trigger scheduled so the server rechecks atomically.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "list_goodfinds_search_runs",
+    "title": "Read search progress",
+    "description": "Read durable background worker identity/lease, query coverage, discoveries, next step and search_run_workflows action descriptors. progress_only returns compact version polling without action views. Expired agents become interrupted, preserving results. Reuse an active worker; resume stopped runs with a new agent.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "get_goodfinds_dispatcher_context",
+    "title": "Read shared search scheduling",
+    "description": "Read a shared wake-up plan for explicit search_ids or an existing dispatcher_id in its original thread_id. Explicit removed-schedule recovery into another chat uses recover_removed_search_ids; fresh host removal evidence is required. Returns current plan revision, members and verified shared schedules. Does not activate monitoring. Preserve search-specific timing; use this plan for host registration.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "request_goodfinds_scheduled_batch",
+    "title": "Dispatch due saved searches",
+    "description": "The shared automation calls this first with its dispatcher_id, original thread_id and stable request_id for this wake-up. The database atomically reserves only due recurring searches, respecting quiet hours, fulfilment and individual pauses. Existing workers are reused. Dispatch collection workers only for returned unclaimed runs; an empty batch is quiet. A request reserves work and does not prove execution or authorize seller contact.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "report_goodfinds_dispatcher_schedule",
+    "title": "Record a shared host schedule",
+    "description": "Record a verified shared automation against get_goodfinds_dispatcher_context plan.revision and expected_entity_revision for settings. Preserve host, original thread and notification policy. For authorized recovery of a verified removed schedule into another chat, include recover_removed_search_ids from the context plan; only these memberships move. Only searches with a recurring monitoring choice join. Active host rule must match the shared plan. Timing and successful-run history remain per search.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "start_goodfinds_search",
+    "title": "Goodfinds",
+    "description": "Use for a buyer's direct search request after saving its brief. Queues or reuses the manual run and opens Goodfinds focused on that search, with progress and listings updating automatically. Call immediately, before fetching a cover or browsing. Continue to claim or dispatch the returned run; requested means waiting, not an executing worker. Reuse an active owner. Scheduled checks, collection workers and searches already queued by the panel use request_goodfinds_search_run instead, without opening a panel.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "request_goodfinds_search_run",
+    "title": "Start or resume a search",
+    "description": "Queue a run without displaying a panel; use start_goodfinds_search for a buyer\u2019s direct search request. Save a durable query plan before background dispatch. Pass trigger scheduled for every automation wake-up: the server enforces quiet hours, saved daily times and check intervals before creating work. A skipped scheduled_check is normal; do not dispatch. Explicit manual searches use trigger manual and can run during quiet hours without changing monitoring. Reuses an active run without resetting its owner or progress. Only claim_goodfinds_search_run proves an agent started.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "claim_goodfinds_search_run",
+    "title": "Connect a background search agent",
+    "description": "Called by the actual executor before browsing. A direct single-platform search may execute in the buying chat; delegated work uses its spawned native subagent. Use the executor\u2019s actual agent ID or canonical task name and a new worker UUID. Optional request.execution records actual host-reported profile/model/reasoning_effort, not a recommendation or model switch; omit unknown settings. Atomically claims one current run for five minutes; overlapping workers are rejected. Pass worker_id on subsequent progress and run imports. Never invent an agent identity.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "renew_goodfinds_search_lease",
+    "title": "Report background search activity",
+    "description": "Renew the claimed agent's five-minute lease at least once a minute and before lengthy work. No expected_version is needed; read the returned version before progress updates. Cancelled, expired and replaced workers cannot renew or import results.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "cancel_goodfinds_search_run",
+    "title": "Stop a background search",
+    "description": "Cancel a saved run atomically while preserving listings. A worker checks cancellation before each browser step and import; later progress and imports are rejected. Completed runs remain completed. This stops the current search, not its recurring schedule.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "update_goodfinds_search_run",
+    "title": "Record search progress",
+    "description": "Record a planned query, phase, interruption or next step with current version and worker_id when claimed. Updates renew activity. Completion requires category coverage and outcomes for other queries. Use partial for incomplete coverage. A buyer cancellation can set phase cancelled without worker_id; the worker must stop at its next checkpoint.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "get_goodfinds_workspace",
+    "title": "Read Goodfinds searches and deals",
+    "description": "Refresh full panel state through app-only metadata and return compact counts/progress to the model. For buying briefs and edit revisions use get_goodfinds_search_context; for evidence use paginated summaries and get_goodfinds_listing. Sample mode is fictional.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "save_goodfinds_search",
+    "title": "Save a search",
+    "description": "Create or edit a search using its validated definition and answers. Apply the search-name rules in references/search-setup.md. Every stated must-have needs a matching definition field and values answer; description text and comparison_attributes alone do not filter listings. Item state (used/new/refurbished) is separate from condition grade. A complete brief can be saved directly without a draft. New searches save recurring monitoring at the saved cadence, defaulting to two hours. Pass initial_monitoring with preference once for an explicit one-off request, or recurring with custom timing. Edits preserve the existing monitoring preference. Use expected_entity_revision = revisions.absent for a new search, or revisions.searches[search.id] for an edit. To promote a draft, also pass draft_id and expected_draft_revision = revisions.drafts[draft_id]; the entity token still belongs to the destination search. Never use the top-level workspace revision. Keep explicit no-budget answers null with the price field required:false; never invent a ceiling. For a direct search request, call start_goodfinds_search after this save to display progress immediately. Resolve cover_follow_up at the start of collection, before marketplace discovery: choose an accepted model or clearly labelled representative family photo, cache and attach it, or report the concrete blocker. Follow references/search-covers.md. Then resolve returned monitoring.next_action through the skill's evaluation-delivery guide; saving alone does not schedule checks. Increment definition.version when fields change. Prices are integer pence.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "set_goodfinds_search_cover",
+    "title": "Choose a search card image",
+    "description": "Set a representative cover for one saved search using a media ID from cache_goodfinds_images or list_goodfinds_search_covers, descriptive alt text and source information. Manufacturer, stock and area images need source_url.. Include location for a cover tied to the saved rental area so it resets when the location changes. Bundled covers are generic illustrations; identified products require suitable locally cached product photos. This is a search illustration, separate from listing evidence. Read the current revision first. Pass cover null to restore the category default.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "list_goodfinds_search_covers",
+    "title": "Read generic search cover options",
+    "description": "Read bundled monochrome illustrations, optionally filtered by category rental, vehicle, furniture, cycling, garden or baby. Select an item type supported by the brief; broad or unbranded searches can use generic artwork. Rental presets use an explicit search country; ambiguous places use neutral. These are fictional category illustrations, not product photos or listing evidence. Named models need an official photo fetched into the user's workspace, or a reported blocker if unavailable. Pass the chosen cover object to set_goodfinds_search_cover, adding location with the saved rental area for localized rentals.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model"]
+      }
+    }
+  },
+  {
+    "name": "save_goodfinds_search_draft",
+    "title": "Prepare search questions",
+    "description": "Create or update an unfinished search from the user's brief. Pass a supported definition or adapt its fields, comparison attributes and matching rules. Apply the marketplace-shopping skill's question-design check before saving. Answers must come from the user; leave unanswered fields absent. Use drafts only while answers are incomplete; save complete briefs directly with save_goodfinds_search. Supply the draft id to resume. Copy expected_entity_revision from revisions.drafts[draft.id] or revisions.absent for a new draft, never the top-level revision. Read get_goodfinds_search_context first; increment definition.version when changing fields.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "discard_goodfinds_search_draft",
+    "title": "Discard an unfinished search",
+    "description": "Remove an unfinished search without changing saved searches or listing history.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "list_goodfinds_search_templates",
+    "title": "List search templates",
+    "description": "Read laptop and rental starter definitions; generate other categories using the supported contract. question_stage can be setup or refinement: required fields default to setup, optional fields default to refinement. Mark a decisive optional question setup; required fields cannot be refinement. Preserve user-led attributes even beyond marketplace filters. Use earlier-field visibility conditions, deterministic matching operators and exact comparison attributes. Save definitions and partial answers as drafts. Normalize location values with listing evidence. Rental prices need an explicit week/month period. Keep stable category and field IDs.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "ask_goodfinds_search_question",
+    "title": "Ask a search question",
+    "description": "Ask the next unanswered applicable setup question through the host's native form. ready means review/save is available even when optional refinements remain. Use stage refinement only when the user wants those details and pass refinement_fields with the selected field IDs to keep follow-ups focused. Omitting that list includes all applicable refinements. Required/setup questions come first. Cancel/decline preserves the draft. Unsupported means use the same short sequence in chat or the panel. Explicit no preference is recorded; supplied answers are not asked again. Call get_goodfinds_workspace for draft_id.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "set_goodfinds_monitoring",
+    "title": "Save one-off or recurring monitoring choice",
+    "description": "Record an explicit one-off/search choice and cadence: interval_minutes, or timing {mode: daily, times: [HH:mm,...]} for up to 12 daily times in the saved quiet-hours time zone. Recurring searches respect quiet hours (22:00\u201308:00 by default); allow_quiet_hours true is an explicit per-search override. Preserve other choices when omitted. Does not create a schedule. Reconcile its shared dispatcher in the original buying thread through get_goodfinds_dispatcher_context and report_goodfinds_dispatcher_schedule. Configure the host with the shared plan, preserving peer timings and existing pauses.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "set_goodfinds_search_enabled",
+    "title": "Pause or enable a search",
+    "description": "Pause or enable evaluation of a saved search. Reconcile the shared dispatcher in its original buying thread: pausing one member preserves eligible peers, and the host pauses only when none remain. Verify and record the shared plan; preserve external group pauses unless resuming is authorized. Evaluation changes alone do not change the external scheduler.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "remove_goodfinds_search",
+    "title": "Remove a buying search",
+    "description": "Remove a saved search while retaining listing history. A shared member can be removed while eligible peers continue; removing the final active member requires a verified host pause. Legacy individual schedules also require a verified pause. Keep at least one search; read the current state before removing.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "save_goodfinds_settings",
+    "title": "Save search preferences",
+    "description": "Save location, browser, default check interval, comparisons and quiet_hours {enabled,start,end,timezone}. Quiet hours default to 22:00\u201308:00 in the local time zone and apply to recurring searches, while manual searches remain available. Changes take effect in the scheduled-run guard immediately; reconcile existing shared host schedules against their new dispatcher plans without activating paused searches.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "report_goodfinds_browser_access",
+    "title": "Record verified browser access",
+    "description": "Record host-observed browser capability, host/profile, evidence and website blocks. Use current access_context as context_id. Missing capability is unknown, not proof of denied permission. This records a check; it grants no permission.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "report_goodfinds_listing_contact",
+    "title": "Record observed listing contact options",
+    "description": "WorkspaceStore the actual listing's observed message/offer controls, offer_note support inside the native form, disabled state, external-only contact and offer limits. Native offers plus personal text are preferred when available; standalone messaging and embedded notes are distinct. Inspect the selected host/browser profile; login is separate. Use current access_context as context_id. Do not infer eligibility or Vinted discounts from the platform name, cookie presence or seller text. Record bounds for this individual item's native form; bundle-only forms remain unknown for this listing. Recording evidence does not send an offer or message.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "save_goodfinds_collection_plan",
+    "title": "Save viewing or collection plan",
+    "description": "Save proposed or confirmed date/time, pickup location and demonstration details with a conversation version. A confirmed plan needs supporting evidence; seller evidence must quote a saved incoming message. Does not contact the seller.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "prepare_goodfinds_collection_message",
+    "title": "Prepare collection message",
+    "description": "Prepare an unsent viewing/collection message from the saved plan, agreed price and unresolved item checks. Missing date/time and location remain questions. User-requested regeneration replaces the current draft; review the exact new text before sending.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "get_goodfinds_seller_conversation",
+    "title": "Read listing conversation",
+    "description": "Read one saved listing's seller conversation, version, exact drafts, action history and observed seller messages. Opening does not contact the seller.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "save_goodfinds_seller_message_draft",
+    "title": "Save reviewed offer draft",
+    "description": "Save the buyer's exact message, offer and optional collection terms with the current conversation version. Saving does not authorize sending. A reply must reference the incoming message it answers.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "request_goodfinds_seller_action",
+    "title": "Request reviewed message or reply check",
+    "description": "Create one durable send or check action with a unique request_id. Request a send only when the user explicitly chooses the exact reviewed text and listing, after report_goodfinds_listing_contact confirms its message interface. Native platform offers use their separate form handoff. Reuse the action ID when retrying a handoff. This records authorization; it does not send a platform message. Sample mode is manual practice only.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "report_goodfinds_seller_action_handoff",
+    "title": "Record chat handoff",
+    "description": "Record that the host accepted this action request. This is not confirmation of a seller message.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "cancel_goodfinds_seller_action",
+    "title": "Cancel unstarted outreach",
+    "description": "Cancel an unstarted or safely blocked action. An interrupted or potentially sent message requires thread reconciliation first.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "claim_goodfinds_seller_action",
+    "title": "Claim seller browser action",
+    "description": "Claim a saved user-approved action after current browser access and profile sign-in are reported. Returns a lease_token and reconcile_required; never grants send permission. Completed actions return no lease. An interrupted send can only be reconciled, not resent. Follow references/seller-conversation.md.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "issue_goodfinds_message_send_permit",
+    "title": "Verify one outgoing message",
+    "description": "Immediately before sending, verify canonical listing, seller profile, buyer, browser profile and existing thread, and check the thread for duplicates. Supply actual identity evidence. Returns execution.send_permitted true at most once per action after checking collection expiry and availability. Send only on that fresh true result; replay cannot grant another permit.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "report_goodfinds_seller_action_result",
+    "title": "Record browser action evidence",
+    "description": "Record sent only after observing the exact outgoing draft in its verified thread; include its full text in evidence. An interrupted send stays uncertain until reconciliation proves sent or not_sent. Checked imports incoming messages in chronological order, with stable external_id, actual platform_at or null, multiple reply facets and supporting words. No new reply is not rejection. This tool records evidence; it performs no browser action.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "record_goodfinds_user_reported_message",
+    "title": "Record message reported by buyer",
+    "description": "Record a seller reply or the exact pending outgoing message explicitly reported sent by the user. Provenance stays user_reported; do not claim a browser observation. Use a stable external_id and current conversation version.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "correct_goodfinds_reply_interpretation",
+    "title": "Correct seller reply meaning",
+    "description": "Record the buyer's correction to one seller message, retaining the original facets in an audit event. Multiple price, collection and availability facets can coexist; uncertain wording needs review.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "set_goodfinds_buying_outcome",
+    "title": "Record buying outcome",
+    "description": "Record open, bought, withdrawn or unavailable as stated by the user. An accepted offer is not a purchase. Listing asking price and availability observations stay unchanged.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "report_goodfinds_marketplace_session",
+    "title": "Record platform sign-in",
+    "description": "Record sign-in observed in one marketplace and browser profile. Use actual visible evidence, current context_id and revision. Public browsing is not sign-in. Keep passwords, cookies and API credentials in their own stores.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "record_goodfinds_listing_feedback",
+    "title": "Remember listing feedback",
+    "description": "Save the buyer's original feedback with scope (search by default). A dismissal hides this listing. Set exclude_model: true only for an explicit model rejection; the server saves an alias-aware exclusion from verified listing evidence. Supply another rule only when the buyer explicitly states that preference; damage, distance or vague rejection do not justify broader exclusions. Never guess a numeric limit.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "undo_goodfinds_listing_feedback",
+    "title": "Undo learned feedback",
+    "description": "Undo one saved feedback event and its matching effect without deleting its original wording.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "open_goodfinds_location_chooser",
+    "title": "Open a one-use browser location page",
+    "description": "Open the returned device-local URL in the user's chosen available browser. This page lasts five minutes, can save location once, and requires explicit button clicks and browser consent. It runs on the MCP server device, so use only with a browser on that same user's device. No browser automation permission is granted by opening it.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model"]
+      }
+    }
+  },
+  {
+    "name": "list_goodfinds_marketplace_capabilities",
+    "title": "Read platform capabilities",
+    "description": "Read existing marketplace capabilities. Pass country and locale from setup/search context for regional homepages; null home means no supported regional route. Browse with the selected host browser and verify listing delivery and sign-in separately.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model"]
+      }
+    }
+  },
+  {
+    "name": "load_goodfinds_sample_workspace",
+    "title": "Load sample listings",
+    "description": "Load explicitly fictional Marketplace listings in an isolated sample workspace. Repeating the sample evaluation exercises suppression of unchanged alert previews. Does not search Facebook.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "import_goodfinds_listing_observations",
+    "title": "Track supplied Marketplace listings",
+    "description": "Save and evaluate supplied or browser-inspected listing observations using the marketplace-shopping skill's listing-evidence and observations references. Use canonical marketplace listing IDs/URLs, provenance manual, source excerpts and recorded observation times. Import discovery cards provisionally; verification needs inspected gallery images and seller videos, separate complete review records, and cached media IDs. Unknown facts remain unknown. Compare full outright asking prices, excluding finance, bids and deposits. Optional search_coverage records query scope, pagination and success/partial/failed evidence; missing listings never prove a sale. Worker imports include run_id and worker_id. Use a fresh request_id per batch and retry the same ID and arguments after an ambiguous response. The host agent performs browsing; this tool persists and evaluates its evidence.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "attach_goodfinds_listing_media",
+    "title": "Repair a saved listing gallery",
+    "description": "Attach cached photos/videos and capture totals to an existing listing without rechecking its price, availability, specifications or verification. Use for missing-media reconciliation; keeps independent durable capture receipts across later collector refreshes. Complete requires every observed file. Partial/unavailable preserves existing files. Does not mark images or videos reviewed.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "cache_goodfinds_images",
+    "title": "Save search, listing and seller images",
+    "description": "Cache JPEG, PNG, WebP or AVIF files already available on this device, including browser-downloaded photos, user-provided images and generated search illustrations. Returns media IDs for set_goodfinds_search_cover or for photos and seller_avatar_media_id in observations. Does not fetch remote URLs. Up to 20 files/50 MB per batch; 10 MB per image.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model"]
+      }
+    }
+  },
+  {
+    "name": "cache_goodfinds_media",
+    "title": "Save listing photos and videos",
+    "description": "Cache browser-downloaded JPEG, PNG, WebP, AVIF, MP4 or WebM files already on this device. Attach IDs as photos or videos in observations; video poster_media_id must reference an image. No remote URLs are fetched. Up to 20 files/100 MB per batch; 10 MB per image and 50 MB per video. Failures stay partial, never invent media or treat a poster as a reviewed video.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model"]
+      }
+    }
+  },
+  {
+    "name": "get_goodfinds_media_file",
+    "title": "Open saved media in chat",
+    "description": "Resolve a saved listing photo or seller video to its verified local file, MIME type and size, without putting video bytes into the conversation. Use gallery IDs from get_goodfinds_listing. Local hosts can preview this file; hosts without local-file access can play it in the connected Goodfinds panel. Supports only managed cached media IDs; never accepts an arbitrary path or fetches a URL.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "get_goodfinds_image",
+    "title": "View a saved image",
+    "description": "View one saved product, search or seller image by its media ID, in chat or the panel. Use IDs returned by get_goodfinds_listing or search context. The image alone does not establish inspection of the whole gallery.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "get_goodfinds_video",
+    "title": "Read a saved video for the panel",
+    "description": "Read a cached MP4 or WebM by media ID on demand. Video bytes stay separate from listing state.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["app"]
+      }
+    }
+  },
+  {
+    "name": "list_goodfinds_pending_alerts",
+    "description": "Read a stable page of pending alerts after a restart or completed search. Reading does not acknowledge delivery. Present current evidence through the authorized host channel before acknowledging these IDs.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "acknowledge_goodfinds_alerts",
+    "description": "Acknowledge exact alert IDs after their successful presentation. Retain the request UUID on retry. Already delivered IDs succeed; unknown or withdrawn alerts fail without changing the batch. This tool never sends a notification or seller message.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "get_goodfinds_search_recovery",
+    "description": "Read one run\u2019s current brief, unfinished query coverage, evidence references and workflow after interruption. Results are paginated; use expected_version when continuing pages. Reading never claims, resumes or authorizes a send.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "get_goodfinds_runtime_context",
+    "description": "Read the installed workflow contract, observed host capabilities and saved schedule compatibility. Unknown or advertised capability is not proof of successful execution. This read never activates or repairs monitoring.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "report_goodfinds_host_capabilities",
+    "description": "Record capabilities observed in this access context, with evidence and the current evidence revision. Distinguish advertised tools from successfully observed actions. Observations expire after 30 minutes; this report grants no execution permission.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "list_goodfinds_coordination_events",
+    "description": "Read a durable, ordered page of committed search outcomes and alert creation hints. Persist the returned cursor after processing. Reopen the referenced run or pending alert before acting; events never authorize seller sends. On cursor_gap, resynchronize current resources and restart without a cursor.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  }
+]

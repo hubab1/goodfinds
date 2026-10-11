@@ -8,8 +8,8 @@ import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { Clock, Effect } from "effect";
 import { rrulestr } from "rrule";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
-import { createGoodfindsServer } from "./reference-server/src/entrypoints/mcp.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
+import { createNativeServer } from "./helpers/native-mcp.ts";
 import { operations } from "@goodfinds/contracts/operations";
 import { dispatcherPlan } from "@goodfinds/contracts/scheduled-dispatch";
 import { revisionFor } from "./helpers/revisions.ts";
@@ -23,7 +23,7 @@ function fixture(t: TestContext, observed = false) {
   const root = mkdtempSync(resolve(tmpdir(), "goodfinds-dispatch-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const automations = resolve(root, "automations");
-  const store = new WorkspaceStore(
+  const store = new NativeWorkspace(
     seedWorkspace(resolve(root, "data")),
     "live",
     observed ? automations : null,
@@ -137,6 +137,7 @@ function fixture(t: TestContext, observed = false) {
     report,
     batch,
     writeHost,
+    removeHost: () => rmSync(resolve(automations, automation), { recursive: true, force: true }),
     at: (value: string) => {
       now = Date.parse(value);
     },
@@ -166,7 +167,11 @@ void test("shared wake-ups preserve hourly and two-hour searches and reserve onl
   assert.equal(f.batch().runs.length, 3);
   f.at("2026-10-08T22:00:00Z");
   assert.equal(f.batch().runs.length, 0);
-  assert.equal(f.state().config.monitoring[1]?.interval_minutes, 120);
+  for (const [index, searchId] of f.ids.entries())
+    assert.equal(
+      f.state().config.monitoring.find((m) => m.search_id === searchId)?.interval_minutes,
+      index ? 120 : 60,
+    );
 });
 
 void test("replayed wake-ups and competing wake-ups reuse reservations and claimed workers", (t) => {
@@ -290,51 +295,19 @@ void test("exact daily unions avoid cross-products; incompatible continuous grou
   assert.throws(() => f.report(), /recurrence/i);
 });
 
-void test("legacy migration verifies redundant pauses, original chat and per-search history", (t) => {
-  const f = fixture(t);
-  const legacy = (search_id: string, status: string, automation_id: string, thread_id = f.thread) =>
-    f.change("report_host_schedule", {
-      report: {
-        search_id,
-        status,
-        automation_id,
-        thread_id,
-        interval_minutes: 120,
-        evidence: "Verified legacy host",
-        last_run_at: "2026-10-07T20:00:00Z",
-      },
-    });
-  legacy(required(f.ids[1]), "active", "old-mac");
-  assert.throws(() => f.report(), /redundant automation/i);
-  legacy(required(f.ids[1]), "paused", "old-mac");
-  f.report();
-  assert.ok(f.state().config.monitoring.every((m) => m.schedule === null));
-  assert.equal(
-    f.state().monitoring.find((m) => m.search_id === f.ids[1])?.schedule?.last_run_at,
-    "2026-10-07T20:00:00Z",
-  );
-  assert.equal(
-    f.state().monitoring.find((m) => m.search_id === f.ids[0])?.schedule?.last_run_at,
-    null,
-  );
-  assert.throws(() => f.report("active", f.ids, f.id, { thread_id: randomUUID() }), /original/i);
-  assert.throws(
-    () => f.report("active", f.ids, f.id, { notification_policy: "failed_runs_only" }),
-    /notification/i,
-  );
-  assert.throws(
-    () => f.report("active", [required(f.ids[0])], randomUUID()),
-    /another dispatcher/i,
-  );
-});
-
 void test("blocked reconciliation preserves the verified shared receipt and membership", (t) => {
   const f = fixture(t);
   f.report();
   const previous = f.state().config.dispatchers[0];
+  const unrelated = f.state().config.monitoring.filter((m) => !f.ids.includes(m.search_id));
   f.report("blocked");
   assert.deepEqual(f.state().config.dispatchers[0], previous);
-  assert.ok(f.state().config.monitoring.every((m) => m.interruption));
+  for (const searchId of f.ids)
+    assert.ok(f.state().config.monitoring.find((m) => m.search_id === searchId)?.interruption);
+  assert.deepEqual(
+    f.state().config.monitoring.filter((m) => !f.ids.includes(m.search_id)),
+    unrelated,
+  );
 });
 
 void test("eligibility excludes undecided, disabled and fulfilled goals from shared wake-up plans", (t) => {
@@ -350,7 +323,7 @@ void test("eligibility excludes undecided, disabled and fulfilled goals from sha
 
 void test("MCP forwards dispatcher selectors and advertises the batch protocol", async (t) => {
   const f = fixture(t);
-  const app = createGoodfindsServer(seedWorkspace(f.store.base));
+  const app = createNativeServer(seedWorkspace(f.store.base));
   t.after(() => app.server.close());
   const tool = app.calls.get("get_goodfinds_dispatcher_context");
   assert.ok(
@@ -410,4 +383,82 @@ void test("only the member that completes a real scheduled search records succes
     "2026-10-08T08:00:00.000Z",
   );
   assert.equal(summaries.find((m) => m.search_id === f.ids[1])?.schedule?.last_run_at, null);
+});
+
+void test("explicit removed-schedule recovery moves only the requested search and preserves peers", (t) => {
+  const f = fixture(t, true);
+  f.writeHost();
+  f.report();
+  const searchId = required(f.ids[0]);
+  const targetThread = randomUUID();
+  const context = (recover = true) =>
+    Effect.runSync(
+      f.store.query("get_dispatcher_context", {
+        thread_id: targetThread,
+        search_ids: [searchId],
+        ...(recover ? { recover_removed_search_ids: [searchId] } : {}),
+      }),
+    );
+  f.removeHost();
+  assert.throws(() => context(false), /buying chat/);
+  const plan = operations.get_dispatcher_context.output.parse(context()).plan;
+  f.writeHost("PAUSED");
+  assert.throws(() => context(), /verified removed/);
+  f.writeHost();
+  assert.throws(() => context(), /verified removed/);
+  f.removeHost();
+  const before = f.state().config;
+  const targetId = randomUUID();
+  const report = {
+    dispatcher_id: targetId,
+    thread_id: targetThread,
+    search_ids: [searchId],
+    recover_removed_search_ids: [searchId],
+    plan_revision: plan.revision,
+    schedule: {
+      automation_id: "replacement",
+      thread_id: targetThread,
+      status: "active",
+      interval_minutes: plan.interval_minutes,
+      rrule: plan.rrule,
+      timezone: plan.timezone,
+      evidence:
+        "Buyer selected Restore schedule; original chat unavailable; old schedule verified removed",
+    },
+  };
+  assert.throws(
+    () =>
+      f.change("report_dispatcher_schedule", {
+        report: { ...report, recover_removed_search_ids: [] },
+      }),
+    /another dispatcher/,
+  );
+  assert.throws(
+    () =>
+      f.change("report_dispatcher_schedule", {
+        report: { ...report, notification_policy: "failed_runs_only" },
+      }),
+    /notification settings/,
+  );
+  f.writeHost();
+  assert.throws(() => f.change("report_dispatcher_schedule", { report }), /verified removed/);
+  assert.deepEqual(
+    f.state().config,
+    before,
+    "A revived source schedule prevents recovery atomically",
+  );
+  f.removeHost();
+  f.change("report_dispatcher_schedule", { report });
+  const after = f.state().config;
+  assert.deepEqual(after.dispatchers.find((d) => d.id === f.id)?.search_ids, f.ids.slice(1));
+  assert.deepEqual(after.dispatchers.find((d) => d.id === targetId)?.search_ids, [searchId]);
+  assert.deepEqual(
+    after.monitoring,
+    before.monitoring,
+    "Cadences, pauses and prior execution history remain unchanged",
+  );
+  assert.deepEqual(
+    after.dispatchers.find((d) => d.id === f.id)?.schedule,
+    before.dispatchers[0]?.schedule,
+  );
 });

@@ -108,7 +108,7 @@ export function SearchHours({
           Save search hours
         </Button>
         <div className="space-y-2 pt-2">
-          <Label htmlFor="default-search-interval">Search every (minutes)</Label>
+          <Label htmlFor="default-search-interval">Search every (mins)</Label>
           <Input
             key={interval}
             id="default-search-interval"
@@ -120,7 +120,7 @@ export function SearchHours({
             onBlur={(event) => {
               const minutes = Number(event.currentTarget.value);
               if (!Number.isInteger(minutes) || minutes < 15 || minutes > 1440) {
-                setError("Enter a number of minutes from 15 to 1440.");
+                setError("Enter a number from 15 to 1440 mins.");
                 return;
               }
               setError("");

@@ -11,6 +11,17 @@ path = "src/lib.rs"
 name = "goodfinds"
 path = "src/main.rs"
 
+[features]
+test-support = []
+
+[[example]]
+name = "test-driver"
+required-features = ["test-support"]
+
+[[example]]
+name = "coordination-benchmark"
+required-features = ["test-support"]
+
 [dependencies]
 axum = "0.8"
 base64 = "0.22"
@@ -62,3 +73,8 @@ panic = "abort"
 [build-dependencies]
 flate2 = "1"
 serde_json = "1"
+
+[profile.test-support]
+inherits = "dev"
+debug = 0
+incremental = false

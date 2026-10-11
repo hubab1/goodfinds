@@ -12,6 +12,8 @@ function fixture() {
     request_id: randomUUID(),
     context_id: "connected-host",
     status: "queued",
+    version: 1,
+    worker: null,
     message: "Waiting…",
     created_at: stamp,
     updated_at: stamp,

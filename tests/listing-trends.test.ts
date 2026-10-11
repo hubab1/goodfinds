@@ -7,11 +7,8 @@ import { Effect } from "effect";
 import { SEARCH_TEMPLATES } from "@goodfinds/contracts/search-definition";
 import { listingSchema, savedSearchSchema, stateSchema } from "@goodfinds/contracts/state";
 import type { Listing, MarketHistory } from "@goodfinds/contracts/state";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
-import {
-  connect,
-  evaluateObservations,
-} from "./reference-server/src/platform/listing-evaluation-sqlite.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
+import { connect, evaluateObservations } from "./helpers/native-domain.ts";
 import sampleRows from "../skills/marketplace-shopping/assets/demo-listings.json" with { type: "json" };
 import {
   clusterPoints,
@@ -269,7 +266,7 @@ void test("the maximum-price line stays in range, one-date charts scale, and ove
 void test("real server snapshots expose cohort keys and observation history usable by the panel", (t) => {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-trends-"));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  const store = new WorkspaceStore(folder, "sample");
+  const store = new NativeWorkspace(folder, "sample");
   const state = stateSchema.parse(Effect.runSync(store.request("load_sample_workspace")).state);
   const saved = state.searches[0];
   assert.ok(saved);
@@ -293,7 +290,7 @@ void test("real server snapshots expose cohort keys and observation history usab
 void test("stored cross-platform IDs remain separate until a confirmed relationship merges them", (t) => {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-trend-copies-"));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  const store = new WorkspaceStore(folder, "sample");
+  const store = new NativeWorkspace(folder, "sample");
   Effect.runSync(store.request("get_workspace"));
   const config = Effect.runSync(store.config());
   const db = Effect.runSync(connect(store.databasePath));

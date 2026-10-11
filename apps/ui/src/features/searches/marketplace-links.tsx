@@ -28,17 +28,31 @@ export function MarketplaceLinks({ search, country }: { search: SavedSearch; cou
         </NativeSelect>
       </label>
       <div className="mt-3 flex flex-wrap gap-3">
-        {(search.marketplaces ?? ["facebook_marketplace"]).map((source) => (
-          <a
-            key={source}
-            className="underline underline-offset-4"
-            href={marketSearchUrl(source, query, country)}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {MARKETPLACES.find((marketplace) => marketplace.id === source)?.name}
-          </a>
-        ))}
+        {(search.marketplaces ?? ["facebook_marketplace"]).map((source) => {
+          const url = marketSearchUrl(
+            source,
+            query,
+            search.market?.country ?? country,
+            search.market?.locale,
+          );
+          if (!url)
+            return (
+              <span key={source}>
+                {MARKETPLACES.find((m) => m.id === source)?.name}: no regional route
+              </span>
+            );
+          return (
+            <a
+              key={source}
+              className="underline underline-offset-4"
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {MARKETPLACES.find((marketplace) => marketplace.id === source)?.name}
+            </a>
+          );
+        })}
       </div>
     </details>
   );

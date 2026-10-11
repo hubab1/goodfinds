@@ -1,9 +1,9 @@
 # Checked seller-send specification
 
 Lean checks a focused model of seller permission and reconciliation. Rust runs the
-production server. Proofs establish properties of the model; the existing comparison
-tests exercise the retained TypeScript reference implementation. Native tests separately
-check the Rust implementation. Neither test suite formally verifies the production server.
+production server. Proofs establish properties of the model; comparison tests exercise the native Rust
+implementation through a test-only driver. Native tests also check runtime behavior.
+Neither test suite formally verifies the production server.
 
 ## Scope
 
@@ -13,8 +13,8 @@ rule spans claiming, expiry and reconciliation, so checking all modeled finite h
 adds value beyond individual recovery examples.
 
 Search runs, connection checks and command receipts use native guards and integration
-tests, with shared TypeScript contracts and reference tests. Extend the formal specification only for a precise, consequential guarantee that
-justifies a separately maintained model.
+tests against shared TypeScript contracts. Extend the formal specification only for a
+precise, consequential guarantee that justifies a separately maintained model.
 
 ## Run the checks
 
@@ -33,8 +33,10 @@ LEAN_NUM_THREADS=1 lake env leanchecker Goodfinds
 ```
 
 The script also recognizes an isolated elan installation in `.local/elan`. Installation
-and build output stay in ignored directories. The script limits kernel replay to one
-worker by default to bound memory; set `LEAN_NUM_THREADS` to override it. No Lean code
+and build output stay in ignored directories. The script limits Lean imports and kernel
+replay to one worker by default to bound memory; set `LEAN_NUM_THREADS` to override it.
+Each command has a four-minute deadline, and cancellation stops its Lake/Lean process
+group. Negative proof probes also follow the test's cancellation signal. No Lean code
 ships in the production server.
 
 ## Checked guarantees
@@ -51,17 +53,17 @@ fencing, and the validation facts required to record a sent result. `Audit.lean`
 transitive theorem dependencies, rejecting admitted proofs and custom axioms. Only Lean's
 standard logical axioms are allowed; negative tests check that the audit rejects failures.
 
-## How the reference implementation and Lean connect
+## How the native implementation and Lean connect
 
 The [development bridge](../scripts/formal-model.ts) builds the model into the native
 `seller_action_oracle` executable. The [comparison tests](../tests/formal-seller-action.test.ts)
-project records from the [TypeScript reference server](../tests/reference-server/README.md) into model states, send arrays of state/context/event cases
+project records from the native Rust workspace into model states, send arrays of state/context/event cases
 as JSON on standard input, and compare the JSON next states or rejections on standard
 output. They exercise seller guard boundaries and an actual stored history through
 permission, expiry, replacement ownership and reconciliation.
 
-The model and reference implementation are written separately. No TypeScript is
-translated into Lean, and Lean generates no production TypeScript. The proofs cover
+The model and native implementation are written separately. No Rust is
+translated into Lean, and Lean generates no production Rust. The proofs cover
 all modeled histories; the implementation comparisons cover only the cases exercised.
 An agreement test cannot establish general equivalence or validate a shared assumption.
 
@@ -107,12 +109,12 @@ meanings and diagrams; the proof inventory generates the seller claims.
 When seller permission or reconciliation semantics change, update the implementation,
 model and explanation together. Preserve proof obligations unless the intended requirement
 changes. An agent keeping files synchronized does not replace review of whether the
-requirement and abstraction are correct. Other lifecycle changes require native and reference
+requirement and abstraction are correct. Other lifecycle changes require native and application
 tests and generated explanations, with no Lean update.
 
 Run `bun run docs:generate`, then `bun run check` and affected domain tests. Keep successful
 execution and recovery examples so an overly restrictive model cannot pass by rejecting
-all work. Native and reference tests cover search recovery, connection cancellation during
+all work. Native and application tests cover search recovery, connection cancellation during
 persistence, receipt replay after later edits and transaction rollback.
 
 See the official [proof validation guide](https://lean-lang.org/doc/reference/latest/ValidatingProofs/)

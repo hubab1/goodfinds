@@ -13,10 +13,39 @@ import { scheduleIsActive } from "@goodfinds/contracts/monitoring";
 import { errorMessage } from "@goodfinds/contracts/state";
 import type { GoodfindsState, SavedSearch } from "@goodfinds/contracts/state";
 import type { Action } from "@/lib/actions";
+import { feedbackInputSchema } from "@goodfinds/contracts/discovery";
 import { mergeSeen, useSeenRecorder } from "@/features/listings/listing-seen";
+import { useFeedbackOutbox } from "@/features/listings/use-feedback-outbox";
+import { feedbackScope, mergeFeedback } from "@/features/listings/feedback-outbox";
+import type { FeedbackResponse } from "@/features/listings/feedback-outbox";
+import type { Dispatch, SetStateAction } from "react";
 
-export function useWorkspace(onSampleLoaded: () => void) {
-  const [state, setState] = useState<GoodfindsState>();
+export function useWorkspace(
+  onSampleLoaded: () => void,
+  onPanelOpened?: (searchId: string) => void,
+) {
+  const [baseState, setBaseState] = useState<GoodfindsState>();
+  const setState = useCallback<Dispatch<SetStateAction<GoodfindsState | undefined>>>(
+    (update) =>
+      setBaseState((current) => {
+        const next = typeof update === "function" ? update(current) : update;
+        if (
+          current &&
+          next &&
+          feedbackScope(current) === feedbackScope(next) &&
+          Date.parse(next.generated_at) < Date.parse(current.generated_at)
+        )
+          return current;
+        return next;
+      }),
+    [],
+  );
+  const savedFeedback = useCallback((response: FeedbackResponse) => {
+    setBaseState((current) => (current ? mergeFeedback(current, response) : current));
+  }, []);
+  const outbox = useFeedbackOutbox(baseState, savedFeedback);
+  const state = outbox.state;
+  const feedbackQueue = outbox.queue;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -50,6 +79,33 @@ export function useWorkspace(onSampleLoaded: () => void) {
 
   const action: Action = useCallback(
     async (name, args, message = "") => {
+      if (
+        state &&
+        feedbackQueue &&
+        (name === "record_goodfinds_listing_feedback" || name === "undo_goodfinds_listing_feedback")
+      ) {
+        try {
+          const feedback =
+            "feedback" in args ? feedbackInputSchema.parse(args.feedback) : undefined;
+          if (
+            name === "undo_goodfinds_listing_feedback" ||
+            feedback?.action === "dismiss" ||
+            feedback?.action === "shortlist"
+          ) {
+            let next;
+            if (name === "undo_goodfinds_listing_feedback" && "feedback_id" in args)
+              next = feedbackQueue.undo(args.feedback_id, state);
+            else if (feedback) next = feedbackQueue.record(feedback, state);
+            else throw new Error("Choose a listing to disregard.");
+            setError("");
+            setNotice(message);
+            return next;
+          }
+        } catch (failure) {
+          setError(errorMessage(failure));
+          return undefined;
+        }
+      }
       if (running.current) return undefined;
       running.current = true;
       setBusy(true);
@@ -69,26 +125,35 @@ export function useWorkspace(onSampleLoaded: () => void) {
         setBusy(false);
       }
     },
-    [mode, onSampleLoaded],
+    [mode, onSampleLoaded, state, feedbackQueue, setState],
   );
 
+  const presentSearch = useEffectEvent((searchId: string) => onPanelOpened?.(searchId));
   useEffect(() => {
     let active = true;
-    const unsubscribe = subscribeToState((next) => {
-      if (active) setState(next);
+    let receivedHostState = false;
+    const unsubscribe = subscribeToState((next, presentation) => {
+      receivedHostState = true;
+      if (active) {
+        setState(next);
+        if (presentation && next.searches.some((search) => search.id === presentation.search_id))
+          presentSearch(presentation.search_id);
+      }
     });
+    // Hosts can deliver the opening tool result before this fallback read resolves.
+    // Preserve that result's workspace (especially sample mode) in either ordering.
     void invoke("get_goodfinds_workspace", { mode: "live" })
       .then((next) => {
-        if (active) setState(next);
+        if (active && !receivedHostState) setState(next);
       })
       .catch((failure: unknown) => {
-        if (active) setError(errorMessage(failure));
+        if (active && !receivedHostState) setError(errorMessage(failure));
       });
     return () => {
       active = false;
       unsubscribe();
     };
-  }, []);
+  }, [setState]);
 
   const hasSavedSearches = (state?.searches.length ?? 0) > 0;
   const reloadChangedConfig = useEffectEvent(async (revision: string) => {
@@ -168,9 +233,12 @@ export function useWorkspace(onSampleLoaded: () => void) {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onVisible);
     };
-  }, [mode, hasSavedSearches]);
+  }, [mode, hasSavedSearches, setState]);
 
-  const progressKey = state?.search_runs.map((run) => `${run.id}:${run.version}`).join(",") ?? "";
+  const progressKey =
+    state?.search_runs
+      .map((run) => `${run.id}:${state.search_run_refresh_keys[run.id] ?? run.version}`)
+      .join(",") ?? "";
   const searching = state?.search_runs.some((run) => ACTIVE_SEARCH_PHASES.has(run.phase)) ?? false;
   useEffect(() => {
     if (!hasSavedSearches) return undefined;
@@ -181,9 +249,43 @@ export function useWorkspace(onSampleLoaded: () => void) {
       polling = true;
       try {
         const runs = await readSearchRuns(mode);
-        if (active && runs.map((run) => `${run.id}:${run.version}`).join(",") !== progressKey) {
-          const next = await invoke("get_goodfinds_workspace", { mode });
-          if (active) setState(next);
+        if (active && !running.current) {
+          if (
+            runs.map((run) => `${run.id}:${run.refresh_key ?? run.version}`).join(",") !==
+            progressKey
+          ) {
+            const next = await invoke("get_goodfinds_workspace", { mode });
+            if (active && !running.current) setState(next);
+          } else {
+            setState((current) => {
+              if (!current || current.mode !== mode) return current;
+              const changed = runs.some((run) =>
+                current.search_runs.some(
+                  (saved) => saved.id === run.id && saved.version < run.version,
+                ),
+              );
+              if (!changed) return current;
+              return {
+                ...current,
+                search_runs: current.search_runs.map((saved) => {
+                  const run = runs.find(
+                    (candidate) =>
+                      candidate.id === saved.id &&
+                      candidate.refresh_key === current.search_run_refresh_keys[saved.id] &&
+                      candidate.version > saved.version,
+                  );
+                  return run
+                    ? {
+                        ...saved,
+                        version: run.version,
+                        updated_at: run.updated_at ?? saved.updated_at,
+                        worker: run.worker === undefined ? saved.worker : run.worker,
+                      }
+                    : saved;
+                }),
+              };
+            });
+          }
         }
       } catch (failure) {
         if (active) setError(errorMessage(failure));
@@ -208,7 +310,7 @@ export function useWorkspace(onSampleLoaded: () => void) {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onVisible);
     };
-  }, [mode, progressKey, searching, hasSavedSearches]);
+  }, [mode, progressKey, searching, hasSavedSearches, setState]);
 
   return {
     state,
@@ -219,6 +321,12 @@ export function useWorkspace(onSampleLoaded: () => void) {
     action,
     searchNow,
     recordSeen,
+    feedbackSaves: {
+      pending: outbox.pending,
+      failed: outbox.failed,
+      storageError: outbox.storageError,
+      retry: () => feedbackQueue?.retry(),
+    },
     clearError: () => setError(""),
   };
 }

@@ -2,36 +2,26 @@ import { existsSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { z } from "zod";
+import { runFormalProcess } from "./formal-process.ts";
 
 export const formalDirectory = resolve(import.meta.dir, "../formal");
 const repositoryDirectory = resolve(formalDirectory, "..");
 const localElan = resolve(repositoryDirectory, ".local/elan");
 
-async function run(command: string[], input?: string): Promise<string> {
+async function run(command: string[], input?: string, signal?: AbortSignal): Promise<string> {
   const lake = command[0];
   const local = lake === resolve(localElan, "bin/lake");
-  const child = Bun.spawn(command, {
+  return runFormalProcess(command, {
     cwd: formalDirectory,
     env: {
       ...process.env,
       ...(local ? { ELAN_HOME: localElan } : {}),
-      // Each replay imports its own environment; bound checker memory on local/CI hosts.
-      ...(command.includes("leanchecker")
-        ? { LEAN_NUM_THREADS: process.env["LEAN_NUM_THREADS"] ?? "1" }
-        : {}),
+      // Probes also import the proof environment; bound all Lean processes, not only replay.
+      LEAN_NUM_THREADS: process.env["LEAN_NUM_THREADS"] ?? "1",
     },
-    stdin: input === undefined ? "ignore" : new TextEncoder().encode(input),
-    stdout: "pipe",
-    stderr: "pipe",
+    ...(input === undefined ? {} : { input }),
+    ...(signal ? { signal } : {}),
   });
-  const [stdout, stderr, code] = await Promise.all([
-    new Response(child.stdout).text(),
-    new Response(child.stderr).text(),
-    child.exited,
-  ]);
-  if (code !== 0)
-    throw new Error(`Formal check failed (${command.join(" ")}):\n${stdout}${stderr}`);
-  return stdout;
 }
 
 function lakeCommand(): string {
@@ -59,13 +49,17 @@ export async function evaluateSellerCases<S extends z.ZodType>(cases: unknown[],
   return schema.parse(JSON.parse(await run([oracle], JSON.stringify(cases))));
 }
 
-export async function auditFormalProbe(source: string): Promise<void> {
+export async function auditFormalProbe(source: string, signal?: AbortSignal): Promise<void> {
   await buildFormalModel();
   const directory = await mkdtemp(resolve(formalDirectory, ".lake/audit-probe-"));
   try {
     const file = resolve(directory, "Probe.lean");
     await writeFile(file, source);
-    await run([lakeCommand(), "env", "lean", file]);
+    await run(
+      [lakeCommand(), "env", "lean", `-j${process.env["LEAN_NUM_THREADS"] ?? "1"}`, file],
+      undefined,
+      signal,
+    );
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

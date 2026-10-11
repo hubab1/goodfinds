@@ -10,6 +10,7 @@ import { ResponsiveOverlay } from "@/components/ui/responsive-overlay";
 import { DISREGARD_REASONS } from "@/lib/listing-feedback";
 import type { Listing, GoodfindsState } from "@goodfinds/contracts/state";
 import type { Action } from "@/lib/actions";
+import type { FeedbackEvent } from "@goodfinds/contracts/discovery";
 
 export function ListingDisregard({
   listing,
@@ -24,7 +25,7 @@ export function ListingDisregard({
   action: Action;
   busy: boolean;
   preferredWatchId?: string | undefined;
-  onDisregarded?: ((id: string) => void) | undefined;
+  onDisregarded?: ((event: FeedbackEvent) => void) | undefined;
 }) {
   const searches = state.searches.filter((search) => search.product === listing.product);
   const selectedWatchId = searches.find((search) => search.id === preferredWatchId)?.id;
@@ -77,7 +78,7 @@ export function ListingDisregard({
             item.action === "dismiss" &&
             !item.undone,
         );
-        if (event) onDisregarded?.(event.id);
+        if (event) onDisregarded?.(event);
         setOpen(false);
       }
     } finally {
@@ -122,7 +123,7 @@ export function ListingDisregard({
               <Button
                 size="icon-sm"
                 variant="ghost"
-                className="rounded-l-none border-l border-white/30 focus-visible:relative focus-visible:z-10"
+                className="rounded-l-none border-l border-primary-foreground/30 focus-visible:relative focus-visible:z-10"
               />
             }
             aria-label="Choose a reason to disregard"

@@ -1,5 +1,4 @@
 import { seedWorkspace } from "./helpers/workspace.ts";
-import { connectionCheckStorage } from "./reference-server/src/platform/connection-checks-sqlite.ts";
 import test from "node:test";
 import type { TestContext } from "node:test";
 import assert from "node:assert/strict";
@@ -7,23 +6,15 @@ import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { Database } from "bun:sqlite";
-import { z } from "zod";
-import { Effect, Exit, Layer } from "effect";
-import { Backend, backendLayer } from "./reference-server/src/entrypoints/backend.ts";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
-import { createGoodfindsServer } from "./reference-server/src/entrypoints/mcp.ts";
-import { ConnectionChecks } from "./reference-server/src/connections/checks.ts";
+import { Effect, Exit } from "effect";
+import { nativeOptions } from "./helpers/native-mcp.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
+import { createNativeServer } from "./helpers/native-mcp.ts";
 import type {
   ConnectionCheckRun,
   ConnectionCheckObservation,
 } from "@goodfinds/contracts/connection-checks";
-import {
-  connectionCheckResultSchema,
-  CONNECTION_CHECK_DISPATCH_MS,
-  CONNECTION_CHECK_LEASE_MS,
-  CONNECTION_CHECK_TIMEOUT_MS,
-} from "@goodfinds/contracts/connection-checks";
+import { connectionCheckResultSchema } from "@goodfinds/contracts/connection-checks";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 import { MARKETPLACES } from "@goodfinds/contracts/integrations";
 
@@ -59,7 +50,7 @@ function parsed(raw: { structuredContent?: unknown; isError?: boolean | undefine
 
 function fixture(t: TestContext, mixed = false) {
   const root = mkdtempSync(resolve(tmpdir(), "goodfinds-connection-check-"));
-  const store = new WorkspaceStore(seedWorkspace(root));
+  const store = new NativeWorkspace(seedWorkspace(root));
   const initial = Effect.runSync(store.request("get_workspace")).state;
   Effect.runSync(
     store.request("save_settings", {
@@ -79,27 +70,12 @@ function fixture(t: TestContext, mixed = false) {
     }),
   );
   let browserId: string | null = "com.google.Chrome";
-  const layer = Layer.effect(
-    Backend,
-    Effect.map(Backend, (backend) => ({
-      ...backend,
-      request: (
-        action: Parameters<typeof backend.request>[0],
-        args: Parameters<typeof backend.request>[1],
-        mode: "live" | "sample",
-        guard?: Parameters<typeof backend.request>[3],
-      ) =>
-        backend.request(action, args, mode, guard).pipe(
-          Effect.map((result) => {
-            result.state.device_browser = browserId
-              ? { id: browserId, name: "Fixture Browser" }
-              : null;
-            return result;
-          }),
-        ),
-    })),
-  ).pipe(Layer.provide(backendLayer(root, null, () => Promise.resolve(null))));
-  const app = createGoodfindsServer(seedWorkspace(root), layer);
+  const app = createNativeServer(
+    seedWorkspace(root),
+    nativeOptions(root, null, async () =>
+      browserId ? { id: browserId, name: "Fixture Browser" } : null,
+    ),
+  );
   let closed = false;
   const close = async () => {
     if (!closed) {
@@ -435,305 +411,4 @@ void test("site-specific blocks preserve connected access and contradictory rout
     ),
   );
   assert.deepEqual((await f.state()).config, connected.config);
-});
-
-function completionInput(run: ConnectionCheckRun) {
-  return {
-    mode: "live",
-    run_id: run.id,
-    expected_version: run.version,
-    worker_id: run.worker?.id,
-    observations: [observation()],
-  };
-}
-
-async function coordinator(t: TestContext) {
-  const f = fixture(t);
-  const state = await f.state();
-  let now = Date.now();
-  const ports = {
-    readState: () => Promise.resolve(state),
-    record: async (
-      observations: readonly ConnectionCheckObservation[],
-      current: typeof state,
-      _mode: "live" | "sample",
-      signal: AbortSignal,
-      guard: (config: typeof state.config) => void,
-    ) => {
-      signal.throwIfAborted();
-      return (
-        await Effect.runPromise(
-          f.store.request(
-            "report_connections",
-            {
-              expected_entity_revision: current.revisions.evidence,
-              context_id: current.access_context,
-              reports: [...observations],
-            },
-            guard,
-          ),
-        )
-      ).state;
-    },
-  };
-  const checks = new ConnectionChecks(connectionCheckStorage(f.root), ports, () => now);
-  t.after(() => checks.close());
-  const queued = (
-    await checks.start({
-      mode: "live",
-      request_id: randomUUID(),
-      expected_entity_revision: state.revisions.settings,
-    })
-  ).run;
-  assert.ok(queued);
-  const claim = async (run: ConnectionCheckRun) => {
-    const next = (
-      await checks.claim({
-        mode: "live",
-        run_id: run.id,
-        expected_version: run.version,
-        worker_id: randomUUID(),
-        agent_id: "child",
-      })
-    ).run;
-    assert.ok(next);
-    return next;
-  };
-  return {
-    f,
-    ports,
-    state,
-    checks,
-    queued,
-    claim,
-    completion: completionInput,
-    advance: (ms: number) => {
-      now += ms;
-    },
-  };
-}
-
-void test("queued dispatch and claimed leases expire durably and cannot be revived", async (t) => {
-  const c = await coordinator(t);
-  c.advance(CONNECTION_CHECK_DISPATCH_MS + 1);
-  assert.equal((await c.checks.read({ mode: "live" })).run?.status, "interrupted");
-  await assert.rejects(c.claim(c.queued));
-  const next = (
-    await c.checks.start({
-      mode: "live",
-      request_id: randomUUID(),
-      expected_entity_revision: c.state.revisions.settings,
-    })
-  ).run;
-  assert.ok(next);
-  const running = await c.claim(next);
-  c.advance(CONNECTION_CHECK_LEASE_MS + 1);
-  await assert.rejects(c.checks.complete(c.completion(running)));
-  await assert.rejects(
-    c.checks.renew({ mode: "live", run_id: running.id, worker_id: running.worker?.id }),
-  );
-  assert.equal((await c.checks.read({ mode: "live" })).run?.status, "interrupted");
-  assert.deepEqual((await c.f.state()).config, c.state.config);
-});
-
-void test("heartbeats cannot extend a check beyond its total time limit", async (t) => {
-  const c = await coordinator(t);
-  const run = await c.claim(c.queued);
-  for (let elapsed = 60_000; elapsed < CONNECTION_CHECK_TIMEOUT_MS; elapsed += 60_000) {
-    c.advance(60_000);
-    // oxlint-disable-next-line eslint/no-await-in-loop -- Each heartbeat follows advancing the same live lease's clock.
-    const renewed = await c.checks.renew({
-      mode: "live",
-      run_id: run.id,
-      worker_id: run.worker?.id,
-    });
-    assert.equal(renewed.run?.status, "running");
-  }
-  c.advance(60_001);
-  assert.equal((await c.checks.read({ mode: "live" })).run?.status, "interrupted");
-});
-
-void test("cancellation by another coordinator during a delayed save prevents an evidence commit", async (t) => {
-  const c = await coordinator(t);
-  let reached!: () => void;
-  let release!: () => void;
-  const waiting = new Promise<void>((accept) => {
-    reached = accept;
-  });
-  const gate = new Promise<void>((accept) => {
-    release = accept;
-  });
-  const checks = new ConnectionChecks(connectionCheckStorage(c.f.root), {
-    ...c.ports,
-    record: async (...args) => {
-      reached();
-      await gate;
-      return c.ports.record(...args);
-    },
-  });
-  t.after(() => checks.close());
-  const run = await c.claim(c.queued);
-  const completion = checks.complete(c.completion(run));
-  await waiting;
-  await c.checks.cancel({ mode: "live", run_id: run.id });
-  release();
-  await assert.rejects(completion);
-  assert.equal((await c.checks.read({ mode: "live" })).run?.status, "cancelled");
-  assert.deepEqual((await c.f.state()).config, c.state.config);
-});
-
-void test("changed settings during a delayed save fail the guard inside the writer transaction", async (t) => {
-  const c = await coordinator(t);
-  const checks = new ConnectionChecks(connectionCheckStorage(c.f.root), {
-    ...c.ports,
-    record: async (...args) => {
-      await Effect.runPromise(
-        c.f.store.request("save_settings", {
-          expected_entity_revision: c.state.revisions.settings,
-          settings: { browser_preference: "in_app" },
-        }),
-      );
-      return c.ports.record(...args);
-    },
-  });
-  t.after(() => checks.close());
-  const run = await c.claim(c.queued);
-  await assert.rejects(checks.complete(c.completion(run)), /Browser selection changed/);
-  assert.deepEqual((await c.f.state()).config.platform_sessions, c.state.config.platform_sessions);
-  assert.equal((await c.checks.read({ mode: "live" })).run?.status, "failed");
-});
-
-void test("a delayed state read cannot save results after cancellation", async (t) => {
-  const c = await coordinator(t);
-  const run = await c.claim(c.queued);
-  let reached!: () => void;
-  let release!: () => void;
-  const waiting = new Promise<void>((accept) => {
-    reached = accept;
-  });
-  const gate = new Promise<void>((accept) => {
-    release = accept;
-  });
-  let writes = 0;
-  const checks = new ConnectionChecks(connectionCheckStorage(c.f.root), {
-    ...c.ports,
-    readState: async () => {
-      reached();
-      await gate;
-      return c.state;
-    },
-    record: (...args) => {
-      writes++;
-      return c.ports.record(...args);
-    },
-  });
-  t.after(() => checks.close());
-  const completion = checks.complete(c.completion(run));
-  await waiting;
-  await c.checks.cancel({ mode: "live", run_id: run.id });
-  release();
-  await assert.rejects(completion);
-  assert.equal(writes, 0);
-});
-
-void test("a durable completion reservation prevents another coordinator from saving concurrently", async (t) => {
-  const c = await coordinator(t);
-  const run = await c.claim(c.queued);
-  let reached!: () => void;
-  let release!: () => void;
-  const waiting = new Promise<void>((accept) => {
-    reached = accept;
-  });
-  const gate = new Promise<void>((accept) => {
-    release = accept;
-  });
-  let writes = 0;
-  const checks = new ConnectionChecks(connectionCheckStorage(c.f.root), {
-    ...c.ports,
-    record: async (...args) => {
-      reached();
-      await gate;
-      writes++;
-      return c.ports.record(...args);
-    },
-  });
-  t.after(() => checks.close());
-  const completion = checks.complete(c.completion(run));
-  await waiting;
-  const saving = (await c.checks.read({ mode: "live", run_id: run.id })).run;
-  assert.ok(saving);
-  await assert.rejects(c.checks.complete(c.completion(saving)), /already being saved/);
-  release();
-  assert.equal((await completion).run?.status, "complete");
-  assert.equal(writes, 1);
-});
-
-void test("a different access context cannot claim or relabel another connection's check", async (t) => {
-  const c = await coordinator(t);
-  const other = new ConnectionChecks(connectionCheckStorage(c.f.root), {
-    ...c.ports,
-    readState: () => Promise.resolve({ ...c.state, access_context: "different-host-session" }),
-  });
-  t.after(() => other.close());
-  assert.equal((await other.read({ mode: "live", run_id: c.queued.id })).run, null);
-  await assert.rejects(
-    other.claim({
-      mode: "live",
-      run_id: c.queued.id,
-      expected_version: c.queued.version,
-      worker_id: randomUUID(),
-      agent_id: "child",
-    }),
-    /original Goodfinds connection/,
-  );
-});
-
-void test("existing terminal records remain readable without worker/version metadata", async (t) => {
-  const f = fixture(t);
-  const finished = parsed(await f.complete(await f.claim(await f.start())));
-  const before = await f.state();
-  const db = new Database(resolve(f.root, "connections.sqlite"));
-  const row = db
-    .query<{ data: string }, [string]>(
-      "SELECT document_json AS data FROM connection_checks WHERE id=?",
-    )
-    .get(finished.id);
-  assert.ok(row);
-  const legacy = z.record(z.string(), z.unknown()).parse(JSON.parse(row.data) as unknown);
-  delete legacy["worker"];
-  delete legacy["version"];
-  db.query("UPDATE connection_checks SET document_json=? WHERE id=?").run(
-    JSON.stringify(legacy),
-    finished.id,
-  );
-  db.close();
-  const read = await f.read(finished.id);
-  assert.equal(read?.status, "complete");
-  assert.equal(read?.worker, null);
-  assert.equal(read?.version, 1);
-  assert.deepEqual(read?.results, finished.results);
-  assert.deepEqual((await f.state()).config, before.config);
-});
-
-void test("sample checks are isolated and server shutdown interrupts queued and running work", async (t) => {
-  const f = fixture(t);
-  assert.equal((await f.start(randomUUID(), "sample")).status, "unavailable");
-  assert.equal(await f.read(), null);
-  const run = await f.claim(await f.start());
-  await f.close();
-  const db = new Database(resolve(f.root, "connections.sqlite"));
-  const row = db
-    .query<{ data: string }, [string]>(
-      "SELECT document_json AS data FROM connection_checks WHERE id=?",
-    )
-    .get(run.id);
-  db.close();
-  assert.ok(row);
-  assert.equal(
-    connectionCheckResultSchema.shape.run
-      .unwrap()
-      .strip()
-      .parse(JSON.parse(row.data) as unknown).status,
-    "interrupted",
-  );
 });

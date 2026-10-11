@@ -30,10 +30,10 @@ export function entityTarget(
   if (action === "save_search_draft")
     return { kind: "drafts", id: id(object(args["draft"])["id"]) };
   if (action === "discard_search_draft") return { kind: "drafts", id: id(args["draft_id"]) };
-  if (action === "set_monitoring" || action === "report_host_schedule")
+  if (action === "set_monitoring")
     return {
       kind: "monitoring",
-      id: id(object(args[action === "set_monitoring" ? "monitoring" : "report"])["search_id"]),
+      id: id(object(args["monitoring"])["search_id"]),
     };
   if (action === "save_settings" || action === "report_dispatcher_schedule")
     return { kind: "settings" };

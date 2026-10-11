@@ -1,6 +1,6 @@
 //! One transaction owns a command, its resource result, and its retry receipt.
 use crate::{
-    configuration, contracts,
+    alerts, configuration, contracts, diagnostics,
     error::{Error, Result},
     listings, queries, searches, sellers, snapshot,
     storage::Workspace,
@@ -22,11 +22,7 @@ const RUNS: &[&str] = &[
     "cancel_search_run",
     "update_search_run",
 ];
-const MONITORING: &[&str] = &[
-    "set_monitoring",
-    "report_host_schedule",
-    "report_dispatcher_schedule",
-];
+const MONITORING: &[&str] = &["set_monitoring", "report_dispatcher_schedule"];
 pub fn cancelled(cancel: &AtomicBool) -> Result<()> {
     if cancel.load(Ordering::SeqCst) {
         Err(Error::new("cancelled", "Request cancelled before commit"))
@@ -41,24 +37,67 @@ pub fn execute(
     input: &Value,
     cancel: Arc<AtomicBool>,
 ) -> Result<Value> {
+    diagnostics::operation(action, || {
+        execute_inner(root, context, action, input, cancel)
+    })
+}
+fn execute_inner(
+    root: &Path,
+    context: &str,
+    action: &str,
+    input: &Value,
+    cancel: Arc<AtomicBool>,
+) -> Result<Value> {
     let args = contracts::parse(&format!("operations.{action}.input"), input)?;
     let mode = args["mode"].as_str().unwrap_or("live");
+    let opening = diagnostics::stage("workspace_open");
     let mut ws = Workspace::open(root, mode, context)?;
+    drop(opening);
     let query = contracts::all()["operations"][action]["kind"] == "query";
     cancelled(&cancel)?;
-    ws.db.execute_batch(if query {
+    // Opening the panel reads a snapshot after Workspace::open has initialized it.
+    // Keep that potentially large read from blocking concurrent search writes.
+    let waiting = diagnostics::stage("transaction_wait");
+    ws.db.execute_batch(if query || action == "get_workspace" {
         "BEGIN DEFERRED"
     } else {
         "BEGIN IMMEDIATE"
     })?;
+    drop(waiting);
+    let _transaction = diagnostics::stage("transaction");
     let result = (|| {
+        let reload = diagnostics::stage("config_reload");
         ws.reload_config()?;
+        drop(reload);
         cancelled(&cancel)?;
         if query {
-            let state = snapshot::snapshot(&ws)?;
+            let state = match action {
+                "get_setup_context"
+                | "get_settings"
+                | "list_search_runs"
+                | "get_runtime_context"
+                | "get_search_recovery"
+                | "list_pending_alerts"
+                | "list_coordination_events" => json!({}),
+                "get_search_context" | "get_monitoring" => {
+                    json!({"seller_conversations":sellers::summaries(&ws)?})
+                }
+                _ if listings::QUERIES.contains(&action) => {
+                    snapshot::listing_context(&ws, action, &args)?
+                }
+                _ => snapshot::snapshot(&ws)?,
+            };
             let mut args = args.clone();
             args.as_object_mut().unwrap().remove("mode");
-            let mut data = if listings::QUERIES.contains(&action) {
+            let mut data = if action == "list_coordination_events" {
+                crate::events::read(&ws, &args)?
+            } else if action == "get_runtime_context" {
+                crate::runtime::context(&ws)
+            } else if action == "get_search_recovery" {
+                crate::recovery::read(&ws, &args)?
+            } else if action == "list_pending_alerts" {
+                alerts::pending(&ws, &args)?
+            } else if listings::QUERIES.contains(&action) {
                 listings::query(&ws, action, &args, &state)?
             } else if queries::QUERY_ACTIONS.contains(&action) {
                 queries::query(&ws, action, &args, &state)?
@@ -92,7 +131,9 @@ pub fn execute(
                     ));
                 }
                 let mut result: Value = serde_json::from_str(&raw)?;
-                result["state"] = snapshot::snapshot(&ws)?;
+                if !["acknowledge_alerts", "report_host_capabilities"].contains(&action) {
+                    result["state"] = snapshot::snapshot(&ws)?;
+                }
                 result["receipt"] = json!({"request_id":request_id,"operation":action,"replayed":true,"committed_at":stamp});
                 return Ok(result);
             }
@@ -119,6 +160,7 @@ pub fn execute(
                 let _ = ws.db.execute_batch("ROLLBACK");
                 return Err(error);
             }
+            let _commit = diagnostics::stage("commit");
             ws.db.execute_batch("COMMIT")?;
             Ok(result)
         }
@@ -146,6 +188,15 @@ fn prepare(ws: &mut Workspace, search_id: &str, keys: Option<&[Value]>) -> Resul
 }
 fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> {
     let mut extras = json!({});
+    if action == "acknowledge_alerts" {
+        let mut output = alerts::acknowledge(ws, args)?;
+        output["mode"] = json!(ws.mode);
+        output["revision"] = json!(ws.revision());
+        output["revisions"] = ws.revisions()?;
+        return Ok(
+            json!({"operation_result":contracts::parse("operations.acknowledge_alerts.output", &output)?}),
+        );
+    }
     if configuration::ACTIONS.contains(&action) || MONITORING.contains(&action) {
         configuration::check_revision(ws, action, args)?;
         if MONITORING.contains(&action) {
@@ -154,19 +205,20 @@ fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> {
                     "Manage real monitoring in the live workspace",
                 ));
             }
-            if action == "report_host_schedule"
-                && args["report"]["status"] == "active"
-                && searches::fulfilled_searches(ws)?.contains(text(&args["report"], "search_id"))
-            {
-                return Err(Error::validation(
-                    "This buying goal is fulfilled. Pause its host schedule.",
-                ));
-            }
             extras = searches::command(ws, action, args)?;
         } else {
             extras = configuration::command(ws, action, args)?;
         }
         ws.save_config()?;
+        if action == "report_host_capabilities" {
+            let mut output = crate::runtime::context(ws);
+            output["mode"] = json!(ws.mode);
+            output["revision"] = json!(ws.revision());
+            output["revisions"] = ws.revisions()?;
+            return Ok(
+                json!({"operation_result":contracts::parse("operations.report_host_capabilities.output", &output)?}),
+            );
+        }
         searches::reconcile_scheduled_runs(ws)?;
         if ![
             "set_search_cover",
@@ -177,7 +229,6 @@ fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> {
             "report_connections",
             "report_listing_contact",
             "set_monitoring",
-            "report_host_schedule",
             "report_dispatcher_schedule",
         ]
         .contains(&action)
@@ -241,6 +292,27 @@ fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> {
     } else if action != "get_workspace" {
         return Err(Error::validation("Unsupported action"));
     }
+    if action == "renew_search_lease"
+        || (action == "update_search_run" && searches::active(&extras["run"]))
+    {
+        // Routine progress retains transactional guards and reconciliation.
+        let run = searches::find_run(ws, text(&args["request"], "run_id"))?
+            .map(|r| searches::expired_run(&r, ws.now));
+        let workflow = if let Some(run) = &run {
+            let fulfilled = sellers::fulfilled_searches(&sellers::summaries(ws)?);
+            searches::workflow_views(&ws.config, std::slice::from_ref(run), &fulfilled, ws.now)
+                ["search_run_workflows"][text(run, "id")].clone()
+        } else {
+            searches::empty_workflow(ws.now)
+        };
+        let mut output = json!({"mode":ws.mode,"revision":ws.revision(),"revisions":ws.revisions()?,"search_run":run,"workflow":workflow});
+        if let Some(check) = extras.get("scheduled_check") {
+            output["scheduled_check"] = check.clone();
+        }
+        extras["operation_result"] =
+            contracts::parse(&format!("operations.{action}.output"), &output)?;
+        return Ok(extras);
+    }
     let mut state = snapshot::snapshot(ws)?;
     for key in ["seller_conversation", "seller_workflow"] {
         if let Some(value) = extras.as_object_mut().unwrap().remove(key) {
@@ -300,6 +372,9 @@ pub fn settings(state: &Value) -> Value {
     json!({"origin":c["origin"],"location":c["location"],"platforms":c["platforms"],"browser_preference":c["browser_preference"],"journey_checks_enabled":c["journey_checks_enabled"],"interval_minutes":c["schedule"]["interval_minutes"],"quiet_hours":c["schedule"]["quiet_hours"],"baseline_days":c["baseline_days"],"minimum_peer_listings":c["minimum_peer_listings"]})
 }
 pub fn command_result(action: &str, args: &Value, result: &Value) -> Result<Value> {
+    if let Some(output) = result.get("operation_result") {
+        return contracts::parse(&format!("operations.{action}.output"), output);
+    }
     let state = &result["state"];
     let mut out =
         json!({"mode":state["mode"],"revision":state["revision"],"revisions":state["revisions"]});
@@ -322,12 +397,8 @@ pub fn command_result(action: &str, args: &Value, result: &Value) -> Result<Valu
             .or_else(|| array(&state["config"], "searches").last())
     };
     let data = match action {
-        "save_search"
-        | "set_search_enabled"
-        | "remove_search"
-        | "set_search_cover"
-        | "set_monitoring"
-        | "report_host_schedule" => {
+        "save_search" | "set_search_enabled" | "remove_search" | "set_search_cover"
+        | "set_monitoring" => {
             let search = if action == "remove_search" {
                 None
             } else {
@@ -400,7 +471,7 @@ pub fn command_result(action: &str, args: &Value, result: &Value) -> Result<Valu
             v
         }
         _ if action.starts_with("report_") => {
-            json!({"access_context":state["access_context"],"evidence":{"browser_access":state["config"]["browser_access"],"platform_sessions":state["config"]["platform_sessions"],"listing_contacts":state["config"]["listing_contacts"]}})
+            json!({"access_context":state["access_context"],"evidence":{"browser_access":state["config"]["browser_access"],"platform_sessions":state["config"]["platform_sessions"],"listing_contacts":array(&state["config"],"listing_contacts")}})
         }
         "prepare_next_steps" => {
             json!({"actions":array(state,"next_steps").iter().filter(|x|x["search_id"]==args["search_id"]).collect::<Vec<_>>()})
@@ -431,6 +502,46 @@ mod config_edge_tests {
             args,
             Arc::new(AtomicBool::new(false)),
         )
+    }
+    #[test]
+    fn feedback_retries_keep_the_original_event_and_fresh_undo_state() {
+        let root = tempfile::tempdir().unwrap();
+        let state = call(
+            root.path(),
+            "load_sample_workspace",
+            &json!({"mode":"sample"}),
+        )
+        .unwrap()["state"]
+            .clone();
+        let workspace_id = state["workspace_id"].clone();
+        let search = &state["searches"][0];
+        let listing = array(&state, "listings")
+            .iter()
+            .find(|row| row["product"] == search["product"])
+            .unwrap();
+        let request = json!({"mode":"sample","request_id":id(),"expected_entity_revision":state["revisions"]["absent"],"feedback":{"search_id":search["id"],"listing_key":listing["key"],"action":"dismiss","reason":"Too expensive","scope":"search"}});
+        let first = call(root.path(), "record_listing_feedback", &request).unwrap();
+        let event = first["operation_result"]["feedback"].clone();
+        let event_id = text(&event, "id");
+        assert_eq!(event["request_id"], request["request_id"]);
+        let undo = json!({"mode":"sample","request_id":id(),"feedback_id":event_id,"expected_entity_revision":first["state"]["revisions"]["feedback"][event_id]});
+        call(root.path(), "undo_listing_feedback", &undo).unwrap();
+        let replay = execute(
+            root.path(),
+            "a-new-server-context",
+            "record_listing_feedback",
+            &request,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .unwrap();
+        assert_eq!(replay["receipt"]["replayed"], true);
+        assert_eq!(replay["operation_result"]["feedback"]["id"], event_id);
+        assert_eq!(replay["state"]["workspace_id"], workspace_id);
+        let events = array(&replay["state"]["config"], "feedback");
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0]["undone"], true);
+        let live = call(root.path(), "get_workspace", &json!({})).unwrap();
+        assert_ne!(live["state"]["workspace_id"], workspace_id);
     }
     #[test]
     fn removal_of_final_search_retains_tombstone_revision_and_replay() {

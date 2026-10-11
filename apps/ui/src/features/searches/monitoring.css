@@ -1,0 +1,67 @@
+.monitoring-panel {
+  display: grid;
+  align-items: start;
+  gap: 12px 24px;
+}
+
+.monitoring-summary {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.monitoring-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--secondary);
+}
+
+.monitoring-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.monitoring-facts {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.monitoring-facts > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+@container (min-width: 40rem) {
+  .monitoring-panel {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .monitoring-actions {
+    grid-column: 2;
+    grid-row: 1;
+    justify-content: flex-end;
+  }
+}
+
+.monitoring-status {
+  display: inline-block;
+  margin-left: 8px;
+  border-radius: 6px;
+  padding: 2px 6px;
+  background: var(--secondary);
+  font-size: 11px;
+  font-weight: 500;
+}

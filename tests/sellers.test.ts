@@ -7,8 +7,8 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import type { Listing } from "@goodfinds/contracts/state";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
-import { normalize } from "./reference-server/src/listings/tracking.ts";
-import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
+import { normalize } from "./helpers/native-domain.ts";
+import { createNativeServer } from "./helpers/native-mcp.ts";
 import { SEARCH_TEMPLATES, validateAnswers } from "@goodfinds/contracts/search-definition";
 import {
   joinedLabel,
@@ -170,7 +170,7 @@ void test("inventory inspection imports reject mismatched sources, duplicates an
 
 void test("inspected inventory evidence survives the import and shared-state round trip", async (context) => {
   const data = await mkdtemp(resolve(tmpdir(), "goodfinds-inventory-test-"));
-  const { server, calls } = createGoodfindsServer(seedWorkspace(data));
+  const { server, calls } = createNativeServer(seedWorkspace(data));
   context.after(async () => {
     await server.close();
     await rm(data, { recursive: true, force: true });

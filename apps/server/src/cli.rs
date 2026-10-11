@@ -15,7 +15,7 @@ use std::{
     path::{Path, PathBuf},
     time::Duration,
 };
-const HELP: &str = "Goodfinds: doctor | call TOOL --input FILE | client (JSON lines: name, arguments) | backup --db FILE --output NEW_DIR | restore --input BACKUP_DIR --output NEW_DIR | demo --output DIR [--workspace FILE] | export --db FILE --output FILE | evaluate --workspace FILE --observations FILE --db FILE [--report FILE] [--search-coverage FILE] | status --db FILE | ack --db FILE --ids ID [ID...]\n";
+const HELP: &str = "Goodfinds: schema TOOL | doctor | call TOOL --input FILE | client (JSON lines: name, arguments) | backup --db FILE --output NEW_DIR | restore --input BACKUP_DIR --output NEW_DIR | demo --output DIR [--workspace FILE] | export --db FILE --output FILE | evaluate --workspace FILE --observations FILE --db FILE [--report FILE] [--search-coverage FILE] | status --db FILE | ack --db FILE --ids ID [ID...]\n";
 fn s(v: &Value) -> &str {
     v.as_str().unwrap_or("")
 }
@@ -361,6 +361,15 @@ pub async fn run(argv: &[String]) -> Result<Option<Value>> {
         .map(String::as_str)
         .unwrap_or("");
     let result = match command {
+        "schema" => {
+            let name = options.positionals.get(1).ok_or_else(|| {
+                Error::validation("Use schema TOOL to inspect arguments without calling a mutation")
+            })?;
+            contracts::all()["tool_contracts"]
+                .get(name)
+                .ok_or_else(|| Error::validation("Unknown tool"))?
+                .clone()
+        }
         "doctor" | "call" | "client" => {
             return crate::mcp::protocol_cli(
                 command,
@@ -404,7 +413,7 @@ pub async fn run(argv: &[String]) -> Result<Option<Value>> {
         }
         _ => {
             return Err(Error::validation(
-                "Choose doctor, call, client, backup, restore, demo, export, evaluate, status or ack (use --help for usage)",
+                "Choose schema, doctor, call, client, backup, restore, demo, export, evaluate, status or ack (use --help for usage)",
             ));
         }
     };

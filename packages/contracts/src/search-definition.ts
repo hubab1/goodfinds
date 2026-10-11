@@ -1,3 +1,8 @@
+import {
+  currencySchema,
+  currencyDivisorSchema,
+  searchMarketSchema,
+} from "./regional-preferences.ts";
 import { z } from "zod";
 import { marketplaceSchema } from "./integrations.ts";
 import { discoverySchema } from "./discovery.ts";
@@ -45,7 +50,7 @@ export const fieldSchema = z
     unit: z.string().max(30).optional(),
     minimum: z.number().optional(),
     maximum: z.number().optional(),
-    display_divisor: z.union([z.literal(1), z.literal(100)]).optional(),
+    display_divisor: currencyDivisorSchema.optional(),
     options: z
       .array(z.object({ value: scalar, label: z.string().trim().min(1).max(120) }).strict())
       .min(1)
@@ -76,7 +81,7 @@ export const searchDefinitionSchema = z
     description: z.string().max(500),
     price: z
       .object({
-        currency: z.enum(["GBP", "USD", "EUR", "CAD", "AUD", "NZD", "JPY"]),
+        currency: currencySchema,
         period: z.enum(["once", "month", "week"]),
       })
       .strict(),
@@ -293,7 +298,12 @@ export function activeAnswers(definition: SearchDefinition, answers: Answers): A
   );
 }
 
+export function formatUnit(unit: string): string {
+  return unit.replace(/\bminute(s?)\b/gu, "min$1");
+}
+
 export function formatAnswer(field: SearchField, answer: Answer | undefined): string {
+  const unit = field.unit ? formatUnit(field.unit) : "";
   if (answer == null || answer === "" || (Array.isArray(answer) && answer.length === 0))
     return "No preference";
   if (Array.isArray(answer))
@@ -313,12 +323,10 @@ export function formatAnswer(field: SearchField, answer: Answer | undefined): st
     return `${label} ${single ? "listing" : "listings"}`;
   }
   if (typeof answer === "object")
-    return `${answer.min ?? "Any"}–${answer.max ?? "Any"}${field.unit ? ` ${field.unit}` : ""}`;
+    return `${answer.min ?? "Any"}–${answer.max ?? "Any"}${unit ? ` ${unit}` : ""}`;
   const option = field.options?.find((item) => item.value === answer);
   if (option)
-    return option.label === String(answer) && field.unit
-      ? `${option.label} ${field.unit}`
-      : option.label;
+    return option.label === String(answer) && unit ? `${option.label} ${unit}` : option.label;
   if (typeof answer === "number" && field.display_divisor === 100 && field.unit?.startsWith("£")) {
     const price = new Intl.NumberFormat("en-GB", {
       style: "currency",
@@ -328,10 +336,11 @@ export function formatAnswer(field: SearchField, answer: Answer | undefined): st
     return `${price}${field.unit.slice(1)}`;
   }
   if (typeof answer === "boolean") return answer ? "Yes" : "No";
-  return `${typeof answer === "number" ? answer / (field.display_divisor ?? 1) : answer}${field.unit ? ` ${field.unit}` : ""}`;
+  return `${typeof answer === "number" ? answer / (field.display_divisor ?? 1) : answer}${unit ? ` ${unit}` : ""}`;
 }
 
 const searchShape = {
+  market: searchMarketSchema.optional(),
   id: z
     .string()
     .regex(/^[a-z0-9-]+$/)
@@ -343,7 +352,7 @@ const searchShape = {
   marketplaces: z
     .array(marketplaceSchema)
     .min(1)
-    .max(6)
+    .max(marketplaceSchema.options.length)
     .refine((v) => new Set(v).size === v.length)
     .optional(),
   discovery: discoverySchema.optional(),
@@ -371,6 +380,7 @@ export const draftInputSchema = z
       .optional(),
     name: searchNameSchema,
     marketplaces: searchShape.marketplaces,
+    market: searchShape.market,
     discovery: discoverySchema.optional(),
     uncertain_fields: z.array(key).max(30).optional(),
     definition: searchDefinitionSchema,
@@ -393,6 +403,7 @@ export const savedDraftSchema = z.object({
   id: z.string(),
   name: z.string(),
   marketplaces: searchShape.marketplaces,
+  market: searchShape.market,
   discovery: discoverySchema.optional(),
   uncertain_fields: z.array(key).max(30).optional(),
   definition: searchDefinitionSchema,

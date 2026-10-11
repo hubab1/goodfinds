@@ -1,17 +1,19 @@
 # Marketplace validation boundaries
 
+Regional coverage and the repeatable test procedure for CarGurus US, Poshmark US, Depop US/UK, Mercari US, Cars.com US and Autotrader US are documented in [US marketplace validation](us-marketplace-validation.md).
+
 Live signed-in/out detection and offer/contact flows have **not** been validated end to end across the six marketplaces. Automated tests verify data, forms and simulated integrations; they do not establish real buyer-session behavior. Public web extraction runs independently of the buyer's browser and is not evidence of their login state. The procedures below define the evidence still needed.
 
 ## Current coverage
 
-| Marketplace          | Collection route implemented              | Contact/offer route implemented                                                      | Live buyer login and interaction validation                              |
-| -------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| Facebook Marketplace | Host browser workflow and evidence import | Reviewed messages with lease, identity checks, one send permit and reconciliation    | Unconfirmed; protocol tested with simulated evidence                     |
-| eBay                 | Browse API adapter and browser/import     | Observed seller composer: manual copy/open; native Best Offer: platform-form handoff | Unconfirmed; API tests use mocked responses and do not prove buyer login |
-| Vinted               | Navigation/import                         | Observed Ask seller: manual copy/open; native Make an offer: platform-form handoff   | Unconfirmed; current numeric discount/quota rules not verified           |
-| Gumtree              | Navigation/import                         | Observed messaging: manual copy/open; external contact: Open listing                 | Unconfirmed                                                              |
-| Auto Trader UK       | Navigation/import                         | Observed on-platform chat: manual copy/open; phone/email/callback: Open listing      | Unconfirmed; dealer contact modes differ                                 |
-| Craigslist           | Navigation/import                         | Observed enabled CL Chat: manual copy/open; email relay/phone: Open listing          | Unconfirmed; chat is opt-in per posting                                  |
+| Marketplace          | Collection route implemented              | Contact/offer route implemented                                                      | Live buyer login and interaction validation                    |
+| -------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| Facebook Marketplace | Host browser workflow and evidence import | Reviewed messages with lease, identity checks, one send permit and reconciliation    | Unconfirmed; protocol tested with simulated evidence           |
+| eBay                 | Host browser workflow and evidence import | Observed seller composer: manual copy/open; native Best Offer: platform-form handoff | Unconfirmed; browser route and import contracts tested         |
+| Vinted               | Host browser workflow and evidence import | Observed Ask seller: manual copy/open; native Make an offer: platform-form handoff   | Unconfirmed; current numeric discount/quota rules not verified |
+| Gumtree              | Host browser workflow and evidence import | Observed messaging: manual copy/open; external contact: Open listing                 | Unconfirmed                                                    |
+| Auto Trader UK       | Host browser workflow and evidence import | Observed on-platform chat: manual copy/open; phone/email/callback: Open listing      | Unconfirmed; dealer contact modes differ                       |
+| Craigslist           | Host browser workflow and evidence import | Observed enabled CL Chat: manual copy/open; email relay/phone: Open listing          | Unconfirmed; chat is opt-in per posting                        |
 
 There is no automated native-offer submission adapter. A public button label alone does not establish availability; cached or extracted pages may contain controls for an unavailable item. Fresh visible-page inspection and active listing evidence remain necessary.
 
@@ -23,7 +25,7 @@ Negotiate is available when a verified native offer or seller-message route is u
 
 The preferred flow is a native offer plus a personal message, using the form's observed note field when available or a separate verified seller composer. The offer_note report distinguishes embedded text support from general messaging. Offer-only and message-only routes remain available when the other cannot be used. Native submission still uses a manual platform-form handoff, so the combined flow must not be described as automated or live-validated.
 
-Authentication remains a host-agent observation workflow, not an independently implemented cookie or network detector. The skill requires account/protected-interface evidence, an explicit guest/expired state or supported authenticated response metadata. Cookie presence, cached pages and application API credentials cannot establish buyer sign-in. Timeouts and challenges remain unknown.
+Authentication remains a host-agent observation workflow, not an independently implemented cookie or network detector. The skill requires account/protected-interface evidence, an explicit guest/expired state or supported authenticated response metadata. Cookie presence and cached pages cannot establish buyer sign-in. Timeouts and challenges remain unknown.
 
 ## Automated verification
 

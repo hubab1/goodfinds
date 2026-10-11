@@ -17,7 +17,9 @@ export function relativeTime(value: string | null | undefined, now: number): str
     "minute",
     60_000,
   ];
-  return formatter.format(Math.sign(difference) * Math.floor(Math.abs(difference) / size), unit);
+  return formatter
+    .format(Math.sign(difference) * Math.floor(Math.abs(difference) / size), unit)
+    .replace(/\bminute(s?)\b/u, "min$1");
 }
 
 export function exactTime(value: string): string {

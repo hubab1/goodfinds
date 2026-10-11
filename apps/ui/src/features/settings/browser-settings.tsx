@@ -1,6 +1,7 @@
 import { Menu, MenuTrigger, MenuContent, MenuItem } from "@/components/ui/menu";
 import { Switch } from "@/components/ui/checkbox";
-import { MARKETPLACES } from "@goodfinds/contracts/integrations";
+import { resolveRegion } from "@goodfinds/contracts/regional";
+import { MARKETPLACES, marketHome } from "@goodfinds/contracts/integrations";
 import type { Marketplace } from "@goodfinds/contracts/integrations";
 import type { ConnectionCheckRun } from "@goodfinds/contracts/connection-checks";
 import { connectionCheckActive } from "@goodfinds/contracts/connection-checks";
@@ -64,14 +65,18 @@ export function BrowserSettings({
   const activeRunId = connectionCheckActive(run) ? run?.id : undefined;
   const disabled = busy || checking;
   const sample = state.mode === "sample";
+  const region = resolveRegion(state.config);
   const enabled = MARKETPLACES.filter(
-    (platform) => state.config.platforms[platform.id]?.enabled !== false,
+    (platform) =>
+      state.config.platforms[platform.id]?.enabled !== false &&
+      Boolean(marketHome(platform.id, region.country, region.locale)),
   );
   const currentJob =
     connectionCheckActive(run) ||
     run?.targets.every(
       (target) =>
         state.config.platforms[target.marketplace]?.enabled !== false &&
+        target.url === (marketHome(target.marketplace, region.country, region.locale) ?? null) &&
         marketplaceBrowser(state, target.marketplace) === target.browser &&
         (target.browser !== "external" || target.browser_id === (state.device_browser?.id ?? null)),
     )
@@ -269,7 +274,12 @@ export function BrowserSettings({
               <div className="settings-marketplace-options">
                 <MarketplaceOptions
                   name={platform.name}
-                  disabled={disabled || sample || !preference.enabled}
+                  disabled={
+                    disabled ||
+                    sample ||
+                    !preference.enabled ||
+                    !marketHome(platform.id, region.country, region.locale)
+                  }
                   check={() => void check([platform.id])}
                 />
               </div>

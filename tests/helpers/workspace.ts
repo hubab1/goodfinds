@@ -1,28 +1,9 @@
-import { resolve } from "node:path";
-import { Effect } from "effect";
 import type { WorkspaceMode } from "@goodfinds/contracts/state";
 import exampleConfig from "../../skills/marketplace-shopping/assets/example-workspace.json" with { type: "json" };
-import { validateConfiguration } from "../reference-server/src/listings/evaluation.ts";
-import { saveConfiguration } from "../reference-server/src/platform/configuration-sqlite.ts";
-import { close, get, openDatabase, transaction } from "../reference-server/src/platform/sqlite.ts";
+import { nativeCall } from "./native-driver.ts";
 
-// Workflow tests opt into fictional searches; production workspaces start empty.
+// Tests opt into fictional searches; production workspaces start empty.
 export function seedWorkspace(base: string, mode: WorkspaceMode = "live"): string {
-  if (mode === "sample") return base;
-  Effect.runSync(
-    Effect.gen(function* () {
-      const db = yield* Effect.acquireRelease(
-        openDatabase(resolve(base, "workspace.sqlite")),
-        close,
-      );
-      yield* transaction(
-        db,
-        Effect.gen(function* () {
-          const saved = yield* get(db, "SELECT 1 FROM workspace_settings WHERE id=1");
-          if (!saved) yield* saveConfiguration(db, yield* validateConfiguration(exampleConfig));
-        }),
-      );
-    }).pipe(Effect.scoped),
-  );
+  if (mode === "live") nativeCall({ op: "seed", root: base, args: exampleConfig });
   return base;
 }

@@ -1,16 +1,30 @@
 # Goodfinds interface design
 
-Keep the interface monochrome: white surfaces, black text and black action buttons with white labels. Use spacing, labels and placement to explain actions. Action variants share one visual treatment; inline links remain text links.
+Keep the interface monochrome and follow the user's appearance preference. Light mode uses white surfaces, black text and black action buttons with white labels. Dark mode uses dark neutral surfaces, white text and light action buttons with dark labels. Use spacing, labels and placement to explain actions. Action variants share one visual treatment; inline links remain text links.
+
+Use semantic colour tokens for surfaces, text, borders, focus indicators and controls. Both the public site and standalone panel follow the browser or device through CSS `color-scheme: light dark` and `light-dark()` tokens, including changes while the page is open. The embedded panel honours the MCP host's initial theme and `hostcontextchanged` updates; unrelated context updates do not reset it. Declare colour-scheme support in the HTML head to avoid a light canvas during loading. Photos and videos retain their original colours; marketplace logos use a small stable white backing so their source artwork remains legible in either appearance.
 
 ## Front-end organization
 
 `apps/ui/src/App.tsx` composes the application shell and navigation. `app/use-workspace.ts` owns workspace state, subscriptions, polling and the shared mutation guard. Feature code lives in `features/searches`, `features/listings`, `features/conversations` and `features/settings`; keep a feature's views, controllers and CSS together.
 
+The startup view centres the logo, heading and loading status horizontally and vertically within the panel viewport. Keep it free of a surrounding card. Loading and connection errors share this layout; errors retain a retry action. Use `GoodfindsLogo` for the startup view and panel header: its black backing stays fixed in both appearance modes because the source artwork is transparent.
+
 Shared controls live in `components/ui`. They receive display values, interaction state and callbacks through props. They may own UI behavior such as focus, keyboard navigation and disclosure state, but never import feature code, domain contracts or transport. `bun run architecture:check` enforces this dependency rule.
+
+Reserve a stable scrollbar gutter on the document and shared overlay bodies. Keep content widths and alignment unchanged as content starts or stops scrolling, including when modal scroll locking hides the page scrollbar.
 
 Feature controllers own workflow orchestration. `use-search-editor.ts` handles search validation, review and saving; `search-actions.ts` queues and dispatches searches with injected dependencies. `use-seller-conversation.ts` exposes named actions for drafts, reviewed sends, replies and collection plans. Conversation views render those values and call those actions. Business definitions and server authorization remain in the shared contracts and backend.
 
 `lib/actions.ts` derives command inputs from `OperationInput` and the shared tool-name map. Commands require typed payloads. `lib/client.ts` translates snapshot revisions and owns transport; do not reimplement either concern inside shared controls.
+
+Listing dismissals and feedback Undo use a separate durable outbox instead of the shared mutation guard. Apply pending feedback immediately to the visible listings, preferences and New counts. Save prepared requests in browser storage before sending; retain their request IDs and entity revisions across reloads and retries. Scope the queue to the workspace and sample/live mode. Merge only the acknowledged feedback event so its snapshot cannot overwrite newer settings or read receipts. Resolve a lost response through the server's retry receipt rather than creating another feedback event.
+
+Store each pending change separately so one panel cannot overwrite or clear another panel's queue. Reopening a panel recovers outstanding changes in its workspace. Multiple panels may replay the same prepared request; server receipts must keep that replay idempotent. Prepare the accompanying Undo request ID with the dismissal so concurrent recovery can undo the same event safely.
+
+Keep the originating request ID on saved feedback events. Host snapshots can arrive before the matching save response; use that ID to replace the temporary record and preserve pending Undo without guessing which event belongs to the request.
+
+Undo cancels an unsent dismissal locally. For an in-flight dismissal, restore the card immediately, then undo the exact event returned by its receipt. Timeouts and failed requests must not prevent other dismissals from saving. Retry transient failures with bounded backoff and offer Retry if they remain unsaved. Show a compact save status only while changes are pending; if browser storage is unavailable, tell the buyer to keep the panel open until saves finish.
 
 ## Shared UI composition
 
@@ -20,22 +34,24 @@ Feature controllers own workflow orchestration. `use-search-editor.ts` handles s
 - Keep global `styles.css` limited to tokens and base rules. Shared overlay and control CSS live alongside their implementations. Search rows, listing cards, media and other feature layouts load their own styles.
 - Reuse existing feature compositions before adding generic abstractions. A domain view may accept domain data; a shared control must not require a workspace snapshot or a tool name.
 
+All tab headings use `PageHeader`: a 24 px semibold title, a 14 px subtitle, consistent line height and spacing, and a wrapping action area. Preserve focus on the Listings heading when opening results from a search. Activity uses a compact three-part summary for the last check, automatic searches and the next check; it stacks on narrow panels. Expanded monitoring keeps the status and its explanation together, aligns actions alongside it where space allows, and separates schedule timestamps into short label/value pairs. Paused searches show a clear resume action without an upcoming-check prediction.
+
 ## Dialogs and sheets
 
 `DialogContent` and `ResponsiveOverlay` share the rules in `apps/ui/src/components/ui/responsive-overlay.css`. Use `DialogHeader`, `DialogBody` and `DialogFooter` for desktop dialogs. `ResponsiveOverlay` becomes a bottom sheet below a 640 px panel viewport, including narrow desktop panels. The caller owns the draft so resizing preserves it. Sheets account for the keyboard and safe-area insets.
 
-| Element       | Rule                                                                    |
-| ------------- | ----------------------------------------------------------------------- |
-| Surface       | White, thin neutral border, 16 px corner radius                         |
-| Width         | 560 px by default; listing details use 896 px                           |
-| Spacing       | 24 px desktop, 20 px mobile                                             |
-| Title         | Left aligned, 20 px, short and descriptive                              |
-| Description   | Optional; explain the immediate choice in one sentence                  |
-| Scrolling     | Body scrolls; header, close control and footer remain visible           |
-| Close control | Black button with a white X and an accessible label                     |
-| Actions       | Black buttons, ordered cancel/back before submit; explicit action verbs |
-| Touch         | At least 44 px action targets inside overlays; allow wrapped labels     |
-| Motion        | Short transitions; disabled for reduced-motion preferences              |
+| Element       | Rule                                                                     |
+| ------------- | ------------------------------------------------------------------------ |
+| Surface       | Theme-aware surface, thin neutral border, 16 px corner radius            |
+| Width         | 560 px by default; listing details use 896 px                            |
+| Spacing       | 24 px desktop, 20 px mobile                                              |
+| Title         | Left aligned, 20 px, short and descriptive                               |
+| Description   | Optional; explain the immediate choice in one sentence                   |
+| Scrolling     | Body scrolls; header, close control and footer remain visible            |
+| Close control | Contrasting monochrome button with an X and an accessible label          |
+| Actions       | Shared buttons, ordered cancel/back before submit; explicit action verbs |
+| Touch         | At least 44 px action targets inside overlays; allow wrapped labels      |
+| Motion        | Short transitions; disabled for reduced-motion preferences               |
 
 ## Interaction rules
 

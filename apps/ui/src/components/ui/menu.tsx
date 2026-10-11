@@ -17,7 +17,7 @@ export function MenuContent({
       <Primitive.Positioner sideOffset={6} align="end" className="z-[70]">
         <Primitive.Popup
           className={cn(
-            "min-w-52 max-w-[calc(100vw-2rem)] rounded-xl border bg-background p-1 text-foreground shadow-lg outline-none",
+            "min-w-52 max-w-[calc(100vw-2rem)] rounded-xl border bg-popover p-1 text-popover-foreground shadow-lg outline-none",
             className,
           )}
           {...props}

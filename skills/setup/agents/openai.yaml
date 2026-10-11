@@ -1,0 +1,6 @@
+interface:
+  display_name: "Set up Goodfinds"
+  short_description: "Open Goodfinds and start your first search"
+  default_prompt: "Use $setup to introduce Goodfinds and help me start a search."
+policy:
+  allow_implicit_invocation: false

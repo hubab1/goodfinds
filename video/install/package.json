@@ -1,0 +1,20 @@
+{
+  "name": "goodfinds-install-film",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.tsx",
+    "render": "remotion render src/index.tsx InstallGoodfinds ../../website/media/install-goodfinds-package.mp4 --codec=h264 --crf=22 --x264-preset=slow --concurrency=4",
+    "poster": "remotion still src/index.tsx InstallGoodfinds ../../output/install-goodfinds-package-poster.png --frame=285 && ffmpeg -hide_banner -loglevel error -y -i ../../output/install-goodfinds-package-poster.png -quality 82 ../../website/media/install-goodfinds-package-poster.webp"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.534",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.534"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.2",
+    "typescript": "5.9.3"
+  }
+}

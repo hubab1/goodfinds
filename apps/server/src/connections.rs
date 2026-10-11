@@ -10,22 +10,6 @@ use rusqlite::{OptionalExtension, params};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, HashSet};
-const MARKETPLACES: &[&str] = &[
-    "facebook_marketplace",
-    "ebay",
-    "vinted",
-    "gumtree",
-    "autotrader",
-    "craigslist",
-];
-const DOMAINS: &[&str] = &[
-    "www.facebook.com",
-    "www.ebay.co.uk",
-    "www.vinted.co.uk",
-    "www.gumtree.com",
-    "www.autotrader.co.uk",
-    "www.craigslist.org",
-];
 pub const ACTIONS: &[&str] = &[
     "start_goodfinds_connection_check",
     "get_goodfinds_connection_check",
@@ -47,12 +31,10 @@ fn invalid<T>(message: &str) -> Result<T> {
 fn active(r: &Value) -> bool {
     r["status"] == "queued" || r["status"] == "running"
 }
-fn domain(m: &str) -> &str {
-    MARKETPLACES
-        .iter()
-        .position(|x| *x == m)
-        .map(|i| DOMAINS[i])
-        .unwrap_or("")
+fn domain(config: &Value, marketplace: &str) -> Option<String> {
+    let region = crate::regional::resolve(config, &Value::Null, &Value::Null, "");
+    let url = crate::regional::home_url(marketplace, s(&region["country"]), s(&region["locale"]))?;
+    url::Url::parse(&url).ok()?.host_str().map(String::from)
 }
 pub fn init(ws: &Workspace) -> Result<()> {
     ws.db.execute_batch("CREATE TABLE IF NOT EXISTS checks.connection_checks (id TEXT PRIMARY KEY,request_id TEXT UNIQUE NOT NULL,context_id TEXT NOT NULL,target_scope_hash TEXT NOT NULL,status TEXT NOT NULL,created_at TEXT NOT NULL,document_json TEXT NOT NULL CHECK(json_valid(document_json))); CREATE UNIQUE INDEX IF NOT EXISTS checks.connection_checks_active_by_scope ON connection_checks(context_id,target_scope_hash) WHERE status IN ('queued','running');")?;
@@ -96,17 +78,7 @@ fn recover(ws: &Workspace) -> Result<()> {
 }
 fn query<P: rusqlite::Params>(ws: &Workspace, sql: &str, p: P) -> Result<Option<Value>> {
     let raw: Option<String> = ws.db.query_row(sql, p, |r| r.get(0)).optional()?;
-    raw.map(|s| {
-        let mut r: Value = serde_json::from_str(&s)?;
-        if r.get("version").is_none() {
-            r["version"] = json!(1)
-        }
-        if r.get("worker").is_none() {
-            r["worker"] = Value::Null
-        }
-        Ok(r)
-    })
-    .transpose()
+    raw.map(|s| Ok(serde_json::from_str(&s)?)).transpose()
 }
 fn find(ws: &Workspace, id: Option<&str>) -> Result<Option<Value>> {
     if let Some(id) = id {
@@ -125,7 +97,9 @@ fn find(ws: &Workspace, id: Option<&str>) -> Result<Option<Value>> {
 }
 fn targets(ws: &Workspace, selected: &Value) -> Result<Vec<Value>> {
     let mut out = vec![];
-    for m in MARKETPLACES {
+    let region = crate::regional::resolve(&ws.config, &Value::Null, &Value::Null, "");
+    for marketplace in arr(contracts::data("MARKETPLACES")) {
+        let m = s(&marketplace["id"]);
         if !selected.is_null() && !arr(selected).iter().any(|v| v == m) {
             continue;
         }
@@ -142,7 +116,7 @@ fn targets(ws: &Workspace, selected: &Value) -> Result<Vec<Value>> {
             pref
         };
         let device = crate::storage::device_browser();
-        out.push(json!({"marketplace":m,"browser":browser,"browser_id":if browser=="in_app"{json!("iab")}else{device["id"].clone()}}));
+        out.push(json!({"marketplace":m,"url":crate::regional::home_url(m, s(&region["country"]), s(&region["locale"])),"browser":browser,"browser_id":if browser=="in_app"{json!("iab")}else{device["id"].clone()}}));
     }
     if out.is_empty() {
         return invalid("Choose a marketplace to check.");
@@ -190,9 +164,9 @@ fn scope(ws: &Workspace, r: &Value) -> Result<()> {
 }
 fn version(r: &Value, args: &Value) -> Result<()> {
     if r["version"] != args["expected_version"] {
-        Err(Error::conflict(
-            "connection_check",
-            r["version"].to_string(),
+        Err(Error::new(
+            "revision_conflict",
+            "Check progress changed. Read it and retry.",
         ))
     } else {
         Ok(())
@@ -511,8 +485,10 @@ pub fn report(ws: &mut Workspace, action: &str, args: &Value) -> Result<()> {
             )
         }
         "report_connections" => {
-            if !(1..=6).contains(&arr(&args["reports"]).len()) {
-                return invalid("Provide between one and six connection observations");
+            if !(1..=arr(contracts::data("MARKETPLACES")).len())
+                .contains(&arr(&args["reports"]).len())
+            {
+                return invalid("Provide one observation per supported marketplace");
             }
             let observations: Vec<Value> = arr(&args["reports"])
                 .iter()
@@ -563,10 +539,10 @@ pub fn report(ws: &mut Workspace, action: &str, args: &Value) -> Result<()> {
                     .find(|o| o["access"]["status"] == "available")
                     .unwrap_or(&route[0]);
                 let access = &o["access"];
-                let checked: Vec<&str> = route
+                let checked: Vec<String> = route
                     .iter()
                     .filter(|o| o["access"]["status"] == "available")
-                    .map(|o| domain(s(&o["marketplace"])))
+                    .filter_map(|o| domain(&candidate, s(&o["marketplace"])))
                     .collect();
                 let mut blocks: Vec<Value> = arr(&candidate["browser_access"])
                     .iter()
@@ -589,8 +565,10 @@ pub fn report(ws: &mut Workspace, action: &str, args: &Value) -> Result<()> {
                     let explicit = arr(&a["blocked_domains"]);
                     if a["status"] == "available" || !explicit.is_empty() {
                         blocks.extend_from_slice(explicit)
-                    } else if a["status"] == "denied" || a["status"] == "unknown" {
-                        blocks.push(json!(domain(s(&item["marketplace"]))))
+                    } else if (a["status"] == "denied" || a["status"] == "unknown")
+                        && let Some(host) = domain(&candidate, s(&item["marketplace"]))
+                    {
+                        blocks.push(json!(host))
                     }
                 }
                 let mut seen = HashSet::new();
@@ -670,6 +648,39 @@ mod tests {
         fn completion(&self, r: &Value) -> Value {
             json!({"run_id":r["id"],"expected_version":r["version"],"worker_id":r["worker"]["id"],"observations":self.observations()})
         }
+    }
+    #[test]
+    fn connection_reports_accept_every_registered_marketplace() {
+        let mut f = Fixture::new();
+        let reports: Vec<Value> = arr(contracts::data("MARKETPLACES"))
+            .iter()
+            .map(|marketplace| {
+                let mut observation = f.observations()[0].clone();
+                observation["marketplace"] = marketplace["id"].clone();
+                observation["session"]["marketplace"] = marketplace["id"].clone();
+                observation
+            })
+            .collect();
+        assert_eq!(reports.len(), 12);
+        let args = json!({"context_id":f.ws.access_context,"reports":reports});
+        report(&mut f.ws, "report_connections", &args).unwrap();
+        assert_eq!(arr(&f.ws.config["platform_sessions"]).len(), 12);
+        for observation in arr(&args["reports"]) {
+            assert!(
+                arr(&f.ws.config["platform_sessions"])
+                    .iter()
+                    .any(|session| {
+                        session["marketplace"] == observation["marketplace"]
+                            && session["status"] == "signed_in"
+                    })
+            );
+        }
+        let saved = f.ws.config.clone();
+        let mut too_many = args;
+        let duplicate = too_many["reports"][0].clone();
+        too_many["reports"].as_array_mut().unwrap().push(duplicate);
+        assert!(report(&mut f.ws, "report_connections", &too_many).is_err());
+        assert_eq!(f.ws.config, saved);
     }
     #[test]
     fn queue_claim_partial_complete_exact_retry_and_observation_fencing() {
@@ -786,6 +797,7 @@ mod tests {
     #[test]
     fn site_blocks_do_not_falsely_disconnect_other_sites() {
         let mut f = Fixture::new();
+        f.ws.config["regional_preferences"] = json!({"country":"DE"});
         let queued = f.start();
         let running = f.claim(&queued);
         let mut args = f.completion(&running);
@@ -798,7 +810,7 @@ mod tests {
         assert_eq!(f.ws.config["browser_access"][0]["status"], "available");
         assert_eq!(
             f.ws.config["browser_access"][0]["blocked_domains"],
-            json!(["www.ebay.co.uk"])
+            json!(["www.ebay.de"])
         );
         assert!(crate::sellers::access_available(
             &f.ws.config["browser_access"],
@@ -812,7 +824,7 @@ mod tests {
             "in_app",
             &f.ws.access_context,
             f.ws.now,
-            "www.ebay.co.uk"
+            "www.ebay.de"
         ));
     }
     #[test]

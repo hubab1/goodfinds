@@ -22,8 +22,6 @@ export type ActionDescriptor = {
 export type Workflow = {
   state: string;
   actions: ActionDescriptor[];
-  allowed_actions: string[];
-  prerequisites: string[];
 };
 export type StateDefinition = { meaning: string; invariant: string; recovery: string };
 export type EventDefinition = {
@@ -75,13 +73,6 @@ export function workflow(state: string, actions: ActionDescriptor[]): Workflow {
   return {
     state,
     actions,
-    // Compatibility: these tools can be proposed, but may still require input/evidence.
-    allowed_actions: [
-      ...new Set(actions.filter((a) => a.availability !== "blocked").map((a) => a.tool)),
-    ],
-    prerequisites: [
-      ...new Set(actions.flatMap((a) => [...a.conditions, ...a.blockers.map((b) => b.recovery)])),
-    ],
   };
 }
 export function canProposeEvent(view: Workflow | undefined, event: string): boolean {

@@ -2,12 +2,24 @@
 
 The panel and agent share one backend. Persistent panel changes call the same MCP mutations available in chat; the local preview routes those tool calls to the same service. Use scoped entity revisions for persisted edits and the conversation's `version` for buying actions; follow [tool contracts](tool-contracts.md) for retries and conflicts. A successful mutation updates durable state for either interface; the panel refreshes it without a separate edit.
 
+## Show the search at the right time
+
+For a direct buying request in the buying chat, save the ready brief, confirm an executor is available, then call `start_goodfinds_search({request: {search_id, request_id, trigger: "manual"}})` through the connected host. The same response queues or reuses the run and displays its focused listings panel. Claim or dispatch that returned run; the panel truthfully says waiting until execution begins. Show it before the cover follow-up, browsing or schedule setup. Its immediate category illustration updates when the product photo is saved.
+
+Orient a first-time buyer in one sentence: “Your search is in Goodfinds beside this chat; listings will appear there as I check them.” Say this only when the host has displayed the panel. Results, photos and review status update there automatically; keep chat for meaningful findings, questions and interruptions. If the user has closed the panel, respect that choice during the run. To show saved results on request, use `open_goodfinds_panel({search_id})`; no new run is needed.
+
+When the brief is ready but browsing cannot launch, show that saved search with `open_goodfinds_panel({search_id})` and explain the specific interruption in chat. Keep the run unqueued until an executor is available.
+
+Scheduled wake-ups and collection workers use the non-displaying `request_goodfinds_search_run`. A run already queued by the panel is reused, with no second start or panel opening. Multiple searches requested together need one focused panel; queue the remaining runs without displaying additional panels. Polling, cover updates and listing imports never reopen the panel or reset its selected tab.
+
+If the connected tool list lacks `start_goodfinds_search`, queue through `request_goodfinds_search_run`, then call the connected `open_goodfinds_panel` once. A CLI/helper response cannot display a panel in the host. When no connected panel tool is available, explain that limitation briefly, keep saving and presenting results in chat, and offer the host's Goodfinds app entry point only when it is observed. An empty dashboard or a setup question is not a substitute for the saved search view.
+
 | Buyer intent                                                           | Tools                                                                                                                                                                        |
 | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Read/change settings, area, browser or marketplaces                    | `get_goodfinds_settings`, `save_goodfinds_settings`; `open_goodfinds_location_chooser` for the device location chooser                                                       |
 | Change quiet hours, time zone or default check frequency               | `save_goodfinds_settings` with `quiet_hours` or `interval_minutes`; reconcile active host recurrences through evaluation-delivery.md                                         |
 | Create/edit a search or resume its draft                               | `get_goodfinds_search_context`, `list_goodfinds_search_templates`, interview tools, `save_goodfinds_search_draft`, `save_goodfinds_search`, `discard_goodfinds_search_draft` |
-| Search now, stop or resume                                             | `request_goodfinds_search_run`, native background dispatch, `cancel_goodfinds_search_run`; follow background-work.md                                                         |
+| Search now, stop or resume                                             | `start_goodfinds_search` for direct requests, native background dispatch, `cancel_goodfinds_search_run`; follow background-work.md                                           |
 | Pause/resume monitoring, change frequency or remove a search           | `set_goodfinds_monitoring`, `set_goodfinds_search_enabled`, `remove_goodfinds_search`; reconcile the linked host schedule through evaluation-delivery.md                     |
 | Set specific daily times or allow overnight checks for one search      | `set_goodfinds_monitoring` with `timing: {mode: "daily", times: [...]}` or `allow_quiet_hours`; use the returned compiled plan                                               |
 | Check an automatic wake-up before dispatch                             | `check_goodfinds_scheduled_search`; normal skips return quietly; automatic starts pass trigger `scheduled`                                                                   |

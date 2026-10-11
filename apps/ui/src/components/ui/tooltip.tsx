@@ -28,7 +28,7 @@ function TooltipContent({
         <TooltipPrimitive.Popup
           data-slot="tooltip-content"
           className={cn(
-            "max-h-[var(--available-height)] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border bg-background p-4 text-xs leading-relaxed text-foreground shadow-lg",
+            "max-h-[var(--available-height)] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border bg-popover p-4 text-xs leading-relaxed text-popover-foreground shadow-lg",
             className,
           )}
           {...props}

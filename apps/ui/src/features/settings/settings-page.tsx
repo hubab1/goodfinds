@@ -1,6 +1,8 @@
+import { RegionalFields } from "./regional-fields";
 import type { Action } from "@/lib/actions";
 import { FormField as Field } from "@/components/ui/form-field";
 import { Disclosure } from "@/components/ui/disclosure";
+import { PageHeader } from "@/components/ui/page-header";
 import { GOODFINDS_VERSION } from "@goodfinds/contracts/version";
 import { scheduleIsActive } from "@goodfinds/contracts/monitoring";
 import { BrowserSettings } from "@/features/settings/browser-settings";
@@ -77,25 +79,49 @@ export function SettingsForm({
   };
 
   return (
-    <section className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold">Settings</h2>
-        <output
-          className="flex items-center gap-1.5 text-xs text-muted-foreground"
-          aria-live="polite"
-        >
-          {status === "saving" ? (
-            <>
-              <LoaderCircle className="size-3 animate-spin" aria-hidden="true" /> Saving…
-            </>
-          ) : status === "saved" ? (
-            <>
-              <Check className="size-3" aria-hidden="true" /> Saved
-            </>
-          ) : null}
-        </output>
-      </div>
+    <section className="space-y-5">
+      <PageHeader
+        title="Settings"
+        subtitle="Location, marketplaces and monitoring."
+        actions={
+          <output
+            className="flex items-center gap-1.5 text-xs text-muted-foreground"
+            aria-live="polite"
+          >
+            {status === "saving" ? (
+              <>
+                <LoaderCircle className="size-3 animate-spin" aria-hidden="true" /> Saving…
+              </>
+            ) : status === "saved" ? (
+              <>
+                <Check className="size-3" aria-hidden="true" /> Saved
+              </>
+            ) : null}
+          </output>
+        }
+      />
       <div className="space-y-6 rounded-xl border p-5 @lg:p-6">
+        <section className="grid gap-4 min-[420px]:grid-cols-2">
+          <h3 className="col-span-full font-medium">Shopping defaults</h3>
+          <RegionalFields
+            country={config.regional_preferences?.country ?? ""}
+            currency={config.regional_preferences?.currency ?? ""}
+            fulfilment={config.regional_preferences?.fulfilment ?? "either"}
+            automatic
+            disabled={busy}
+            changeCountry={(country) =>
+              void save({ regional_preferences: { country: country || null } })
+            }
+            changeCurrency={(currency) =>
+              void save({ regional_preferences: { currency: currency || null } })
+            }
+            changeFulfilment={(fulfilment) => void save({ regional_preferences: { fulfilment } })}
+          />
+          <p className="col-span-full text-sm text-muted-foreground">
+            Defaults apply to new searches. Each search keeps its own currency and marketplace
+            choices.
+          </p>
+        </section>
         <LocationSettings state={state} busy={busy} action={locationAction} />
         <section className="border-t pt-5 space-y-2">
           <Label htmlFor="journey-checks">Check driving times</Label>

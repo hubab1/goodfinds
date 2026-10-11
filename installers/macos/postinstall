@@ -1,0 +1,18 @@
+#!/bin/bash
+set -euo pipefail
+
+# The distribution only allows CurrentUserHomeDirectory, with auth="none".
+# Installer supplies that user's home as the installation destination ($2).
+if [ "$#" -lt 2 ] || [ -z "$2" ] || [ "$2" = / ] || [ "$(id -u)" -eq 0 ]; then
+  echo 'Goodfinds must be installed for the current user, without sudo.' >&2
+  exit 1
+fi
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+helper="$script_dir/Goodfinds Setup.app/Contents/MacOS/GoodfindsInstaller"
+plugin_url="$("$helper" --install-home "$2")"
+
+# CLI installs remain noninteractive. A missing host must not turn a completed
+# installation into a failure; the summary explains how to open Plugins manually.
+if [ -z "${COMMAND_LINE_INSTALL:-}" ]; then
+  /usr/bin/open "$plugin_url" || true
+fi

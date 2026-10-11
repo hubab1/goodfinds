@@ -1,5 +1,5 @@
 import { seedWorkspace } from "./helpers/workspace.ts";
-import { errorDetails } from "./reference-server/src/workspace/errors.ts";
+import { errorDetails } from "./helpers/native-driver.ts";
 import { revisionFor } from "./helpers/revisions.ts";
 import { sellerActions } from "@goodfinds/contracts/tool-names";
 import test from "node:test";
@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { Clock, Effect } from "effect";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
 import {
   collectionExpired,
   EMPTY_FACETS,
@@ -20,7 +20,7 @@ import {
 } from "@goodfinds/contracts/seller-conversation";
 import type { SellerMessageDraft } from "@goodfinds/contracts/seller-conversation";
 import { sellerRequest, offerDefaults } from "../apps/ui/src/lib/seller-conversation.ts";
-import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
+import { createNativeServer } from "./helpers/native-mcp.ts";
 import { stateFromToolResult, stateSchema } from "@goodfinds/contracts/state";
 import { QUIET_BROWSING_GUIDANCE } from "@goodfinds/contracts/host-request";
 
@@ -37,7 +37,7 @@ function fixture(t: TestContext, mode: "live" | "sample" = "live") {
     monotonicTimeNanos: Effect.succeed(0n),
     sleep: () => Effect.void,
   };
-  const store = new WorkspaceStore(seedWorkspace(folder, mode), mode);
+  const store = new NativeWorkspace(seedWorkspace(folder, mode), mode);
   const run = (operation: string, args: Record<string, unknown> = {}) =>
     Effect.runSync(store.request(operation, args).pipe(Effect.provideService(Clock.Clock, clock)));
   const imported =
@@ -211,7 +211,7 @@ void test("drafts persist without outreach or changing search revisions", (t) =>
   assert.equal(c.version, 0);
   f.command("save", { expected_version: 0, draft: f.draft });
   const restored = Effect.runSync(
-    new WorkspaceStore(seedWorkspace(f.folder)).request("get_seller_conversation", {
+    new NativeWorkspace(seedWorkspace(f.folder)).request("get_seller_conversation", {
       listing_key: f.listing.key,
     }),
   );
@@ -242,7 +242,7 @@ void test("reply workers record actual model settings without gaining send permi
     "collection",
   );
   const restored = Effect.runSync(
-    new WorkspaceStore(seedWorkspace(f.folder)).request("get_seller_conversation", {
+    new NativeWorkspace(seedWorkspace(f.folder)).request("get_seller_conversation", {
       listing_key: f.listing.key,
     }),
   ).state.seller_conversation;
@@ -597,7 +597,7 @@ void test("sample conversations stay isolated and never grant browser execution"
   assert.equal(a.manual_only, true);
   assert.equal(sellerSummary(f.conversation()).label, "Message ready");
   const live = Effect.runSync(
-    new WorkspaceStore(seedWorkspace(f.folder)).request("get_workspace"),
+    new NativeWorkspace(seedWorkspace(f.folder)).request("get_workspace"),
   ).state;
   assert.equal(live.seller_conversations.length, 0);
   assert.equal(live.listings.length, 0);
@@ -831,7 +831,7 @@ void test("MCP exposes the durable protocol and copy handoff references one acti
   assert.ok(prompt.includes(a.id));
   assert.ok(prompt.includes("execution.send_permitted true"));
   assert.ok(prompt.endsWith(QUIET_BROWSING_GUIDANCE));
-  const { server, calls } = createGoodfindsServer(seedWorkspace(f.folder));
+  const { server, calls } = createNativeServer(seedWorkspace(f.folder));
   t.after(() => server.close());
   const read = calls.get("get_goodfinds_seller_conversation");
   assert.ok(read);

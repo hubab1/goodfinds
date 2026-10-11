@@ -1,13 +1,12 @@
 import { z } from "zod";
 import type { MonitoringRecord, HostScheduleObservation } from "./monitoring.ts";
-import { hostScheduleObservationSchema } from "./monitoring.ts";
+import { dispatcherReceiptSchema, hostScheduleObservationSchema } from "./monitoring.ts";
 import {
   schedulePlan,
   canonicalRule,
   dailyRule,
   minuteOfDay,
   nextLocalTime,
-  quietHoursSchema,
 } from "./search-timing.ts";
 import type { QuietHours } from "./search-timing.ts";
 
@@ -15,18 +14,6 @@ const searchIds = z
   .array(z.string().min(1))
   .max(50)
   .refine((ids) => new Set(ids).size === ids.length, "Searches must be unique");
-export const dispatcherReceiptSchema = z.object({
-  automation_id: z.string().min(1).max(200).nullable(),
-  thread_id: z.uuid(),
-  status: z.enum(["active", "paused", "removed", "blocked"]),
-  interval_minutes: z.number().int().min(15).max(1440),
-  rrule: z.string().min(1).max(2000).optional(),
-  timezone: quietHoursSchema.shape.timezone.optional(),
-  evidence: z.string().trim().min(1).max(2000),
-  next_run_at: z.iso.datetime({ offset: true }).nullable().default(null),
-  last_run_at: z.iso.datetime({ offset: true }).nullable().default(null),
-  verified_at: z.iso.datetime({ offset: true }),
-});
 export const dispatcherRecordSchema = z
   .object({
     id: z.uuid(),
@@ -59,6 +46,7 @@ export const dispatcherReportSchema = z
     host_id: z.string().min(1).max(200).default("local"),
     notification_policy: z.enum(["failed_runs_only"]).nullable().default(null),
     search_ids: searchIds,
+    recover_removed_search_ids: searchIds.optional(),
     schedule: dispatcherReceiptSchema.omit({ verified_at: true }),
   })
   .strict()
@@ -210,6 +198,7 @@ export const dispatcherContextInputSchema = z
     thread_id: z.uuid(),
     search_ids: searchIds.optional(),
     dispatcher_id: z.uuid().optional(),
+    recover_removed_search_ids: searchIds.optional(),
   })
   .strict();
 export const scheduledBatchSchema = z

@@ -21,7 +21,7 @@ export function Disclosure({
   return (
     <Accordion.Root
       defaultValue={defaultOpen ? OPEN : CLOSED}
-      className={cn("rounded-xl border bg-white", className)}
+      className={cn("rounded-xl border bg-card text-card-foreground", className)}
     >
       <Accordion.Item value="content">
         <Accordion.Header>

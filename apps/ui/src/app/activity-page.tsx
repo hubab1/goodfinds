@@ -1,51 +1,62 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
+import { CalendarClock, Clock3, Timer } from "lucide-react";
 import { scheduleIsActive } from "@goodfinds/contracts/monitoring";
 import { RelativeTime } from "@/relative-time";
 import { Empty } from "@/components/ui/empty-state";
 import type { ViewProps } from "@/app/feature-props";
 
 export function Activity({ state }: ViewProps) {
+  const activeSchedules = state.monitoring.filter(scheduleIsActive).length;
+  const unverified = state.monitoring.some((item) => item.status === "unverified");
+  const status = activeSchedules
+    ? `${activeSchedules} active`
+    : unverified
+      ? "Needs checking"
+      : "Off";
   return (
     <section className="space-y-5">
-      <div>
-        <h2 className="text-xl font-semibold">Activity</h2>
-        <p className="mt-1 text-sm">Search history</p>
-      </div>
-      <Card>
-        <CardContent className="grid gap-5 py-5 @lg:grid-cols-3">
-          <div>
-            <h3 className="text-xs">Last checked</h3>
-            <p className="mt-1 text-sm font-medium">
-              <RelativeTime value={state.monitor.last_run_at} />
-            </p>
-          </div>
-          <div>
-            <h3 className="text-xs">Automatic searches</h3>
-            <p className="mt-1 text-sm font-medium">
-              {state.monitoring.filter(scheduleIsActive).length
-                ? `${state.monitoring.filter(scheduleIsActive).length} active`
-                : state.monitoring.some((item) => item.status === "unverified")
-                  ? "Needs checking"
-                  : "Off"}
-            </p>
-          </div>
-          <div>
-            <h3 className="text-xs">Monitoring updates</h3>
-            <p className="mt-1 text-sm font-medium">
-              {state.monitoring.some(scheduleIsActive)
-                ? "In your buying chat"
-                : state.monitoring.some((item) => item.status === "unverified")
-                  ? "Needs checking"
-                  : "No active schedule"}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <PageHeader title="Activity" subtitle="Your recent searches and upcoming checks." />
+      <dl
+        aria-label="Search status"
+        className="grid overflow-hidden rounded-xl border bg-card @lg:grid-cols-3"
+      >
+        <div className="flex min-w-0 items-center justify-between gap-3 border-b p-4 @lg:block @lg:border-r @lg:border-b-0">
+          <dt className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock3 className="size-4 shrink-0" aria-hidden="true" /> Last checked
+          </dt>
+          <dd className="text-sm font-medium tabular-nums @lg:mt-1 @lg:pl-6">
+            <RelativeTime value={state.monitor.last_run_at} />
+          </dd>
+        </div>
+        <div className="flex min-w-0 items-center justify-between gap-3 border-b p-4 @lg:block @lg:border-r @lg:border-b-0">
+          <dt className="flex items-center gap-2 text-xs text-muted-foreground">
+            <CalendarClock className="size-4 shrink-0" aria-hidden="true" /> Automatic searches
+          </dt>
+          <dd className="text-sm font-medium @lg:mt-1 @lg:pl-6">{status}</dd>
+        </div>
+        <div className="flex min-w-0 items-center justify-between gap-3 p-4 @lg:block">
+          <dt className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Timer className="size-4 shrink-0" aria-hidden="true" /> Next check
+          </dt>
+          <dd className="text-sm font-medium tabular-nums @lg:mt-1 @lg:pl-6">
+            {unverified ? (
+              "Needs checking"
+            ) : activeSchedules && state.monitor.next_run_at ? (
+              <RelativeTime value={state.monitor.next_run_at} />
+            ) : activeSchedules ? (
+              "Not confirmed"
+            ) : (
+              "None planned"
+            )}
+          </dd>
+        </div>
+      </dl>
       <h3 className="font-semibold">Recent checks</h3>
       {state.activity.length ? (
-        <Card>
-          <CardContent className="divide-y">
+        <Card className="gap-0 py-0 shadow-none">
+          <CardContent className="divide-y px-4">
             {state.activity.map((entry) => (
               <div key={entry.id} className="flex items-center justify-between gap-3 py-4 text-sm">
                 <div>

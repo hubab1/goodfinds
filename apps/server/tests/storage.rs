@@ -1,166 +1,155 @@
-use goodfinds::{contracts, storage::Workspace, util};
-use rusqlite::{Connection, params_from_iter, types::Value as SqlValue};
+use goodfinds::storage::Workspace;
+use rusqlite::Connection;
 use serde_json::{Value, json};
-use std::path::Path;
-fn fixture() -> Value {
-    serde_json::from_str(include_str!("fixtures/bun-workspace.json")).unwrap()
-}
-fn install(root: &Path) -> Value {
-    std::fs::create_dir_all(root).unwrap();
-    let f = fixture();
-    let db = Connection::open(root.join("workspace.sqlite")).unwrap();
-    db.execute_batch(contracts::all()["schema_sql"].as_str().unwrap())
-        .unwrap();
-    db.execute_batch("PRAGMA user_version=4").unwrap();
-    for (table, rows) in f["tables"].as_object().unwrap() {
-        for row in rows.as_array().unwrap() {
-            let cells = row.as_array().unwrap();
-            let sql = format!(
-                "INSERT INTO {table} VALUES({})",
-                vec!["?"; cells.len()].join(",")
-            );
-            let values: Vec<SqlValue> = cells
-                .iter()
-                .map(|v| match v {
-                    Value::Null => SqlValue::Null,
-                    Value::Number(n) => n
-                        .as_i64()
-                        .map(SqlValue::Integer)
-                        .unwrap_or_else(|| SqlValue::Real(n.as_f64().unwrap())),
-                    Value::String(s) => SqlValue::Text(s.clone()),
-                    _ => panic!("Unexpected SQLite fixture value"),
-                })
-                .collect();
-            db.execute(&sql, params_from_iter(values)).unwrap();
-        }
-    }
-    f
-}
 #[test]
-fn bun_persisted_rows_keep_configuration_hash_entity_tokens_and_tombstones() {
+fn fresh_workspace_uses_complete_schema_one_and_keeps_its_stream_identity() {
     let dir = tempfile::tempdir().unwrap();
-    let expected = install(dir.path());
-    let mut ws = Workspace::open(dir.path(), "live", "storage-compatibility").unwrap();
-    assert_eq!(ws.config, expected["config"]);
-    assert_eq!(ws.revision(), expected["revision"].as_str().unwrap());
-    assert_eq!(ws.revisions().unwrap(), expected["revisions"]);
+    let ws = Workspace::open(dir.path(), "live", "fresh").unwrap();
     assert_eq!(
-        ws.config["schedule"]["quiet_hours"]["timezone"],
-        "Pacific/Auckland"
+        ws.db
+            .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        1
     );
-    ws.db.execute_batch("BEGIN IMMEDIATE").unwrap();
-    ws.save_config().unwrap();
-    ws.db.execute_batch("COMMIT").unwrap();
-    assert_eq!(ws.revisions().unwrap(), expected["revisions"]);
-    drop(ws);
-    let reread = Workspace::open(dir.path(), "live", "fresh-context").unwrap();
-    assert_eq!(reread.revision(), expected["revision"].as_str().unwrap());
-    assert_eq!(reread.revisions().unwrap(), expected["revisions"]);
-    let deleted: i64 = reread
+    assert_eq!(ws.config["searches"], json!([]));
+    assert_eq!(ws.config["origin_confirmed"], false);
+    let stream: String = ws
         .db
         .query_row(
-            "SELECT is_deleted FROM saved_searches WHERE id='removed-search'",
+            "SELECT stream_id FROM coordination_stream WHERE id=1",
             [],
             |r| r.get(0),
         )
         .unwrap();
-    assert_eq!(deleted, 1);
-    assert!(
-        !reread.config["searches"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|s| s["id"] == "removed-search")
+    let events: i64 = ws
+        .db
+        .query_row("SELECT COUNT(*) FROM coordination_events", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(events, 0);
+    drop(ws);
+    let reopened = Workspace::open(dir.path(), "live", "reopened").unwrap();
+    assert_eq!(
+        reopened
+            .db
+            .query_row(
+                "SELECT stream_id FROM coordination_stream WHERE id=1",
+                [],
+                |r| r.get::<_, String>(0)
+            )
+            .unwrap(),
+        stream
+    );
+    assert_eq!(
+        reopened
+            .db
+            .query_row("PRAGMA integrity_check", [], |r| r.get::<_, String>(0))
+            .unwrap(),
+        "ok"
     );
 }
 #[test]
-fn schema_one_two_three_upgrades_preserve_earliest_discovery_and_saved_revisions() {
-    for version in [1, 2, 3] {
+fn concurrent_first_open_preserves_one_complete_workspace() {
+    for _ in 0..10 {
         let dir = tempfile::tempdir().unwrap();
-        let expected = install(dir.path());
-        let db = Connection::open(dir.path().join("workspace.sqlite")).unwrap();
-        db.execute_batch("DROP TABLE listing_seen").unwrap();
-        if version < 3 {
-            db.execute_batch("DROP TABLE listing_search_discoveries")
-                .unwrap()
-        }
-        if version == 1 {
-            db.execute_batch("DROP TABLE journey_estimates").unwrap()
-        }
-        for (id, date) in [
-            ("later", "2026-10-07T10:00:00Z"),
-            ("earlier", "2026-10-06T10:00:00Z"),
-        ] {
-            let doc = json!({"id":id,"search_id":"demo-laptop","created_at":date,"listing_keys":["manual:fixture"]});
-            db.execute(
-                "INSERT INTO search_runs VALUES(?,?,?,?)",
-                [id, "demo-laptop", &doc.to_string(), date],
-            )
-            .unwrap();
-        }
-        db.execute_batch(&format!("PRAGMA user_version={version}"))
-            .unwrap();
-        drop(db);
-        let ws = Workspace::open(dir.path(), "live", "migration").unwrap();
-        let upgraded: i64 = ws
+        let barrier = std::sync::Barrier::new(8);
+        let revisions = std::thread::scope(|scope| {
+            let workers: Vec<_> = (0..8)
+                .map(|_| {
+                    scope.spawn(|| {
+                        barrier.wait();
+                        let ws = Workspace::open(dir.path(), "live", "concurrent-start")?;
+                        ws.revisions()
+                    })
+                })
+                .collect();
+            workers
+                .into_iter()
+                .map(|worker| worker.join().unwrap().unwrap())
+                .collect::<Vec<_>>()
+        });
+        assert!(revisions.iter().all(|revision| revision == &revisions[0]));
+        let ws = Workspace::open(dir.path(), "live", "readback").unwrap();
+        let settings: i64 = ws
             .db
-            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .query_row("SELECT COUNT(*) FROM workspace_settings", [], |row| {
+                row.get(0)
+            })
             .unwrap();
-        assert_eq!(upgraded, 4);
-        assert_eq!(ws.revisions().unwrap(), expected["revisions"]);
-        if version < 3 {
-            let run:String=ws.db.query_row("SELECT run_id FROM listing_search_discoveries WHERE listing_key='manual:fixture' AND search_id='demo-laptop'",[],|r|r.get(0)).unwrap();
-            assert_eq!(run, "earlier");
-        }
-        let count: i64 = ws
-            .db
-            .query_row("SELECT COUNT(*) FROM listing_seen", [], |r| r.get(0))
-            .unwrap();
-        assert_eq!(count, 0);
+        assert_eq!(settings, 1);
     }
 }
 #[test]
-fn old_model_dismissal_is_upgraded_once_only_with_saved_evidence() {
-    let dir = tempfile::tempdir().unwrap();
-    install(dir.path());
-    let mut ws = Workspace::open(dir.path(), "live", "legacy-feedback").unwrap();
-    let search = ws.config["searches"][0].clone();
-    let listing = json!({"key":"manual:fixture","listing_id":"fixture","product":search["product"],"attributes":{"model":"Fictional verified model"},"evidence":{"model":"Model printed on identification plate"}});
-    ws.db.execute("INSERT INTO listings VALUES('manual:fixture','manual',?,'2026-10-08T00:00:00Z','2026-10-08T00:00:00Z')",[listing.to_string()]).unwrap();
-    let mut feedback = json!({"id":"legacy-dismissal","search_id":search["id"],"listing_key":"manual:fixture","action":"dismiss","reason":"Not interested in this model","scope":"search","category":search["product"],"created_at":"2026-10-08T00:00:00Z","undone":false});
-    let mut unverified = feedback.clone();
-    unverified["id"] = json!("unverified-dismissal");
-    unverified["listing_key"] = json!("manual:missing");
-    let mut opted_out = feedback.clone();
-    opted_out["id"] = json!("opted-out");
-    opted_out["exclude_model"] = json!(false);
-    feedback.as_object_mut().unwrap().remove("exclude_model");
-    ws.config["feedback"] = json!([feedback, unverified, opted_out]);
-    ws.save_config().unwrap();
-    let before = ws.revisions().unwrap();
-    drop(ws);
-    let ws = Workspace::open(dir.path(), "live", "upgraded").unwrap();
-    assert_eq!(
-        ws.config["feedback"][0]["rule"]["value"],
-        "Fictional verified model"
-    );
-    assert_eq!(ws.config["feedback"][0]["exclude_model"], true);
-    assert!(ws.config["feedback"][1]["rule"].is_null());
-    assert!(ws.config["feedback"][2]["rule"].is_null());
-    let after = ws.revisions().unwrap();
-    assert_eq!(after["settings"], before["settings"]);
-    assert_eq!(after["searches"], before["searches"]);
-    assert_ne!(
-        after["feedback"]["legacy-dismissal"],
-        before["feedback"]["legacy-dismissal"]
-    );
-    assert_eq!(
-        after["feedback"]["unverified-dismissal"],
-        before["feedback"]["unverified-dismissal"]
-    );
-    drop(ws);
-    let ws = Workspace::open(dir.path(), "live", "repeated").unwrap();
-    assert_eq!(ws.revisions().unwrap(), after);
+fn unsupported_schemas_are_rejected_without_changes() {
+    for version in [0, 2, 3, 4, 5, 99] {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("workspace.sqlite");
+        let db = Connection::open(&path).unwrap();
+        db.execute_batch(&format!("CREATE TABLE preserved(value TEXT); INSERT INTO preserved VALUES('saved'); PRAGMA user_version={version}")).unwrap();
+        assert!(Workspace::open(dir.path(), "live", "test").is_err());
+        assert_eq!(
+            db.query_row("SELECT value FROM preserved", [], |r| r.get::<_, String>(0))
+                .unwrap(),
+            "saved"
+        );
+        assert_eq!(
+            db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            version
+        );
+    }
+}
+#[test]
+fn removed_record_fields_are_rejected_without_rewriting_saved_records() {
+    for (table, field) in [
+        ("search_monitoring", "schedule"),
+        ("saved_searches", "prompt"),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let mut ws = Workspace::open(dir.path(), "live", "record-boundary").unwrap();
+        let example: Value = serde_json::from_str(include_str!(
+            "../../../skills/marketplace-shopping/assets/example-workspace.json"
+        ))
+        .unwrap();
+        ws.config = goodfinds::storage::validate_config(&example).unwrap();
+        let sid = ws.config["searches"][0]["id"].clone();
+        goodfinds::searches::set_monitoring(
+            &mut ws.config,
+            &json!({"search_id":sid,"preference":"recurring","interval_minutes":120}),
+        )
+        .unwrap();
+        ws.save_config().unwrap();
+        let query = format!("SELECT document_json FROM {table} ORDER BY sort_order LIMIT 1");
+        let original: String = ws.db.query_row(&query, [], |r| r.get(0)).unwrap();
+        let mut row: Value = serde_json::from_str(&original).unwrap();
+        if field == "schedule" {
+            row["schedule"] = Value::Null;
+        } else {
+            row["cover"] = json!({"media_id":"a".repeat(64),"kind":"generated","alt":"Example cover","source_name":"Generated illustration","prompt":"Removed generation data"});
+        }
+        let persisted = row.to_string();
+        ws.db
+            .execute(
+                &format!("UPDATE {table} SET document_json=?1 WHERE document_json=?2"),
+                [&persisted, &original],
+            )
+            .unwrap();
+        drop(ws);
+        let error = match Workspace::open(dir.path(), "live", "readback") {
+            Err(error) => error,
+            Ok(_) => panic!("Removed {field} unexpectedly accepted"),
+        };
+        assert!(error.to_string().contains(field));
+        let db = Connection::open(dir.path().join("workspace.sqlite")).unwrap();
+        assert_eq!(
+            db.query_row(&query, [], |r| r.get::<_, String>(0)).unwrap(),
+            persisted
+        );
+        assert_eq!(
+            db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            1
+        );
+    }
 }
 #[test]
 fn defaults_use_host_timezone_without_replacing_explicit_preferences() {
@@ -176,19 +165,18 @@ fn defaults_use_host_timezone_without_replacing_explicit_preferences() {
         goodfinds::storage::validate_config(&explicit).unwrap()["schedule"]["quiet_hours"]["timezone"],
         "Asia/Tokyo"
     );
-    assert_eq!(
-        util::hash(&Value::Null),
-        fixture()["revisions"]["absent"].as_str().unwrap()
-    );
 }
 #[test]
 fn imported_configuration_cannot_bypass_monitoring_dispatcher_or_feedback_guards() {
-    let base = fixture()["config"].clone();
+    let base: Value = serde_json::from_str(include_str!(
+        "../../../skills/marketplace-shopping/assets/example-workspace.json"
+    ))
+    .unwrap();
     let search = base["searches"][0]["id"].clone();
     let mut bad = base.clone();
     bad["searches"][0]["id"] = json!("Wrong_ID");
     assert!(goodfinds::storage::validate_config(&bad).is_err());
-    let monitoring = json!({"search_id":search,"preference":"recurring","interval_minutes":60,"timing":{"mode":"daily","times":["09:00"]},"schedule":null});
+    let monitoring = json!({"search_id":search,"preference":"recurring","interval_minutes":60,"timing":{"mode":"daily","times":["09:00"]}});
     bad = base.clone();
     bad["monitoring"] = json!([monitoring.clone(), monitoring.clone()]);
     assert!(goodfinds::storage::validate_config(&bad).is_err());

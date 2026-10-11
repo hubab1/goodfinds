@@ -1,3 +1,4 @@
+import { fixtureImage } from "./helpers/fixture-media.ts";
 import { seedWorkspace } from "./helpers/workspace.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -5,7 +6,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Effect } from "effect";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
 
 const start = Date.now() - 60000;
 function observation(extra: Record<string, unknown> = {}) {
@@ -30,7 +31,7 @@ function observation(extra: Record<string, unknown> = {}) {
 void test("a detail import without price basis cannot erase a saved asking price", (t) => {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-extraction-"));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  const store = new WorkspaceStore(seedWorkspace(folder));
+  const store = new NativeWorkspace(seedWorkspace(folder));
   const save = (row: Record<string, unknown>) =>
     Effect.runSync(store.request("import_listing_observations", { observations: [row] })).state;
   const before = save(observation());
@@ -49,10 +50,10 @@ void test("a detail import without price basis cannot erase a saved asking price
 void test("partial detail enrichment saves seller, location and condition without erasing a gallery", (t) => {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-enrichment-"));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  const store = new WorkspaceStore(seedWorkspace(folder));
+  const store = new NativeWorkspace(seedWorkspace(folder));
   const save = (row: Record<string, unknown>) =>
     Effect.runSync(store.request("import_listing_observations", { observations: [row] })).state;
-  const photos = [{ media_id: "a".repeat(64), position: 1, caption: "Saved original" }];
+  const photos = [{ media_id: fixtureImage(folder), position: 1, caption: "Saved original" }];
   save(observation({ photos, seller_name: "Old name", evidence: { seller_name: "Old source" } }));
   const profile = "https://www.facebook.com/marketplace/profile/123456789/";
   const checked = new Date(start + 1000).toISOString();

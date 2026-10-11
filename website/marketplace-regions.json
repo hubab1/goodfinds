@@ -1,0 +1,498 @@
+{
+  "AT": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      },
+      { "id": "ebay", "name": "eBay", "url": "https://www.ebay.at/" },
+      { "id": "vinted", "name": "Vinted", "url": "https://www.vinted.at/" }
+    ],
+    "vehicle": ["facebook_marketplace", "ebay"],
+    "fashion": ["vinted", "ebay"]
+  },
+  "AU": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      },
+      { "id": "ebay", "name": "eBay", "url": "https://www.ebay.com.au/" },
+      { "id": "vinted", "name": "Vinted", "url": "https://www.vinted.com.au/" }
+    ],
+    "vehicle": ["facebook_marketplace", "ebay"],
+    "fashion": ["vinted", "ebay"]
+  },
+  "BE": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      },
+      { "id": "ebay", "name": "eBay", "url": "https://benl.ebay.be/" },
+      { "id": "vinted", "name": "Vinted", "url": "https://www.vinted.be/" }
+    ],
+    "vehicle": ["facebook_marketplace", "ebay"],
+    "fashion": ["vinted", "ebay"]
+  },
+  "BG": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "BR": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "CA": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      },
+      { "id": "ebay", "name": "eBay", "url": "https://www.ebay.ca/" },
+      { "id": "craigslist", "name": "Craigslist", "url": "https://www.craigslist.org/" }
+    ],
+    "vehicle": ["facebook_marketplace", "ebay", "craigslist"],
+    "fashion": ["ebay"]
+  },
+  "CH": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      },
+      { "id": "ebay", "name": "eBay", "url": "https://www.ebay.ch/" }
+    ],
+    "vehicle": ["facebook_marketplace", "ebay"],
+    "fashion": ["ebay"]
+  },
+  "CY": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "CZ": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "DE": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      },
+      { "id": "ebay", "name": "eBay", "url": "https://www.ebay.de/" },
+      { "id": "vinted", "name": "Vinted", "url": "https://www.vinted.de/" }
+    ],
+    "vehicle": ["facebook_marketplace", "ebay"],
+    "fashion": ["vinted", "ebay"]
+  },
+  "DK": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "EE": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "ES": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      },
+      { "id": "ebay", "name": "eBay", "url": "https://www.ebay.es/" },
+      { "id": "vinted", "name": "Vinted", "url": "https://www.vinted.es/" }
+    ],
+    "vehicle": ["facebook_marketplace", "ebay"],
+    "fashion": ["vinted", "ebay"]
+  },
+  "FI": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "FR": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      },
+      { "id": "ebay", "name": "eBay", "url": "https://www.ebay.fr/" },
+      { "id": "vinted", "name": "Vinted", "url": "https://www.vinted.fr/" }
+    ],
+    "vehicle": ["facebook_marketplace", "ebay"],
+    "fashion": ["vinted", "ebay"]
+  },
+  "GB": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      },
+      { "id": "ebay", "name": "eBay", "url": "https://www.ebay.co.uk/" },
+      { "id": "vinted", "name": "Vinted", "url": "https://www.vinted.co.uk/" },
+      { "id": "gumtree", "name": "Gumtree", "url": "https://www.gumtree.com/" },
+      { "id": "autotrader", "name": "Auto Trader UK", "url": "https://www.autotrader.co.uk/" },
+      { "id": "depop", "name": "Depop", "url": "https://www.depop.com/gb/" }
+    ],
+    "vehicle": ["autotrader", "facebook_marketplace", "ebay", "gumtree"],
+    "fashion": ["vinted", "depop", "ebay"]
+  },
+  "GR": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "HR": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "HU": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "IE": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      },
+      { "id": "ebay", "name": "eBay", "url": "https://www.ebay.ie/" },
+      { "id": "vinted", "name": "Vinted", "url": "https://www.vinted.ie/" }
+    ],
+    "vehicle": ["facebook_marketplace", "ebay"],
+    "fashion": ["vinted", "ebay"]
+  },
+  "IN": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "IS": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "IT": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      },
+      { "id": "ebay", "name": "eBay", "url": "https://www.ebay.it/" },
+      { "id": "vinted", "name": "Vinted", "url": "https://www.vinted.it/" }
+    ],
+    "vehicle": ["facebook_marketplace", "ebay"],
+    "fashion": ["vinted", "ebay"]
+  },
+  "JP": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "LT": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "LU": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "LV": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "MT": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "MX": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "NL": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      },
+      { "id": "ebay", "name": "eBay", "url": "https://www.ebay.nl/" },
+      { "id": "vinted", "name": "Vinted", "url": "https://www.vinted.nl/" }
+    ],
+    "vehicle": ["facebook_marketplace", "ebay"],
+    "fashion": ["vinted", "ebay"]
+  },
+  "NO": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "NZ": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "PL": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      },
+      { "id": "ebay", "name": "eBay", "url": "https://www.ebay.pl/" },
+      { "id": "vinted", "name": "Vinted", "url": "https://www.vinted.pl/" }
+    ],
+    "vehicle": ["facebook_marketplace", "ebay"],
+    "fashion": ["vinted", "ebay"]
+  },
+  "PT": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      },
+      { "id": "vinted", "name": "Vinted", "url": "https://www.vinted.pt/" }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": ["vinted"]
+  },
+  "RO": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "SE": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "SG": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "SI": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "SK": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  },
+  "US": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      },
+      { "id": "ebay", "name": "eBay", "url": "https://www.ebay.com/" },
+      { "id": "vinted", "name": "Vinted", "url": "https://www.vinted.com/" },
+      { "id": "craigslist", "name": "Craigslist", "url": "https://www.craigslist.org/" },
+      { "id": "cargurus", "name": "CarGurus US", "url": "https://www.cargurus.com/" },
+      { "id": "poshmark", "name": "Poshmark US", "url": "https://poshmark.com/" },
+      { "id": "depop", "name": "Depop", "url": "https://www.depop.com/" },
+      { "id": "mercari", "name": "Mercari US", "url": "https://www.mercari.com/" },
+      { "id": "cars_com", "name": "Cars.com US", "url": "https://www.cars.com/" },
+      { "id": "autotrader_us", "name": "Autotrader US", "url": "https://www.autotrader.com/" }
+    ],
+    "vehicle": [
+      "cargurus",
+      "cars_com",
+      "autotrader_us",
+      "facebook_marketplace",
+      "ebay",
+      "craigslist"
+    ],
+    "fashion": ["poshmark", "depop", "mercari", "ebay"]
+  },
+  "ZA": {
+    "marketplaces": [
+      {
+        "id": "facebook_marketplace",
+        "name": "Facebook Marketplace",
+        "url": "https://www.facebook.com/marketplace/"
+      }
+    ],
+    "vehicle": ["facebook_marketplace"],
+    "fashion": []
+  }
+}

@@ -40,7 +40,7 @@ export const discoverySchema = z
           )
           .min(1)
           .max(30),
-        queries: z.array(z.string().trim().min(1).max(300)).max(20),
+        queries: z.array(z.string().trim().min(1).max(300)).max(20).default([]),
         candidates: z
           .array(
             z
@@ -55,7 +55,8 @@ export const discoverySchema = z
               })
               .strict(),
           )
-          .max(30),
+          .max(30)
+          .default([]),
       })
       .strict()
       .optional(),
@@ -99,6 +100,7 @@ export const feedbackInputSchema = z
   });
 export const feedbackEventSchema = feedbackInputSchema.extend({
   id: z.string(),
+  request_id: z.uuid().optional(),
   category: z.string(),
   created_at: z.iso.datetime(),
   undone: z.boolean(),

@@ -17,7 +17,7 @@ import {
   expiredSellerAction,
 } from "@goodfinds/contracts/seller-action-model";
 import type { Conversation, SellerAction } from "@goodfinds/contracts/seller-conversation";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
 import { auditFormalProbe, evaluateSellerCases, formalDirectory } from "../scripts/formal-model.ts";
 import properties from "../formal/properties.json" with { type: "json" };
 import { revisionFor } from "./helpers/revisions.ts";
@@ -46,7 +46,7 @@ function fixture(t: TestContext) {
     monotonicTimeNanos: Effect.succeed(0n),
     sleep: () => Effect.void,
   };
-  const store = new WorkspaceStore(seedWorkspace(folder));
+  const store = new NativeWorkspace(seedWorkspace(folder));
   const request = (operation: string, args: Record<string, unknown> = {}) =>
     Effect.runSync(store.request(operation, args).pipe(Effect.provideService(Clock.Clock, clock)));
   const state = () => request("get_workspace").state;
@@ -185,7 +185,7 @@ const sellerContext = (now = start) => ({
 });
 
 void test(
-  "Lean seller gates match TypeScript through permit, identity, evidence and expiry boundaries",
+  "Lean seller gates match the native workspace through permit, identity, evidence and expiry boundaries",
   { timeout: 300_000 },
   async (t) => {
     const f = sellerFixture(t);
@@ -400,16 +400,18 @@ void test("documented formal properties refer to actual proof declarations", asy
 void test(
   "the Lean dependency audit rejects admitted proofs and custom axioms",
   { timeout: 300_000 },
-  async () => {
+  async (t) => {
     await assert.rejects(
       auditFormalProbe(
         "import Goodfinds.Audit\nnamespace Goodfinds.SellerAction\ntheorem incomplete : False := by sorry\nend Goodfinds.SellerAction\n#audit_formal_proofs\n",
+        t.signal,
       ),
       /unapproved axiom sorryAx/u,
     );
     await assert.rejects(
       auditFormalProbe(
         "import Goodfinds.Audit\nnamespace Goodfinds.SellerAction\naxiom unexpected : False\ntheorem unsupported : False := unexpected\nend Goodfinds.SellerAction\n#audit_formal_proofs\n",
+        t.signal,
       ),
       /unapproved axiom Goodfinds.SellerAction.unexpected/u,
     );

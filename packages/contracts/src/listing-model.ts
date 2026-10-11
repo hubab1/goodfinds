@@ -153,7 +153,7 @@ export const listingGuards = {
 } as const satisfies Record<string, GuardDefinition>;
 export const listingEvents = {
   observe: {
-    execution_profile: "collection",
+    execution_profile: "browser_collection",
     operation: "import_listing_observations",
     from: ["listing"],
     to: [],
@@ -162,7 +162,7 @@ export const listingEvents = {
     meaning: "Append observations and reevaluate with existing matching and quality rules.",
   },
   recover_media: {
-    execution_profile: "collection",
+    execution_profile: "browser_collection",
     operation: "attach_listing_media",
     from: ["listing"],
     to: [],

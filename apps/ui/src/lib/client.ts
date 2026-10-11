@@ -1,8 +1,9 @@
+import { searchRunSchema } from "@goodfinds/contracts/search-workflow";
 import type { PanelTool, PanelInput } from "./actions";
 import { searchRunAction, sellerAction } from "@goodfinds/contracts/tool-names";
 import { GOODFINDS_VERSION } from "@goodfinds/contracts/version";
 import { locationPageResultSchema } from "@goodfinds/contracts/external-tools";
-import { App } from "@modelcontextprotocol/ext-apps";
+import { App, applyDocumentTheme } from "@modelcontextprotocol/ext-apps";
 import { entityRevision, entityTarget } from "@goodfinds/contracts/revisions";
 import type { Revisions } from "@goodfinds/contracts/revisions";
 import { operationForTool } from "@goodfinds/contracts/tool-names";
@@ -22,6 +23,9 @@ import { connectionCheckResultSchema } from "@goodfinds/contracts/connection-che
 import type { Marketplace } from "@goodfinds/contracts/integrations";
 import { createImageLoader } from "./image-loader";
 import { requestConnectionCheck } from "./connection-checks";
+import { feedbackEventSchema } from "@goodfinds/contracts/discovery";
+import { panelPresentationSchema } from "@goodfinds/contracts/panel-presentation";
+import type { PanelPresentation } from "@goodfinds/contracts/panel-presentation";
 
 declare global {
   interface Window {
@@ -33,10 +37,24 @@ declare global {
   }
 }
 
-const listeners = new Set<(state: GoodfindsState) => void>();
+const listeners = new Set<(state: GoodfindsState, presentation?: PanelPresentation) => void>();
 let connection: Promise<App> | undefined;
+let latestState: GoodfindsState | undefined;
+let pendingPresentation: PanelPresentation | undefined;
+let openingInputId: string | undefined;
+let openingInputApplied = false;
+function presentPending(state: GoodfindsState) {
+  const target = pendingPresentation;
+  if (!target || !state.searches.some((search) => search.id === target.search_id)) return false;
+  pendingPresentation = undefined;
+  if (target.search_id === openingInputId) openingInputApplied = true;
+  for (const listener of listeners) listener(state, target);
+  return true;
+}
 const revisionsBySnapshot = new Map<string, Revisions>();
 function remember(state: GoodfindsState) {
+  latestState = state;
+  presentPending(state);
   revisionsBySnapshot.set(state.revision, state.revisions);
   if (revisionsBySnapshot.size > 100) {
     const oldest = revisionsBySnapshot.keys().next().value;
@@ -49,9 +67,28 @@ function connect(): Promise<App> {
   connection ??= (async () => {
     const app = new App(
       { name: "Goodfinds", version: GOODFINDS_VERSION },
-      {},
+      { availableDisplayModes: ["inline", "fullscreen"] },
       { autoResize: true },
     );
+    app.addEventListener("hostcontextchanged", ({ theme }) => {
+      if (theme) applyDocumentTheme(theme);
+    });
+    app.addEventListener("toolinput", ({ arguments: input }) => {
+      const args = z
+        .object({
+          search_id: z.string().optional(),
+          request: z.object({ search_id: z.string() }).optional(),
+        })
+        .safeParse(input);
+      const target = panelPresentationSchema.safeParse({
+        search_id: args.success ? (args.data.search_id ?? args.data.request?.search_id) : undefined,
+      });
+      if (!target.success) return;
+      openingInputId = target.data.search_id;
+      openingInputApplied = false;
+      pendingPresentation = target.data;
+      if (latestState) presentPending(latestState);
+    });
     app.addEventListener("toolresult", (result) => {
       const parsed = (() => {
         try {
@@ -60,10 +97,23 @@ function connect(): Promise<App> {
           return undefined;
         }
       })();
-      if (parsed) remember(parsed);
-      if (parsed) for (const listener of listeners) listener(parsed);
+      const presentation = panelPresentationSchema.safeParse(result._meta?.["goodfinds_panel"]);
+      if (
+        presentation.success &&
+        !(openingInputApplied && presentation.data.search_id === openingInputId)
+      )
+        pendingPresentation = presentation.data;
+      openingInputId = undefined;
+      openingInputApplied = false;
+      if (parsed) {
+        const target = pendingPresentation;
+        remember(parsed);
+        if (target === pendingPresentation) for (const listener of listeners) listener(parsed);
+      } else if (latestState) presentPending(latestState);
     });
     await app.connect();
+    const theme = app.getHostContext()?.theme;
+    if (theme) applyDocumentTheme(theme);
     return app;
   })().catch((error: unknown) => {
     connection = undefined;
@@ -72,20 +122,27 @@ function connect(): Promise<App> {
   return connection;
 }
 
-export function subscribeToState(listener: (state: GoodfindsState) => void): () => void {
+export function subscribeToState(
+  listener: (state: GoodfindsState, presentation?: PanelPresentation) => void,
+): () => void {
   listeners.add(listener);
   return () => {
     listeners.delete(listener);
   };
 }
 
-async function callTool(name: string, args: Record<string, unknown>): Promise<unknown> {
+async function callTool(
+  name: string,
+  args: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<unknown> {
   const preview = window.__GOODFINDS_PREVIEW__;
   if (preview) {
     const response = await fetch("/api/tool", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Goodfinds-Token": preview.token },
       body: JSON.stringify({ name, arguments: args }),
+      ...(signal ? { signal } : {}),
     });
     if (!response.ok)
       throw new Error("Could not connect to Goodfinds. Refresh the panel and try again.");
@@ -93,7 +150,21 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
     return result;
   }
   const app = await connect();
-  return app.callServerTool({ name, arguments: args });
+  return app.callServerTool({ name, arguments: args }, signal ? { signal } : undefined);
+}
+
+// Feedback retries need the receipt's exact event, not the last event in a fresh snapshot.
+export async function invokeFeedback(
+  name: "record_goodfinds_listing_feedback" | "undo_goodfinds_listing_feedback",
+  args: Record<string, unknown>,
+  signal: AbortSignal,
+) {
+  const result = await callTool(name, args, signal);
+  const state = remember(stateFromToolResult(result));
+  const { structuredContent } = z
+    .object({ structuredContent: z.object({ feedback: feedbackEventSchema }) })
+    .parse(result);
+  return { state, feedback: structuredContent.feedback };
 }
 
 export async function openLocationBrowser(mode: "live" | "sample"): Promise<void> {
@@ -210,7 +281,15 @@ export async function readSearchRuns(mode: "live" | "sample") {
     .object({
       isError: z.boolean().optional(),
       structuredContent: z.object({
-        search_runs: z.array(z.object({ id: z.string(), version: z.number() })),
+        search_runs: z.array(
+          z.object({
+            id: z.string(),
+            version: z.number(),
+            refresh_key: z.string().optional(),
+            updated_at: z.iso.datetime().optional(),
+            worker: searchRunSchema.shape.worker.optional(),
+          }),
+        ),
       }),
     })
     .parse(await callTool("list_goodfinds_search_runs", { mode, progress_only: true }));

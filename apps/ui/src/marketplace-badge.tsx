@@ -13,7 +13,7 @@ export function MarketplaceBadge({ source }: { source: string | undefined }) {
         aria-label={name}
         closeOnClick={false}
         onClick={() => setOpen((previous) => !previous)}
-        className="inline-flex size-7 shrink-0 items-center justify-center rounded-full border bg-white text-black outline-none focus-visible:ring-2 focus-visible:ring-black"
+        className="inline-flex size-7 shrink-0 items-center justify-center rounded-full border bg-card text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <MarketplaceLogo source={source} className="size-4" />
       </TooltipTrigger>

@@ -9,10 +9,10 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Effect } from "effect";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
-import { backupWorkspace, restoreWorkspace } from "./reference-server/src/platform/backup.ts";
-import { createGoodfindsServer } from "./reference-server/src/entrypoints/mcp.ts";
-import { RevisionConflict } from "./reference-server/src/workspace/errors.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
+import { backupWorkspace, restoreWorkspace } from "./helpers/native-workspace.ts";
+import { createNativeServer } from "./helpers/native-mcp.ts";
+import { RevisionConflict } from "./helpers/native-driver.ts";
 import { z } from "zod";
 import { operations, receiptSchema, errorSchema } from "@goodfinds/contracts/operations";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -22,7 +22,7 @@ import { stateFromToolResult } from "@goodfinds/contracts/state";
 function fixture(t: TestContext) {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-design-"));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  const store = new WorkspaceStore(seedWorkspace(folder));
+  const store = new NativeWorkspace(seedWorkspace(folder));
   const state = Effect.runSync(store.request("get_workspace")).state;
   assert.ok(state.revisions);
   return { folder, store, state, revisions: state.revisions };
@@ -184,7 +184,7 @@ void test("import retries preserve one evaluateObservations and receipt across r
   const args = { request_id: randomUUID(), observations: [observation()] };
   const imported = Effect.runSync(store.request("import_listing_observations", args));
   const replayed = Effect.runSync(
-    new WorkspaceStore(seedWorkspace(folder)).request("import_listing_observations", args),
+    new NativeWorkspace(seedWorkspace(folder)).request("import_listing_observations", args),
   );
   assert.deepEqual(replayed["import_receipt"], imported["import_receipt"]);
   assert.equal(receiptSchema.parse(replayed["receipt"]).replayed, true);
@@ -254,7 +254,7 @@ void test("workspace backup restores committed WAL data, media and operation rec
     Effect.runSync(backupWorkspace(store.databasePath, output));
   });
   Effect.runSync(restoreWorkspace(output, restored));
-  const restoredStore = new WorkspaceStore(seedWorkspace(restored));
+  const restoredStore = new NativeWorkspace(seedWorkspace(restored));
   assert.equal(Effect.runSync(restoredStore.config()).origin, "Backed up town");
   assert.deepEqual(readFileSync(resolve(restored, "media", id)), bytes);
   assert.equal(
@@ -277,7 +277,7 @@ void test("restore verifies checksums and publishes no partial workspace on corr
 
 void test("MCP advertises concrete shared result schemas and returns resource results and structured conflicts", async (t) => {
   const { folder } = fixture(t);
-  const { server } = createGoodfindsServer(seedWorkspace(folder));
+  const { server } = createNativeServer(seedWorkspace(folder));
   t.after(() => server.close());
   const client = new Client({ name: "Design test", version: "1" });
   const [a, b] = InMemoryTransport.createLinkedPair();
@@ -328,7 +328,7 @@ void test("MCP advertises concrete shared result schemas and returns resource re
 
 void test("search lifecycle results expose prerequisites and never imply send permission", async (t) => {
   const { folder, state } = fixture(t);
-  const { server, calls } = createGoodfindsServer(seedWorkspace(folder));
+  const { server, calls } = createNativeServer(seedWorkspace(folder));
   t.after(() => server.close());
   const call = calls.get("request_goodfinds_search_run");
   assert.ok(call);
@@ -336,7 +336,11 @@ void test("search lifecycle results expose prerequisites and never imply send pe
     (await call({ request: { search_id: state.searches[0]?.id, request_id: randomUUID() } }))
       .structuredContent,
   );
-  assert.ok(output.workflow.allowed_actions.includes("claim_goodfinds_search_run"));
+  assert.ok(
+    output.workflow.actions.some(
+      (action) => action.tool === "claim_goodfinds_search_run" && action.availability !== "blocked",
+    ),
+  );
   assert.equal(
     output.workflow.actions.find((a) => a.event === "claim")?.availability,
     "requires_input",
@@ -345,6 +349,6 @@ void test("search lifecycle results expose prerequisites and never imply send pe
     output.workflow.actions.find((a) => a.event === "cancel")?.availability,
     "available",
   );
-  assert.ok(output.workflow.prerequisites.length);
+  assert.ok(output.workflow.actions.some((action) => action.conditions.length));
   assert.equal("execution" in output, false);
 });

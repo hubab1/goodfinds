@@ -3,7 +3,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { answerError, isVisible } from "@goodfinds/contracts/search-definition";
+import { answerError, formatUnit, isVisible } from "@goodfinds/contracts/search-definition";
 import type {
   Answer,
   Answers,
@@ -48,7 +48,7 @@ function NumericInput({
         change(
           input === ""
             ? null
-            : field.type === "integer" && divisor === 100
+            : field.type === "integer" && divisor > 1
               ? Math.round(number)
               : number,
         );
@@ -218,7 +218,7 @@ export function SchemaFields({
             <FormField
               key={field.id}
               id={`search-field-${field.id}`}
-              label={`${field.label}${field.unit ? ` (${field.unit})` : ""}`}
+              label={`${field.label}${field.unit ? ` (${formatUnit(field.unit)})` : ""}`}
               group={field.type === "multiple_choice" || field.type === "range"}
               full={["location", "text", "multiple_choice"].includes(field.type)}
               hint={`${field.hint ?? (field.required ? "Required" : "Optional · leave blank for no preference")}${field.match?.importance === "preferred" ? " · preference" : ""}`}

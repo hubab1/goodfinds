@@ -9,7 +9,12 @@ import { hostRequest } from "@goodfinds/contracts/host-request";
 
 const defaultIcon = <Sparkles aria-hidden="true" />;
 
-function useHostAction(request: string, disabled: boolean, autoStart = false) {
+function useHostAction(
+  request: string,
+  disabled: boolean,
+  autoStart = false,
+  successMessage = "Started.",
+) {
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
   const started = useRef(false);
@@ -21,7 +26,7 @@ function useHostAction(request: string, disabled: boolean, autoStart = false) {
     setBusy(true);
     try {
       await requestHostAction(prompt);
-      setMessage("Started.");
+      setMessage(successMessage);
     } catch (error) {
       setMessage(errorMessage(error));
     } finally {
@@ -47,18 +52,24 @@ export function HostAction({
   disabled = false,
   icon = defaultIcon,
   autoStart = false,
+  pendingLabel = "Starting…",
+  successMessage = "Started.",
   className,
+  containerClassName,
 }: {
   request: string;
   children: string;
   disabled?: boolean;
   icon?: ReactNode;
   autoStart?: boolean;
+  pendingLabel?: string;
+  successMessage?: string;
   className?: string;
+  containerClassName?: string;
 }) {
-  const { busy, message, run } = useHostAction(request, disabled, autoStart);
+  const { busy, message, run } = useHostAction(request, disabled, autoStart, successMessage);
   return (
-    <div className="space-y-2">
+    <div className={containerClassName ?? "space-y-2"}>
       <Button
         type="button"
         size="sm"
@@ -70,9 +81,13 @@ export function HostAction({
         }}
       >
         {busy ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : icon}
-        {busy ? "Starting…" : children}
+        {busy ? pendingLabel : children}
       </Button>
-      {message && <output className="block text-xs">{message}</output>}
+      {message && (
+        <output className="block text-xs" aria-live="polite">
+          {message}
+        </output>
+      )}
     </div>
   );
 }

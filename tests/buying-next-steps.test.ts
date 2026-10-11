@@ -1,3 +1,4 @@
+import { dispatcherArgs } from "./helpers/dispatcher.ts";
 import { seedWorkspace } from "./helpers/workspace.ts";
 import { revisionFor } from "./helpers/revisions.ts";
 import test from "node:test";
@@ -8,7 +9,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Effect } from "effect";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
 import { savedSearchSchema } from "@goodfinds/contracts/search-definition";
 import { stateSchema } from "@goodfinds/contracts/state";
 import {
@@ -24,7 +25,7 @@ import {
 } from "@goodfinds/contracts/verification";
 import { initialSellerMessageDraft } from "../apps/ui/src/lib/seller-conversation.ts";
 import { collectionPlanSchema, sellerSummary } from "@goodfinds/contracts/seller-conversation";
-import { createGoodfindsServer } from "@goodfinds/reference-server/mcp";
+import { createNativeServer } from "./helpers/native-mcp.ts";
 
 const search = savedSearchSchema.parse({
   id: "coffee",
@@ -63,7 +64,7 @@ const search = savedSearchSchema.parse({
 function fixture(t: TestContext) {
   const dir = mkdtempSync(resolve(tmpdir(), "goodfinds-follow-through-"));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
-  const store = new WorkspaceStore(seedWorkspace(dir));
+  const store = new NativeWorkspace(seedWorkspace(dir));
   const run = (action: string, args: Record<string, unknown> = {}) =>
     stateSchema.parse(Effect.runSync(store.request(action, args)).state);
   const initial = run("get_workspace");
@@ -372,7 +373,7 @@ void test("search completion prepares a conditional reviewed draft without outre
   run("prepare_next_steps", { search_id: search.id, run_id: searchRun.id });
   conversation = stateSchema.parse(
     Effect.runSync(
-      new WorkspaceStore(seedWorkspace(dir)).request("get_seller_conversation", {
+      new NativeWorkspace(seedWorkspace(dir)).request("get_seller_conversation", {
         listing_key: key,
       }),
     ).state,
@@ -461,7 +462,7 @@ void test("collection plans retain uncertainty, generate a reviewed message and 
   );
   const restored = stateSchema.parse(
     Effect.runSync(
-      new WorkspaceStore(seedWorkspace(dir)).request("get_seller_conversation", {
+      new NativeWorkspace(seedWorkspace(dir)).request("get_seller_conversation", {
         listing_key: key,
       }),
     ).state,
@@ -484,19 +485,13 @@ void test("a confirmed purchase fulfils linked goals, stops searches and new out
     monitoring: { search_id: search.id, preference: "recurring" },
   });
   const hostReceipt = {
-    search_id: search.id,
     automation_id: "fixture-buying-search",
     thread_id: "00000000-0000-4000-8000-000000000001",
     status: "active",
     interval_minutes: 60,
     evidence: "Fictional host schedule in an isolated test",
   };
-  run("report_host_schedule", {
-    expected_entity_revision: revisionFor(watchChoice, "report_host_schedule", {
-      report: hostReceipt,
-    }),
-    report: hostReceipt,
-  });
+  run("report_dispatcher_schedule", dispatcherArgs(watchChoice, [search.id], hostReceipt));
   const bought = run("set_buying_outcome", {
     listing_key: key,
     expected_version: conversation.version,
@@ -509,14 +504,8 @@ void test("a confirmed purchase fulfils linked goals, stops searches and new out
     "pause",
   );
   assert.throws(
-    () =>
-      run("report_host_schedule", {
-        expected_entity_revision: revisionFor(bought, "report_host_schedule", {
-          report: hostReceipt,
-        }),
-        report: hostReceipt,
-      }),
-    /fulfilled/,
+    () => run("report_dispatcher_schedule", dispatcherArgs(bought, [search.id], hostReceipt)),
+    /shared recurrence/,
   );
   assert.equal(
     bought.search_runs.find((searchRun) => searchRun.search_id === search.id)?.phase,
@@ -693,7 +682,7 @@ void test("chat-only tools expose prepared actions without sending or loading im
   const { run, importItem, dir } = fixture(t);
   importItem("123456789");
   run("prepare_next_steps", { search_id: search.id });
-  const { server, calls } = createGoodfindsServer(seedWorkspace(dir));
+  const { server, calls } = createNativeServer(seedWorkspace(dir));
   t.after(async () => server.close());
   const get = calls.get("list_goodfinds_next_steps");
   assert.ok(get);

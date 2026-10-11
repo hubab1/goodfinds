@@ -1,6 +1,8 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
     "types": ["bun"],
     "paths": {
       "@/*": ["./apps/ui/src/*"]
@@ -11,6 +13,8 @@
     "tests/**/*.ts",
     "scripts/*.ts",
     "skills/marketplace-shopping/scripts/*.ts",
-    "apps/ui/vite*.ts"
+    "apps/ui/vite*.ts",
+    "website/*.js",
+    "website/downloads/*.js"
   ]
 }

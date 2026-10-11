@@ -1,3 +1,4 @@
+import { dispatcherArgs } from "./helpers/dispatcher.ts";
 import { seedWorkspace } from "./helpers/workspace.ts";
 import { revisionFor } from "./helpers/revisions.ts";
 import test from "node:test";
@@ -7,9 +8,9 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Effect } from "effect";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
-import { backendLayer } from "./reference-server/src/entrypoints/backend.ts";
-import { createGoodfindsServer } from "./reference-server/src/entrypoints/mcp.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
+import { nativeOptions } from "./helpers/native-mcp.ts";
+import { createNativeServer } from "./helpers/native-mcp.ts";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -19,7 +20,7 @@ function fixture(t: TestContext, linked = true) {
   const root = mkdtempSync(resolve(tmpdir(), "goodfinds-host-monitoring-"));
   const data = resolve(root, "data");
   const automations = resolve(root, "codex/automations");
-  const store = new WorkspaceStore(seedWorkspace(data));
+  const store = new NativeWorkspace(seedWorkspace(data));
   const read = () => Effect.runSync(store.request("get_workspace", {})).state;
   Effect.runSync(
     store.request("save_settings", {
@@ -41,19 +42,14 @@ function fixture(t: TestContext, linked = true) {
       }),
     );
     Effect.runSync(
-      store.request("report_host_schedule", {
-        expected_entity_revision: revisionFor(read(), "report_host_schedule", {
-          report: { search_id: search.id },
-        }),
-        report: {
-          search_id: search.id,
+      store.request("report_dispatcher_schedule", {
+        ...dispatcherArgs(read(), [search.id], {
           automation_id: automationId,
           thread_id: thread,
-          interval_minutes: 60,
           status: "active",
           evidence: "Isolated fixture registration",
           next_run_at: "2026-10-05T20:00:00Z",
-        },
+        }),
       }),
     );
   }
@@ -75,7 +71,7 @@ function fixture(t: TestContext, linked = true) {
         .join("\n"),
     );
   write();
-  const app = createGoodfindsServer(seedWorkspace(data), backendLayer(data, automations));
+  const app = createNativeServer(seedWorkspace(data), nativeOptions(data, automations));
   t.after(async () => {
     await app.server.close();
     rmSync(root, { recursive: true, force: true });
@@ -156,13 +152,13 @@ void test("panel and chat reflect external pause and resume without altering sea
   assert.equal(after.searches.find((item) => item.id === f.search.id)?.enabled, true);
   assert.equal(after.monitor.scheduler_available, false);
   assert.equal(after.revision, before.revision);
-  assert.equal(f.read().config.monitoring[0]?.schedule?.status, "active");
+  assert.equal(f.read().config.dispatchers[0]?.schedule?.status, "active");
   assert.equal(readFileSync(f.path, "utf8"), bytes);
   const result = await f.context({ mode: "live", search_id: f.search.id });
   assert.match(JSON.stringify(result.structuredContent), /"status":"paused"/);
-  assert.match(await f.render(), /Monitoring paused/);
-  assert.match(await f.render(), /Resume monitoring/);
-  assert.doesNotMatch(await f.render(), /Stop monitoring/);
+  assert.match(await f.render(), /Paused/);
+  assert.match(await f.render(), /Resume checks/);
+  assert.doesNotMatch(await f.render(), /Pause checks/);
   f.write({ status: "ACTIVE" });
   assert.equal((await f.summary()).status, "active");
   assert.equal((await f.summary()).schedule?.last_run_at, null);
@@ -178,7 +174,7 @@ void test("removing a linked schedule is different from an unavailable host dire
   assert.equal((await f.summary()).status, "unverified");
   assert.equal((await f.summary()).next_action, "check");
   assert.doesNotMatch(await f.render(), /Monitoring active/);
-  assert.doesNotMatch(await f.render(), /Keep watching/);
+  assert.doesNotMatch(await f.render(), /Start checks/);
 });
 
 void test("malformed automation metadata and changed identity never retain an active badge", async (t) => {

@@ -17,6 +17,7 @@ pub const ACTIONS: &[&str] = &[
     "record_listing_feedback",
     "undo_listing_feedback",
     "report_browser_access",
+    "report_host_capabilities",
     "report_marketplace_session",
     "report_connections",
     "report_listing_contact",
@@ -30,11 +31,11 @@ pub fn check_revision(ws: &Workspace, action: &str, args: &Value) -> Result<()> 
         "save_search_draft" => ("drafts", args["draft"]["id"].as_str()),
         "discard_search_draft" => ("drafts", args["draft_id"].as_str()),
         "set_monitoring" => ("monitoring", args["monitoring"]["search_id"].as_str()),
-        "report_host_schedule" => ("monitoring", args["report"]["search_id"].as_str()),
         "save_settings" | "report_dispatcher_schedule" => ("settings", None),
         "record_listing_feedback" => ("feedback", None),
         "undo_listing_feedback" => ("feedback", args["feedback_id"].as_str()),
-        "report_browser_access"
+        "report_host_capabilities"
+        | "report_browser_access"
         | "report_marketplace_session"
         | "report_connections"
         | "report_listing_contact" => ("evidence", None),
@@ -99,11 +100,30 @@ pub fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> 
                 find(&config, "drafts", draft)?;
             }
             let mut search = searches::normalize_search(&args["search"])?;
+            if let Some(draft) = array(&config, "drafts")
+                .iter()
+                .find(|d| d["id"] == args["draft_id"])
+            {
+                crate::regional::preserve_market(draft, &mut search);
+                for key in ["marketplaces"] {
+                    if search.get(key).is_none()
+                        && let Some(value) = draft.get(key)
+                    {
+                        search[key] = value.clone();
+                    }
+                }
+            }
             let index = array(&config, "searches")
                 .iter()
                 .position(|s| s["id"] == search["id"]);
+            if index.is_some() && args.get("initial_monitoring").is_some() {
+                return Err(Error::validation(
+                    "initial_monitoring is for new searches only; use set_goodfinds_monitoring to edit monitoring",
+                ));
+            }
             if let Some(index) = index {
                 let prev = &config["searches"][index];
+                crate::regional::preserve_market(prev, &mut search);
                 for key in ["marketplaces", "discovery"] {
                     if search.get(key).is_none()
                         && let Some(value) = prev.get(key)
@@ -140,7 +160,15 @@ pub fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> 
                 }
                 config["searches"][index] = search;
             } else {
+                let sid = search["id"].clone();
+                crate::regional::new_search_defaults(&config, &mut search)?;
                 config["searches"].as_array_mut().unwrap().push(search);
+                let mut monitoring = args
+                    .get("initial_monitoring")
+                    .cloned()
+                    .unwrap_or_else(|| json!({"preference":"recurring"}));
+                monitoring["search_id"] = sid;
+                searches::set_monitoring(&mut config, &monitoring)?;
             }
             if let Some(draft) = args["draft_id"].as_str() {
                 config["drafts"]
@@ -165,9 +193,6 @@ pub fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> 
                     && text(&cover, "source_url").is_empty()
                 {
                     return Err(Error::validation("Include the image's source page"));
-                }
-                if cover["kind"] == "generated" && text(&cover, "prompt").is_empty() {
-                    return Err(Error::validation("Keep the image generation prompt"));
                 }
                 let search = &mut config["searches"][index];
                 if search["product"] == "rental"
@@ -194,6 +219,14 @@ pub fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> 
                 .position(|d| d["id"] == draft["id"])
             {
                 let prev = &config["drafts"][index];
+                crate::regional::preserve_market(prev, &mut draft);
+                for key in ["marketplaces"] {
+                    if draft.get(key).is_none()
+                        && let Some(value) = prev.get(key)
+                    {
+                        draft[key] = value.clone();
+                    }
+                }
                 if hash(&prev["definition"]) != hash(&draft["definition"])
                     && draft["definition"]["version"].as_i64().unwrap_or(0)
                         <= prev["definition"]["version"].as_i64().unwrap_or(0)
@@ -204,6 +237,7 @@ pub fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> 
                 }
                 config["drafts"][index] = draft;
             } else {
+                crate::regional::new_search_defaults(&config, &mut draft)?;
                 config["drafts"].as_array_mut().unwrap().push(draft);
             }
         }
@@ -289,6 +323,9 @@ pub fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> 
                 feedback["exclude_model"] = json!(true);
             }
             feedback["id"] = json!(id());
+            if let Some(request_id) = args.get("request_id") {
+                feedback["request_id"] = request_id.clone();
+            }
             feedback["category"] = search["product"].clone();
             feedback["created_at"] = json!(iso(ws.now));
             feedback["undone"] = json!(false);
@@ -314,13 +351,20 @@ pub fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> 
             for (key, value) in settings.as_object().unwrap() {
                 if ["interval_minutes", "quiet_hours"].contains(&key.as_str()) {
                     config["schedule"][key] = value.clone();
+                } else if key == "regional_preferences" {
+                    if !config[key].is_object() {
+                        config[key] = json!({});
+                    }
+                    for (field, preference) in value.as_object().unwrap() {
+                        config[key][field] = preference.clone();
+                    }
                 } else {
                     config[key] = value.clone();
                 }
             }
             if let Some(location) = settings.get("location") {
                 if location.is_null() {
-                    config["origin_confirmed"] = json!(false);
+                    config["origin_confirmed"] = json!(settings.get("origin").is_some());
                 } else {
                     config["origin"] = if location["display"] == "postal" {
                         location
@@ -338,6 +382,10 @@ pub fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> 
                 config["location"] = Value::Null;
             }
         }
+        "report_host_capabilities" => {
+            crate::runtime::report(ws, args)?;
+            return Ok(json!({}));
+        }
         name if name.starts_with("report_") => {
             crate::connections::report(ws, name, args)?;
             return Ok(json!({}));
@@ -352,7 +400,18 @@ pub fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> 
             search.as_object_mut().unwrap().remove("cover");
         }
     }
-    ws.config = crate::storage::validate_config(&config)?;
+    let validated = crate::storage::validate_config(&config)?;
+    if ["set_search_cover", "save_search"].contains(&action) {
+        for previous in array(&ws.config, "searches") {
+            if let Some(next) = array(&validated, "searches")
+                .iter()
+                .find(|next| next["id"] == previous["id"])
+            {
+                searches::preserve_cover_runs(ws, previous, next)?;
+            }
+        }
+    }
+    ws.config = validated;
     Ok(json!({}))
 }
 pub fn model_exclusion_rule(row: &Value, search: &Value) -> Option<Value> {
@@ -425,7 +484,7 @@ mod tests {
         ws.automations_directory = None;
         let mut saved=searches::normalize_search(&json!({"id":"vehicle-demo","name":"Vehicle","product":"vehicle","definition":{"schema_version":1,"version":1,"category":"vehicle","title":"Vehicle","description":"A fictional vehicle search","price":{"currency":"GBP","period":"once"},"comparison_attributes":["model"],"fields":[{"id":"body_type","type":"single_choice","label":"Type","options":[{"value":"sedan","label":"Sedan"},{"value":"suv","label":"SUV"}]}]},"values":{"body_type":"sedan"}})).unwrap();
         let image = searches::bundled_cover_for(&saved).unwrap();
-        saved["cover"] = json!({"media_id":image["media_id"],"kind":image["kind"],"alt":image["alt"],"source_name":image["source_name"],"prompt":image["prompt"]});
+        saved["cover"] = json!({"media_id":image["media_id"],"kind":image["kind"],"alt":image["alt"],"source_name":image["source_name"]});
         ws.config["searches"] = json!([saved.clone()]);
         ws.save_config().unwrap();
         saved["values"]["body_type"] = json!("suv");

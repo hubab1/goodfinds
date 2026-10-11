@@ -6,7 +6,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Effect } from "effect";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
 import { stateSchema } from "@goodfinds/contracts/state";
 import { accessAvailable } from "@goodfinds/contracts/integrations";
 import {
@@ -17,7 +17,7 @@ import {
 void test("selecting a device browser saves a preference without granting browser access", (t) => {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-settings-choice-"));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  const store = new WorkspaceStore(seedWorkspace(folder));
+  const store = new NativeWorkspace(seedWorkspace(folder));
   const before = Effect.runSync(store.request("get_workspace")).state;
   const after = Effect.runSync(
     store.request("save_settings", {
@@ -37,7 +37,7 @@ void test("selecting a device browser saves a preference without granting browse
 void test("saving unrelated preferences retains the confirmed location and its country", (t) => {
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-settings-location-"));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  const store = new WorkspaceStore(seedWorkspace(folder));
+  const store = new NativeWorkspace(seedWorkspace(folder));
   let state = Effect.runSync(store.request("get_workspace")).state;
   const location = {
     source: "manual",
@@ -76,7 +76,7 @@ void test("compact statuses follow the selected browser, account, website permis
   const folder = mkdtempSync(resolve(tmpdir(), "goodfinds-settings-status-"));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
   const value = stateSchema.parse(
-    Effect.runSync(new WorkspaceStore(seedWorkspace(folder)).request("get_workspace")).state,
+    Effect.runSync(new NativeWorkspace(seedWorkspace(folder)).request("get_workspace")).state,
   );
   const now = Date.now();
   const checked_at = new Date(now).toISOString();

@@ -5,7 +5,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Effect } from "effect";
-import { WorkspaceStore } from "../reference-server/src/platform/workspace-sqlite.ts";
+import { NativeWorkspace } from "./native-workspace.ts";
 import type { Action } from "../../apps/ui/src/lib/actions.ts";
 
 const dom = new Window({ url: "https://panel.example", width: 1200 });
@@ -123,6 +123,11 @@ function ResponsiveFixture() {
     }),
   );
 }
+const selectValue = (id: string) => {
+  const select = document.getElementById(id);
+  assert.ok(select instanceof HTMLSelectElement);
+  return select;
+};
 const container = document.createElement("div");
 document.body.append(container);
 const root = createRoot(container);
@@ -309,7 +314,7 @@ try {
   await act(async () => dom.happyDOM.setViewport({ width: 1200, height: 800 }));
 
   const state = Effect.runSync(
-    new WorkspaceStore(folder, "sample").request("load_sample_workspace"),
+    new NativeWorkspace(folder, "sample").request("load_sample_workspace"),
   ).state;
   const search = state.searches[0];
   const listing = state.listings.find((item) => item.product === search?.product);
@@ -341,8 +346,9 @@ try {
     );
   };
   await renderSearchRow(unscheduled);
+  assert.equal(button("Start").closest("[hidden]"), null);
   await click(`More options for ${search.name}`);
-  assert.ok(required("[role=menu]").textContent?.includes("Keep watching"));
+  assert.ok(required("[role=menu]").textContent?.includes("Edit search"));
   await escape();
   assert.equal(document.querySelector("[role=menu]"), null);
   assert.equal(document.activeElement, button(`More options for ${search.name}`));
@@ -362,11 +368,24 @@ try {
     status: "paused",
     preference: "recurring",
     next_action: "resume",
+    quiet_now: true,
+    next_allowed_at: new Date(Date.now() + 3_600_000).toISOString(),
   });
   await click(`More options for ${search.name}`);
-  assert.ok(required("[role=menu]").textContent?.includes("Resume monitoring"));
+  assert.equal(button("Resume").closest("[hidden]"), null);
+  assert.equal(required("[role=menu]").contains(button("Resume")), false);
   assert.equal(required("[role=menu]").textContent?.includes("Pause search"), false);
   await escape();
+  await click(`Details for ${search.name}`);
+  const pausedMonitoring = required('[aria-label="Recurring search"]');
+  assert.equal(pausedMonitoring.contains(button("Resume")), false);
+  assert.equal(button("Resume").closest("[hidden]"), null);
+  assert.equal(
+    /Next (?:search|check)/.test(pausedMonitoring.textContent ?? ""),
+    false,
+    "Paused monitoring never predicts a future check, including during quiet hours",
+  );
+  await click(`Hide details for ${search.name}`);
   // Test the actual read-only detail dialog with isolated media; no browser or live listings.
   let preparedFrom: HTMLElement | undefined;
   const detailListing = {
@@ -441,7 +460,6 @@ try {
         revision: state.revision,
         busy: false,
         error: "",
-        removable: true,
         action,
         close: () => {
           closed += 1;
@@ -472,6 +490,73 @@ try {
   assert.ok(finish);
   await act(async () => finish?.());
   assert.equal(closed, 1, "A completed save never closes a later dialog after Escape");
+
+  // Fresh searches infer defaults; deliberate currency and source choices survive country edits.
+  await act(async () =>
+    root.render(
+      el(SearchEditor, {
+        key: "regional-new",
+        search: undefined,
+        config: {
+          regional_preferences: { country: "GB", currency: "EUR", fulfilment: "delivery" },
+        },
+        revision: state.revision,
+        busy: false,
+        error: "",
+        action,
+        close: () => {},
+      }),
+    ),
+  );
+  assert.equal(selectValue("shopping-country").value, "GB");
+  assert.equal(selectValue("budget-currency").value, "EUR");
+  await act(async () => {
+    const select = selectValue("shopping-country");
+    select.value = "US";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  assert.equal(selectValue("budget-currency").value, "EUR", "Saved currency beats inferred USD");
+  assert.equal(document.querySelector("[role=dialog]")?.textContent?.includes("Gumtree"), false);
+  await act(async () =>
+    root.render(
+      el(SearchEditor, {
+        key: "regional-inferred",
+        search: undefined,
+        config: { regional_preferences: { country: "GB" } },
+        revision: state.revision,
+        busy: false,
+        error: "",
+        action,
+        close: () => {},
+      }),
+    ),
+  );
+  assert.equal(selectValue("budget-currency").value, "GBP");
+  await act(async () => {
+    const select = selectValue("shopping-country");
+    select.value = "DE";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  assert.equal(
+    selectValue("budget-currency").value,
+    "EUR",
+    "Inferred currency follows edited country",
+  );
+  await act(async () => {
+    const currency = selectValue("budget-currency");
+    currency.value = "GBP";
+    currency.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await act(async () => {
+    const country = selectValue("shopping-country");
+    country.value = "US";
+    country.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  assert.equal(
+    selectValue("budget-currency").value,
+    "GBP",
+    "Explicit currency survives further country edits",
+  );
 
   await act(async () =>
     root.render(
@@ -507,7 +592,7 @@ try {
   const conversationAction: Action = async (name) => {
     conversationWrites.push(name);
     const response = Effect.runSync(
-      new WorkspaceStore(folder, "sample").request("get_seller_conversation", {
+      new NativeWorkspace(folder, "sample").request("get_seller_conversation", {
         listing_key: listing.key,
       }),
     ).state;

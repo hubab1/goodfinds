@@ -4,8 +4,7 @@
   "private": true,
   "workspaces": [
     "apps/*",
-    "packages/*",
-    "tests/reference-server"
+    "packages/*"
   ],
   "type": "module",
   "scripts": {
@@ -20,19 +19,24 @@
     "architecture:check": "bun scripts/check-server-architecture.ts && bun scripts/check-panel-architecture.ts",
     "formal:check": "bun scripts/check-formal-model.ts",
     "deps:check": "bun outdated --recursive --no-cache",
-    "test": "bun test ./tests/*.ts",
+    "test": "bun run test:prepare && bun test --timeout 30000 ./tests/*.ts",
     "package": "bun run build && bun scripts/package-plugin.ts",
+    "package:check": "bun scripts/smoke-packages.ts",
     "demo": "bun skills/marketplace-shopping/scripts/goodfinds.ts demo --output output/demo",
     "docs:generate": "bun scripts/generate-state-model.ts",
     "docs:check": "bun scripts/generate-state-model.ts --check",
     "test:native": "bun run --filter @goodfinds/ui build && cargo test --manifest-path apps/server/Cargo.toml",
     "check:native": "bun run --filter @goodfinds/ui build && cargo fmt --manifest-path apps/server/Cargo.toml -- --check && cargo clippy --manifest-path apps/server/Cargo.toml --all-targets -- -D warnings",
     "contracts:generate": "bun scripts/generate-native-contracts.ts",
-    "contracts:check": "bun scripts/generate-native-contracts.ts --check"
+    "contracts:check": "bun scripts/generate-native-contracts.ts --check",
+    "site:dev": "wrangler dev --config wrangler.site.jsonc --port 5055",
+    "site:check": "bun scripts/generate-website-regions.ts --check && bun --bun tsc --project tsconfig.site.json && wrangler deploy --config wrangler.site.jsonc --dry-run",
+    "site:deploy": "bun scripts/sync-release.ts && wrangler deploy --config wrangler.site.jsonc",
+    "test:prepare": "bun run --filter @goodfinds/ui build && bun scripts/generate-native-contracts.ts && cargo build --manifest-path apps/server/Cargo.toml --profile test-support --features test-support --example test-driver --bin goodfinds"
   },
   "devDependencies": {
+    "@anthropic-ai/mcpb": "2.1.2",
     "@goodfinds/contracts": "workspace:*",
-    "@goodfinds/reference-server": "workspace:*",
     "@modelcontextprotocol/ext-apps": "1.7.5",
     "@modelcontextprotocol/sdk": "1.32.0",
     "@types/bun": "1.4.2",
@@ -44,6 +48,7 @@
     "oxlint-tsgolint": "7.0.2003",
     "rrule": "2.8.1",
     "typescript": "7.0.2",
+    "wrangler": "4.149.0",
     "zod": "4.6.5"
   },
   "engines": {

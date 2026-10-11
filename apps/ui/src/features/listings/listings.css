@@ -64,11 +64,11 @@
   justify-content: center;
   transform: translateY(-50%);
   border-radius: 4px;
-  color: white;
-  background: black;
+  color: var(--primary-foreground);
+  background: var(--primary);
 }
 .filter-field-clear:focus-visible {
-  outline: 2px solid black;
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
@@ -78,6 +78,7 @@
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 16px;
+  background: var(--card);
 }
 .listing-card-heading {
   display: flex;
@@ -86,6 +87,29 @@
 }
 .listing-card-price {
   text-align: left;
+}
+.listing-card-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+@container (max-width: 26rem) {
+  .listing-card-open {
+    width: 32px;
+    padding: 0;
+  }
+  .listing-card-open-label {
+    display: none;
+  }
+}
+@container (max-width: 20rem) {
+  .listing-card-actions {
+    gap: 4px;
+  }
+  .listing-card-actions > fieldset > button > svg {
+    display: none;
+  }
 }
 @container (min-width: 32rem) {
   .listing-card {

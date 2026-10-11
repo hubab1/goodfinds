@@ -1,7 +1,7 @@
 [
   {
     "schema_version": 1,
-    "version": 2,
+    "version": 3,
     "category": "macbook_pro",
     "title": "MacBook Pro",
     "description": "Choose your specifications and buying limits. Working items only.",
@@ -54,6 +54,63 @@
         "match": {
           "attribute": "chip_generation",
           "operator": "gte",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "screen_inches",
+        "label": "Screen size",
+        "type": "single_choice",
+        "required": false,
+        "question_stage": "refinement",
+        "options": [
+          {
+            "value": 13,
+            "label": "13-inch"
+          },
+          {
+            "value": 14,
+            "label": "14-inch"
+          },
+          {
+            "value": 15,
+            "label": "15-inch"
+          },
+          {
+            "value": 16,
+            "label": "16-inch"
+          }
+        ],
+        "match": {
+          "attribute": "screen_inches",
+          "operator": "eq",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "item_state",
+        "label": "New, used or refurbished",
+        "type": "single_choice",
+        "required": false,
+        "question_stage": "refinement",
+        "hint": "Item state is separate from condition grade. Used only excludes new and refurbished listings.",
+        "options": [
+          {
+            "value": "new",
+            "label": "New"
+          },
+          {
+            "value": "used",
+            "label": "Used"
+          },
+          {
+            "value": "refurbished",
+            "label": "Refurbished"
+          }
+        ],
+        "match": {
+          "attribute": "item_state",
+          "operator": "eq",
           "importance": "required"
         }
       },

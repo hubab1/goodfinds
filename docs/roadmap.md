@@ -6,21 +6,13 @@ These requirements are not established capabilities. Read [marketplace validatio
 
 Define a shared budget descriptor for target, maximum or range, including currency, price period and cost scope. Generic fields and offer defaults currently express parts of this meaning independently. Preserve “around £200” without inventing a hard ceiling; setup, display, matching and offer defaults must agree. A requested discount from retail price needs sourced retail evidence and a separate comparison rule from peer asking prices.
 
-## MCP alert acknowledgement
+## Host acceptance and schedule upgrades
 
-The durable outbox supports listing and acknowledgement through the CLI, and imports return pending alerts. Add MCP operations for reading later pending alerts and acknowledging presentation, with stable IDs, pagination and idempotent acknowledgement. Failed or uncertain presentation must remain pending across restart. External notifications still depend on host capabilities.
-
-## Schedule upgrades
-
-Verify a workflow contract version and that saved schedule prompts resolve the installed skill. Reconcile stale bindings in the original buying chat, preserving pause state, cadence, thread and notification settings. Include an upgrade test with a paused schedule; development work must not activate buyer monitoring.
-
-## Host capability summary
-
-Add an observed host-level summary for native panel support, browser control, delegation, local files and scheduling. Marketplace collection capabilities and browser observations already exist, but server health does not establish host support. Keep unknown capabilities unknown and verify panel and chat-only recovery paths.
+The runtime context now records expiring, connection-scoped capability observations and distinguishes unknown, advertised, observed and unavailable support. Saved schedule receipts can record the verified workflow contract and skill name. Validate these paths in each supported host, including chat-only recovery and a paused schedule after an upgrade. Server diagnostics and caller reports do not establish that host prompts were inspected or that unattended execution succeeded. Reconcile stale bindings in the original buying chat while preserving pause, cadence, thread and notification settings.
 
 ## Live integrations and release validation
 
-Complete the [live acceptance procedures](marketplace-validation.md#remaining-live-acceptance-work), including eBay production entitlements, browser/profile behavior and native-offer inspection. Additional automated collectors need supported collection routes. Validate each distributed executable on its target operating system and architecture; protocol fixtures and successful packaging do not establish live integration support.
+Complete the [live acceptance procedures](marketplace-validation.md#remaining-live-acceptance-work), including marketplace browser/profile behavior and native-offer inspection. Additional automated collectors need supported collection routes. Validate each distributed executable on its target operating system and architecture; protocol fixtures and successful packaging do not establish live integration support.
 
 ## Interview quality
 

@@ -1,8 +1,9 @@
+import { nativeBinary } from "./helpers/native-driver.ts";
 import { Effect } from "effect";
 import { seedWorkspace } from "./helpers/workspace.ts";
-import { validateConfiguration } from "./reference-server/src/listings/evaluation.ts";
-import { connect } from "./reference-server/src/platform/listing-evaluation-sqlite.ts";
-import { saveConfiguration } from "./reference-server/src/platform/configuration-sqlite.ts";
+import { validateConfiguration } from "./helpers/native-domain.ts";
+import { connect } from "./helpers/native-domain.ts";
+import { saveConfiguration } from "./helpers/native-workspace.ts";
 import { revisionFor } from "./helpers/revisions.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -12,7 +13,7 @@ import { resolve } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { z } from "zod";
-import { startPreview } from "@goodfinds/reference-server/preview";
+import { startPreview } from "./helpers/native-preview.ts";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 
 void test("the packaged protocol helper preserves the chosen workspace in its nested server", async (t) => {
@@ -35,7 +36,7 @@ void test("the packaged protocol helper preserves the chosen workspace in its ne
   const database = Effect.runSync(connect(resolve(folder, "workspace.sqlite")));
   Effect.runSync(saveConfiguration(database, Effect.runSync(validateConfiguration(config))));
   database.close();
-  const child = Bun.spawn([resolve("dist/build/server/goodfinds"), "client"], {
+  const child = Bun.spawn([nativeBinary, "client"], {
     stdin: "pipe",
     stdout: "pipe",
     stderr: "pipe",
@@ -96,7 +97,7 @@ void test("installed-style stdio server advertises the panel and persists edits 
   seedWorkspace(data);
   const client = new Client({ name: "Goodfinds test", version: "1.0.0" });
   const transport = new StdioClientTransport({
-    command: resolve("dist/build/server/goodfinds"),
+    command: nativeBinary,
     args: [],
     env: { PATH: "", GOODFINDS_WORKSPACE_DIR: data },
   });
@@ -186,7 +187,7 @@ void test("local panel serves only its own origin and rejects unauthenticated wr
   assert.equal(response.status, 200);
   assert.ok(response.headers.get("content-security-policy")?.includes("frame-ancestors 'none'"));
   const html = await response.text();
-  const token = html.match(/token:"([a-f0-9]+)"/)?.[1];
+  const token = html.match(/"token":"([a-f0-9]+)"/)?.[1];
   assert.ok(token);
   const call = { name: "get_goodfinds_workspace", arguments: {} };
   assert.equal(
@@ -216,7 +217,7 @@ void test("tracking imports preserve full purchase price and coverage through th
   seedWorkspace(data);
   const client = new Client({ name: "Tracking test", version: "1.0.0" });
   const transport = new StdioClientTransport({
-    command: resolve("dist/build/server/goodfinds"),
+    command: nativeBinary,
     args: [],
     env: { PATH: "", GOODFINDS_WORKSPACE_DIR: data },
   });

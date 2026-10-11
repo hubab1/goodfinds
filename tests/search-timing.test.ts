@@ -1,3 +1,4 @@
+import { dispatcherArgs } from "./helpers/dispatcher.ts";
 import { seedWorkspace } from "./helpers/workspace.ts";
 import { revisionFor } from "./helpers/revisions.ts";
 import test from "node:test";
@@ -12,9 +13,9 @@ import { rrulestr } from "rrule";
 import { z } from "zod";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { WorkspaceStore } from "./reference-server/src/platform/workspace-sqlite.ts";
-import { createGoodfindsServer } from "./reference-server/src/entrypoints/mcp.ts";
-import { backendLayer } from "./reference-server/src/entrypoints/backend.ts";
+import { NativeWorkspace } from "./helpers/native-workspace.ts";
+import { createNativeServer } from "./helpers/native-mcp.ts";
+import { nativeOptions } from "./helpers/native-mcp.ts";
 import {
   schedulePlan,
   inQuietHours,
@@ -32,7 +33,7 @@ function timeOfDay(value: number): string {
 function fixture(t: TestContext) {
   const dir = mkdtempSync(resolve(tmpdir(), "goodfinds-search-timing-"));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
-  const store = new WorkspaceStore(seedWorkspace(dir));
+  const store = new NativeWorkspace(seedWorkspace(dir));
   let now = Date.parse("2026-10-06T12:00:00Z");
   const clock: Clock.Clock = {
     currentTimeMillisUnsafe: () => now,
@@ -277,6 +278,7 @@ void test("saved hour changes immediately guard claims and imports without losin
     observations: [{ invalid: "must not be imported" }],
   });
   assert.ok("scheduled_check" in imported);
+  assert.equal(imported["import_receipt"], null);
   assert.deepEqual(imported.state.listings, before.listings);
   assert.deepEqual(imported.state.search_runs[0]?.queries, before.search_runs[0]?.queries);
 });
@@ -317,23 +319,22 @@ void test("clock changes skip nonexistent daily slots and deduplicate repeated l
   );
 });
 
-void test("old host recurrences need updating and matching rules preserve pauses and report quiet hours", (t) => {
+void test("shared recurrences validate exact times and preserve pauses and quiet hours", (t) => {
   const f = fixture(t);
   f.choose();
   const report = (rrule?: string, status: "active" | "paused" = "active") =>
-    f.change("report_host_schedule", {
-      report: {
-        search_id: f.search.id,
+    f.change(
+      "report_dispatcher_schedule",
+      dispatcherArgs(f.state(), [f.search.id], {
         automation_id: "fixture-timed-search",
         thread_id: "00000000-0000-4000-8000-000000000001",
-        interval_minutes: 60,
         status,
         evidence: "Isolated host receipt",
         ...(rrule ? { rrule, timezone: "UTC" } : {}),
-      },
-    });
+      }),
+    );
   report();
-  assert.equal(f.state().monitoring[0]?.label, "Schedule update needed");
+  assert.equal(f.state().monitoring[0]?.status, "active");
   const plan = f.state().monitoring[0]?.plan;
   assert.ok(plan?.rrule);
   assert.throws(() => report("FREQ=HOURLY;INTERVAL=1"));
@@ -347,6 +348,8 @@ void test("old host recurrences need updating and matching rules preserve pauses
     settings: { quiet_hours: { ...quiet, timezone: "UTC", end: "09:00" } },
   });
   assert.equal(f.state().monitoring[0]?.status, "paused");
+  const dispatcher = f.state().dispatchers[0];
+  assert.ok(dispatcher);
   const observed = monitoringSummary(
     f.search,
     f.state().config.monitoring,
@@ -363,6 +366,17 @@ void test("old host recurrences need updating and matching rules preserve pauses
     },
     f.state().config.schedule.quiet_hours,
     Date.parse("2026-10-06T22:00:00Z"),
+    {
+      ...dispatcher,
+      host_schedule: {
+        status: "active",
+        checked_at: "2026-10-06T22:00:00Z",
+        interval_minutes: null,
+        evidence: "Host recurrence observed independently",
+        rrule: plan.rrule,
+        timezone: "UTC",
+      },
+    },
   );
   assert.equal(observed.label, "Schedule update needed");
   assert.notEqual(canonicalRule(`FREQ=HOURLY;${plan.rrule}`), canonicalRule(plan.rrule));
@@ -372,9 +386,9 @@ void test("old host recurrences need updating and matching rules preserve pauses
 void test("MCP exposes quiet hours, compiled daily timing and a lightweight preflight", async (t) => {
   const f = fixture(t);
   f.choose({ timing: { mode: "daily", times: ["08:15", "18:30"] } });
-  const app = createGoodfindsServer(
+  const app = createNativeServer(
     f.dir,
-    backendLayer(f.dir, null, () => Promise.resolve(null)),
+    nativeOptions(f.dir, null, () => Promise.resolve(null)),
   );
   t.after(() => app.server.close());
   const check = app.calls.get("check_goodfinds_scheduled_search"),

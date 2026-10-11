@@ -189,7 +189,7 @@ export function schedulePlan(
   const cadence =
     timing.mode === "daily"
       ? `Daily at ${times.map(clockTime).join(", ") || "no permitted times"}`
-      : `Every ${timing.interval_minutes === 60 ? "hour" : `${timing.interval_minutes} minutes`}`;
+      : `Every ${timing.interval_minutes === 60 ? "hour" : `${timing.interval_minutes} mins`}`;
   return {
     timing,
     quiet_hours: hours,

@@ -8,7 +8,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { Effect } from "effect";
-import { WorkspaceStore } from "../reference-server/src/platform/workspace-sqlite.ts";
+import { NativeWorkspace } from "./native-workspace.ts";
 import type { Action } from "../../apps/ui/src/lib/actions.ts";
 
 const values: unknown[] = [];
@@ -59,7 +59,7 @@ function click(element: ReactElement<ControlProps>) {
 }
 try {
   const state = Effect.runSync(
-    new WorkspaceStore(folder, "sample").request("load_sample_workspace"),
+    new NativeWorkspace(folder, "sample").request("load_sample_workspace"),
   ).state;
   const search = state.searches[0];
   const original = state.listings[0];
