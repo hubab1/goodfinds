@@ -381,7 +381,11 @@ pub fn restore_workspace(input: &Path, output: &Path) -> Result<Value> {
             [util::id()],
         )?;
         db.close().map_err(|(_, e)| e)?;
-        fs::File::open(folder.join("workspace.sqlite"))?.sync_all()?;
+        // As with snapshots, Windows requires write access to flush the file.
+        OpenOptions::new()
+            .write(true)
+            .open(folder.join("workspace.sqlite"))?
+            .sync_all()?;
         Ok(())
     })?;
     Ok(json!({"workspace":destination,"database":destination.join("workspace.sqlite")}))
