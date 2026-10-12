@@ -407,7 +407,7 @@ pub fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> 
                 .iter()
                 .find(|next| next["id"] == previous["id"])
             {
-                searches::preserve_cover_runs(ws, previous, next)?;
+                searches::preserve_evidence_runs(ws, previous, next)?;
             }
         }
     }

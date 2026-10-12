@@ -158,7 +158,7 @@ export function localizeTemplate(template: SearchDefinition, currency: string): 
   const next = structuredClone(template);
   next.price.currency = currency;
   for (const field of next.fields) {
-    if (field.match?.attribute !== "price_minor") continue;
+    if (!["price_minor", "total_cash_cost_minor"].includes(field.match?.attribute ?? "")) continue;
     field.display_divisor = currencyDivisor(currency);
     field.unit = currency + (next.price.period === "once" ? "" : ` / ${next.price.period}`);
   }

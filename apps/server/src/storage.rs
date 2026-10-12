@@ -112,6 +112,7 @@ impl Workspace {
         ws.db.execute_batch("BEGIN IMMEDIATE")?;
         let result = (|| {
             ws.reload_config()?;
+            crate::reset::recover_media(&ws)?;
             Ok(())
         })();
         match result {

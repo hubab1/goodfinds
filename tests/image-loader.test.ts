@@ -1,6 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { resolve as resolvePath } from "node:path";
 import { createImageLoader } from "../apps/ui/src/lib/image-loader.ts";
+
+void test("the panel accepts AVIF images served by the native media cache", () => {
+  const result = Bun.spawnSync(
+    [process.execPath, resolvePath(import.meta.dir, "helpers/image-client.ts")],
+    {
+      cwd: resolvePath(import.meta.dir, ".."),
+      timeout: 10000,
+    },
+  );
+  assert.equal(result.exitCode, 0, result.stderr.toString() + result.stdout.toString());
+});
 
 void test("gallery and prefetch share retries and a recovered original", async () => {
   let attempts = 0;
@@ -50,4 +62,52 @@ void test("a failed image can be retried without starving other gallery slots", 
   assert.equal(peak, 2);
   failing = false;
   assert.equal(await load("bad"), "bad");
+});
+
+void test("completed images have entry and byte bounds without evicting in-flight requests", async () => {
+  const calls: string[] = [];
+  let release: ((value: string) => void) | undefined;
+  const load = createImageLoader(
+    async (id) => {
+      calls.push(id);
+      if (id === "pending")
+        return new Promise<string>((resolve) => {
+          release = resolve;
+        });
+      return id.repeat(4);
+    },
+    { maxEntries: 2, maxBytes: 16 },
+  );
+  const pending = load("pending");
+  const visible = await load("a");
+  await load("b");
+  await load("a"); // Recently used a survives c.
+  await load("c");
+  assert.equal(load("pending"), pending);
+  assert.equal(visible, "aaaa", "Eviction does not revoke a visible image");
+  await load("a");
+  assert.equal(calls.filter((id) => id === "a").length, 1);
+  await load("b");
+  assert.equal(calls.filter((id) => id === "b").length, 2);
+  assert.ok(release);
+  release("oversized image data");
+  await pending;
+  await load("huge");
+  await load("huge");
+  assert.equal(calls.filter((id) => id === "huge").length, 2, "Oversized entries are not retained");
+});
+
+void test("clearing cached workspace data prevents a late image from repopulating the cache", async () => {
+  const resolvers: ((value: string) => void)[] = [];
+  const load = createImageLoader(() => new Promise<string>((resolve) => resolvers.push(resolve)));
+  const stale = load("same-id");
+  load.clear();
+  const current = load("same-id");
+  assert.notEqual(current, stale);
+  resolvers[0]?.("old bytes");
+  await stale;
+  assert.equal(load("same-id"), current);
+  resolvers[1]?.("new bytes");
+  await current;
+  assert.equal(await load("same-id"), "new bytes");
 });

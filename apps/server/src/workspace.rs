@@ -72,7 +72,8 @@ fn execute_inner(
         cancelled(&cancel)?;
         if query {
             let state = match action {
-                "get_setup_context"
+                "preview_workspace_reset"
+                | "get_setup_context"
                 | "get_settings"
                 | "list_search_runs"
                 | "get_runtime_context"
@@ -89,7 +90,9 @@ fn execute_inner(
             };
             let mut args = args.clone();
             args.as_object_mut().unwrap().remove("mode");
-            let mut data = if action == "list_coordination_events" {
+            let mut data = if action == "preview_workspace_reset" {
+                crate::reset::preview(&ws)?
+            } else if action == "list_coordination_events" {
                 crate::events::read(&ws, &args)?
             } else if action == "get_runtime_context" {
                 crate::runtime::context(&ws)
@@ -155,17 +158,34 @@ fn execute_inner(
         Ok(result)
     })();
     match result {
-        Ok(result) => {
+        Ok(mut result) => {
             if let Err(error) = cancelled(&cancel) {
                 let _ = ws.db.execute_batch("ROLLBACK");
+                if action == "reset_workspace" {
+                    crate::reset::rollback_media(&ws, &args);
+                }
                 return Err(error);
             }
             let _commit = diagnostics::stage("commit");
-            ws.db.execute_batch("COMMIT")?;
+            if let Err(error) = ws.db.execute_batch("COMMIT") {
+                let _ = ws.db.execute_batch("ROLLBACK");
+                if action == "reset_workspace" {
+                    crate::reset::rollback_media(&ws, &args);
+                }
+                return Err(error.into());
+            }
+            if action == "reset_workspace" {
+                let clean = crate::reset::finish_media(&ws, &args);
+                result["operation_result"]["reset"]["media_cleanup_complete"] = json!(clean);
+                result["reset"]["media_cleanup_complete"] = json!(clean);
+            }
             Ok(result)
         }
         Err(error) => {
             let _ = ws.db.execute_batch("ROLLBACK");
+            if action == "reset_workspace" {
+                crate::reset::rollback_media(&ws, &args);
+            }
             Err(error)
         }
     }
@@ -197,7 +217,9 @@ fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> {
             json!({"operation_result":contracts::parse("operations.acknowledge_alerts.output", &output)?}),
         );
     }
-    if configuration::ACTIONS.contains(&action) || MONITORING.contains(&action) {
+    if action == "reset_workspace" {
+        extras = crate::reset::reset(ws, args)?;
+    } else if configuration::ACTIONS.contains(&action) || MONITORING.contains(&action) {
         configuration::check_revision(ws, action, args)?;
         if MONITORING.contains(&action) {
             if ws.mode != "live" {
@@ -465,6 +487,9 @@ pub fn command_result(action: &str, args: &Value, result: &Value) -> Result<Valu
             )["pending_action"]
                 .clone();
             let mut v = json!({"conversation":c,"workflow":state["seller_workflow"]});
+            if action == "save_seller_message_draft" {
+                v["mutation_receipt"] = json!({"operation":action,"listing_key":c["listing_key"],"version":c["version"],"draft_hash":hash(&c["draft"]),"committed_at":c["updated_at"]});
+            }
             if let Some(e) = result.get("execution") {
                 v["execution"] = e.clone();
             }
@@ -473,6 +498,7 @@ pub fn command_result(action: &str, args: &Value, result: &Value) -> Result<Valu
         _ if action.starts_with("report_") => {
             json!({"access_context":state["access_context"],"evidence":{"browser_access":state["config"]["browser_access"],"platform_sessions":state["config"]["platform_sessions"],"listing_contacts":array(&state["config"],"listing_contacts")}})
         }
+        "reset_workspace" => json!({"reset":result["reset"]}),
         "prepare_next_steps" => {
             json!({"actions":array(state,"next_steps").iter().filter(|x|x["search_id"]==args["search_id"]).collect::<Vec<_>>()})
         }

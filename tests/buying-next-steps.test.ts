@@ -1,3 +1,4 @@
+import { operations } from "@goodfinds/contracts/operations";
 import { dispatcherArgs } from "./helpers/dispatcher.ts";
 import { seedWorkspace } from "./helpers/workspace.ts";
 import { revisionFor } from "./helpers/revisions.ts";
@@ -72,7 +73,7 @@ function fixture(t: TestContext) {
     search,
     expected_entity_revision: revisionFor(initial, "save_search", { search }),
   });
-  const importItem = (id: string, price = 22000) =>
+  const importItem = (id: string, price = 22000, extra: Record<string, unknown> = {}) =>
     run("import_listing_observations", {
       observations: [
         {
@@ -94,11 +95,82 @@ function fixture(t: TestContext) {
           image_review: { total_images: 1, reviewed_positions: [1], complete: true },
           attributes: { model: "Sage Barista Express" },
           evidence: { model: "Photo 1 shows the Sage Barista Express label" },
+          ...extra,
         },
       ],
     });
   return { dir, run, store, importItem };
 }
+
+void test("clothing enquiries preserve garment checks without inventing machine checks", (t) => {
+  const { run, store } = fixture(t);
+  const garmentSearch = savedSearchSchema.parse({
+    ...search,
+    id: "raincoat",
+    name: "Raincoat",
+    product: "clothing",
+    marketplaces: ["vinted"],
+    definition: { ...search.definition, category: "clothing", title: "Raincoat" },
+    discovery: { scope: "alternatives", category_terms: ["raincoat"] },
+  });
+  run("save_search", {
+    search: garmentSearch,
+    expected_entity_revision: revisionFor(run("get_workspace"), "save_search", {
+      search: garmentSearch,
+    }),
+  });
+  const listing = run("import_listing_observations", {
+    observations: [
+      {
+        listing_id: "123456780",
+        title: "Raincoat XL",
+        url: "https://www.vinted.co.uk/items/123456780-raincoat-xl",
+        source: "vinted",
+        provenance: "manual",
+        product: "clothing",
+        price_minor: 3000,
+        currency: "GBP",
+        price_kind: "asking",
+        price_period: "once",
+        availability: "active",
+        condition: "good",
+        observed_at: new Date().toISOString(),
+        attributes: { model: "Raincoat" },
+        verification_checks: [
+          {
+            id: "waterproofing",
+            label: "Waterproofing",
+            question: "Is the waterproof lining intact?",
+            state: "unknown",
+            evidence: null,
+          },
+        ],
+      },
+    ],
+  }).listings[0];
+  assert.ok(listing);
+  const details = Effect.runSync(store.query("get_listing", { listing_key: listing.key }));
+  assert.deepEqual(
+    details.workflow.evidence.checks.map((check) => check.id),
+    ["waterproofing"],
+  );
+  assert.deepEqual(
+    verificationChecks(listing).map((check) => check.id),
+    ["waterproofing"],
+  );
+  const explicit = {
+    id: "functional",
+    label: "Zip operation",
+    question: "Does the zip work?",
+    state: "unknown" as const,
+    evidence: null,
+  };
+  assert.ok(verificationChecks({ ...listing, verification_checks: [explicit] }).includes(explicit));
+  assert.equal(openingDraft(listing, garmentSearch).text, "Hi, is this still available?");
+  const prepared = run("prepare_next_steps", { search_id: garmentSearch.id });
+  assert.equal(prepared.next_steps[0]?.draft_text, "Hi, is this still available?");
+  assert.doesNotMatch(prepared.next_steps[0]?.reasons.join(" ") ?? "", /accessories/u);
+});
 
 void test("opening enquiries omit an already acceptable asking price, including a free item", (t) => {
   const { importItem } = fixture(t);
@@ -692,4 +764,69 @@ void test("chat-only tools expose prepared actions without sending or loading im
   assert.match(JSON.stringify(result.structuredContent), /portafilter/);
   assert.ok(calls.has("save_goodfinds_collection_plan"));
   assert.ok(calls.has("prepare_goodfinds_collection_message"));
+});
+
+void test("conflicting identities rank below unknown checks before price in native and panel recommendations", (t) => {
+  const { run, importItem } = fixture(t);
+  const conflict = {
+    id: "model_identity",
+    label: "Model identity",
+    question: "Could you show the model label?",
+    state: "conflicting",
+    evidence: "The seller description and pictured model label disagree",
+  };
+  const cheap = importItem("987654321", 10000, { verification_checks: [conflict] }).listings.find(
+    (r) => r.listing_id === "987654321",
+  );
+  const state = importItem("987654322", 20000);
+  const better = state.listings.find((r) => r.listing_id === "987654322");
+  assert.ok(cheap);
+  assert.ok(better);
+  const recommended = recommendations(state, search.id);
+  assert.equal(recommended[0]?.listing_key, better.key);
+  assert.ok(
+    recommended
+      .find((r) => r.listing_key === cheap.key)
+      ?.reasons.some((r) => /conflicting/.test(r)),
+  );
+  const prepared = run("prepare_next_steps", { search_id: search.id });
+  assert.ok(prepared.seller_conversations.find((c) => c.listing_key === better.key)?.draft_text);
+  assert.equal(
+    prepared.seller_conversations.find((c) => c.listing_key === cheap.key)?.draft_text,
+    undefined,
+  );
+});
+
+void test("new enquiries default to no reply and return a persisted mutation receipt", async (t) => {
+  const { dir, importItem } = fixture(t);
+  const listing = importItem("987654323").listings[0];
+  assert.ok(listing);
+  const { calls } = createNativeServer(dir);
+  const save = calls.get("save_goodfinds_seller_message_draft");
+  assert.ok(save);
+  const result = await save({
+    listing_key: listing.key,
+    expected_version: 0,
+    draft: {
+      search_id: search.id,
+      text: "Could you confirm the model?",
+      intent: "message",
+      price_minor: null,
+      currency: "GBP",
+      price_period: "once",
+      collection: null,
+    },
+  });
+  assert.equal(result.isError, undefined, JSON.stringify(result.content));
+  const response = operations.save_seller_message_draft.output.parse(result.structuredContent);
+  assert.equal(response.conversation.draft?.responds_to, null);
+  assert.equal(response.mutation_receipt?.listing_key, listing.key);
+  assert.equal(response.mutation_receipt?.version, response.conversation.version);
+  const read = calls.get("get_goodfinds_seller_conversation");
+  assert.ok(read);
+  const persisted = operations.get_seller_conversation.output.parse(
+    (await read({ listing_key: listing.key })).structuredContent,
+  );
+  assert.equal(persisted.conversation.draft?.text, "Could you confirm the model?");
+  assert.equal(persisted.conversation.first_sent_at, null);
 });

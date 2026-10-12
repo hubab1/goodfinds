@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { createNativeServer } from "./helpers/native-mcp.ts";
-import { stateFromToolResult } from "@goodfinds/contracts/state";
+import { savedSearchSchema, stateFromToolResult } from "@goodfinds/contracts/state";
 import { rentalCoverFor, rentalCovers } from "@goodfinds/contracts/rental-cover";
 import { SEARCH_TEMPLATES } from "@goodfinds/contracts/search-definition";
 import { searchCoverSchema, searchCoverFollowUp } from "@goodfinds/contracts/search-cover";
@@ -86,6 +86,51 @@ void test("vehicle defaults use explicit types and preserve ambiguity", () => {
     { product: "camera", values: { body_type: "sedan" } },
   ])
     assert.equal(bundledSearchCoverFor(search), undefined);
+});
+
+void test("clothing category searches request representative photos without inventing a reference model", async (t) => {
+  const data = await mkdtemp(resolve(tmpdir(), "goodfinds-clothing-cover-"));
+  const { server, calls } = createNativeServer(seedWorkspace(data));
+  t.after(async () => {
+    await server.close();
+    await rm(data, { recursive: true, force: true });
+  });
+  const call = async (name: string, args: unknown) => {
+    const fn = calls.get(name);
+    assert.ok(fn);
+    const result = await fn(args);
+    assert.ok(!result.isError, JSON.stringify(result));
+    return result;
+  };
+  const initial = stateFromToolResult(await call("get_goodfinds_workspace", {}));
+  const original = initial.config.searches[0];
+  assert.ok(original);
+  for (const garment of ["fleece", "hoodies", "raincoat"]) {
+    const search = savedSearchSchema.parse({
+      ...original,
+      id: garment,
+      name: garment,
+      product: "clothing",
+      definition: { ...original.definition, category: "clothing", title: garment },
+      discovery: { scope: "alternatives", category_terms: [garment] },
+    });
+    // Serialize mutations against this shared fixture workspace.
+    // oxlint-disable-next-line no-await-in-loop
+    const result = await call("save_goodfinds_search", {
+      expected_entity_revision: initial.revisions.absent,
+      search,
+    });
+    assert.ok(result && !result.isError, JSON.stringify(result));
+    const saved = operations.save_search.output.parse(result.structuredContent);
+    assert.deepEqual(saved.cover_follow_up, {
+      search_id: garment,
+      product: garment,
+      action: "fetch_manufacturer_photo",
+      required: true,
+    });
+    assert.deepEqual(searchCoverFollowUp(search), saved.cover_follow_up);
+    assert.equal(saved.search?.discovery?.reference_model, undefined);
+  }
 });
 
 void test("marketplace defaults recognize item types without guessing a broad furniture or baby brief", () => {

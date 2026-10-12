@@ -169,6 +169,12 @@ impl ServerHandler for NativeServer {
             ServerCapabilities::builder()
                 .enable_tools()
                 .enable_resources()
+                .enable_extensions_with(
+                    serde_json::from_value(json!({
+                        "openai/mentions": {"searchTool":"search_goodfinds_mentions"}
+                    }))
+                    .expect("mention capability"),
+                )
                 .build(),
         )
         .with_protocol_version(ProtocolVersion::V_2025_11_25)
@@ -203,8 +209,23 @@ impl ServerHandler for NativeServer {
     async fn read_resource(
         &self,
         request: ReadResourceRequestParams,
-        _context: RequestContext<RoleServer>,
+        context: RequestContext<RoleServer>,
     ) -> std::result::Result<ReadResourceResponse, ErrorData> {
+        if request.uri.starts_with("goodfinds:") {
+            let cancellation = RequestCancellation::new(&context);
+            let root = self.root.clone();
+            let access = self.access_context.clone();
+            let cancel = cancellation.flag.clone();
+            let value = tokio::task::spawn_blocking(move || {
+                crate::references::read(&root, &access, &request.uri, cancel)
+            })
+            .await
+            .map_err(protocol_error)?
+            .map_err(protocol_error)?;
+            return serde_json::from_value::<ReadResourceResult>(value)
+                .map(Into::into)
+                .map_err(protocol_error);
+        }
         let value = service::resource(&request.uri).map_err(protocol_error)?;
         serde_json::from_value::<ReadResourceResult>(value)
             .map(Into::into)

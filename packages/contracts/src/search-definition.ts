@@ -62,7 +62,9 @@ export const fieldSchema = z
       .optional(),
     match: z
       .object({
-        attribute: key,
+        attribute: key.describe(
+          "Use price_minor for asking price and total_cash_cost_minor for the full payable cost. The latter is derived only when all required cost components are known; do not invent total_cost_minor or total_price_minor aliases.",
+        ),
         operator: z.enum(["eq", "gte", "lte", "in", "contains_any", "range"]),
         importance: z.enum(["required", "preferred"]).default("required"),
       })

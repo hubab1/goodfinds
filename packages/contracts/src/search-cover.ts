@@ -3,7 +3,7 @@ import type { SavedSearch } from "./state.ts";
 import { isBundledSearchCover } from "./search-cover-presets.ts";
 
 export const MANUFACTURER_PHOTO_GUIDANCE =
-  "For identifiable products, automatically fetch a suitable official manufacturer photo, cache it in the user's workspace and attach it as the search worker’s first bounded media task before marketplace discovery. Choose any accepted model or a clearly labelled representative family photo; exact variant, storage and colour matching are unnecessary. This follow-up is required before finishing the request, including searches with no listings. Reuse a suitable saved photo. Bundled covers are generic illustrations and do not satisfy a named product's photo follow-up. If fetching is blocked or no suitable photo is available, report the specific reason and retain the fallback; never silently skip the attempt. Follow references/search-covers.md.";
+  "For identifiable products and clothing categories, automatically fetch a suitable official manufacturer photo, cache it in the user's workspace and attach it as the search worker’s first bounded media task before marketplace discovery. Choose any accepted model or a clearly labelled representative family photo; exact variant, storage and colour matching are unnecessary. This follow-up is required before finishing the request, including searches with no listings. Reuse a suitable saved photo. Bundled covers are generic illustrations and do not satisfy a named product's photo follow-up. If fetching is blocked or no suitable photo is available, report the specific reason and retain the fallback; never silently skip the attempt. Follow references/search-covers.md.";
 
 const manufacturerProducts = new Map([
   ["macbook_pro", "MacBook Pro"],
@@ -11,8 +11,17 @@ const manufacturerProducts = new Map([
   ["mac_pro", "Mac Pro"],
 ]);
 
-export function searchCoverProduct(search: Pick<SavedSearch, "product" | "discovery">) {
-  return search.discovery?.reference_model?.trim() || manufacturerProducts.get(search.product);
+export function searchCoverProduct(
+  search: Pick<SavedSearch, "product" | "discovery"> & Partial<Pick<SavedSearch, "definition">>,
+) {
+  return (
+    search.discovery?.reference_model?.trim() ||
+    manufacturerProducts.get(search.product) ||
+    (search.product === "clothing"
+      ? search.discovery?.category_terms?.find((term) => term.trim())?.trim() ||
+        search.definition?.title.trim()
+      : undefined)
+  );
 }
 
 export const searchCoverFollowUpSchema = z.object({
@@ -23,7 +32,8 @@ export const searchCoverFollowUpSchema = z.object({
 });
 
 export function searchCoverFollowUp(
-  search: Pick<SavedSearch, "id" | "product" | "cover" | "discovery">,
+  search: Pick<SavedSearch, "id" | "product" | "cover" | "discovery"> &
+    Partial<Pick<SavedSearch, "definition">>,
 ) {
   const product = searchCoverProduct(search);
   if (

@@ -110,8 +110,43 @@ void test("a flexible fleece budget is a target while an explicit ceiling keeps 
   assert.equal(searchBudget(free), "£0");
   assert.equal(searchBudgetLabel(free), "Target");
   const unbounded = { ...search, values: { target_price_minor: null } };
-  assert.equal(searchBudget(unbounded), "No price limit");
+  assert.equal(searchBudget(unbounded), "Budget not set");
   assert.equal(searchBudgetLabel(unbounded), null);
+});
+
+void test("delivered budgets remain visible for native totals and existing custom total fields", () => {
+  for (const attribute of ["total_cash_cost_minor", "total_cost_minor", "total_price_minor"]) {
+    const search = savedSearchSchema.parse({
+      id: "hoodie",
+      name: "Premium hoodie",
+      product: "clothing",
+      definition: {
+        schema_version: 1,
+        version: 1,
+        category: "clothing",
+        title: "Premium hoodie",
+        description: "£40 delivered maximum",
+        price: { currency: "GBP", period: "once" },
+        comparison_attributes: ["brand"],
+        fields: [
+          {
+            id: "max_total_minor",
+            label: "Maximum delivered total",
+            type: "integer",
+            match: { attribute, operator: "lte" },
+            display_divisor: 100,
+          },
+          { id: "size", label: "Size", type: "text" },
+        ],
+      },
+      values: { max_total_minor: 4000, size: "XL" },
+    });
+    assert.equal(searchBudget(search), "£40 total", attribute);
+    assert.equal(searchBudgetLabel(search), "Up to");
+    assert.equal(searchSummary(search), "Size: XL");
+    assert.equal(searchRequirements(search)[0]?.value, "£40");
+    assert.equal(searchBudget({ ...search, values: { size: "XL" } }), "Budget not set");
+  }
 });
 
 void test("new categories retain false and zero preferences without a category-specific layout", () => {
@@ -159,7 +194,7 @@ void test("new categories retain false and zero preferences without a category-s
   });
   assert.equal(searchSummary(search), "54 cm frame size · Electric: No · 0 previous owners");
   assert.deepEqual(searchLocation(search, "Birmingham"), { location: "Cambridge", distances: [] });
-  assert.equal(searchBudget(search), "No price limit");
+  assert.equal(searchBudget(search), "Budget not set");
   assert.equal(searchBudgetLabel(search), null);
   assert.ok(
     searchRequirements(search).some(

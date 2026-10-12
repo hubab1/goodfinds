@@ -27,10 +27,12 @@ export function SearchCover({
   compact?: boolean;
 }) {
   const root = useRef<HTMLElement>(null);
-  const [savedImage, setSavedImage] = useState<{ id: string; src: string }>();
+  const [savedImage, setSavedImage] = useState<{ id: string; src: string; attempt: number }>();
+  const [failure, setFailure] = useState<{ id: string; attempt: number }>();
+  const [retry, setRetry] = useState(0);
   const fallback = bundledSearchCoverFor(search);
   const mediaId = search.cover?.media_id ?? fallback?.media_id;
-  const src = savedImage && savedImage.id === mediaId ? savedImage.src : "";
+  const src = savedImage?.id === mediaId && savedImage?.attempt === retry ? savedImage.src : "";
   useEffect(() => {
     const element = root.current;
     let active = true;
@@ -43,10 +45,13 @@ export function SearchCover({
       observer.disconnect();
       void getSavedImage(mediaId).then(
         (value) => {
-          if (active) setSavedImage({ id: mediaId, src: value });
+          if (active) {
+            setSavedImage({ id: mediaId, src: value, attempt: retry });
+            setFailure(undefined);
+          }
         },
         () => {
-          // Keep the category cover when a saved image is unavailable.
+          if (active) setFailure({ id: mediaId, attempt: retry });
         },
       );
     });
@@ -55,7 +60,7 @@ export function SearchCover({
       active = false;
       observer.disconnect();
     };
-  }, [mediaId]);
+  }, [mediaId, retry]);
 
   const picture = src;
   const metadata = src ? (search.cover ?? fallback) : undefined;
@@ -91,6 +96,7 @@ export function SearchCover({
           decoding="async"
           onError={() => {
             setSavedImage(undefined);
+            if (mediaId) setFailure({ id: mediaId, attempt: retry });
           }}
         />
       ) : (
@@ -112,6 +118,20 @@ export function SearchCover({
         </a>
       ) : (
         cover
+      )}
+      {mediaId && failure?.id === mediaId && failure.attempt === retry && (
+        <output className="block text-center text-xs">
+          <span>Cover unavailable. </span>
+          <button
+            type="button"
+            className="underline"
+            onClick={() => {
+              setRetry((value) => value + 1);
+            }}
+          >
+            Retry cover
+          </button>
+        </output>
       )}
       <figcaption
         className={compact ? "sr-only" : "text-center text-[11px] leading-relaxed text-foreground"}

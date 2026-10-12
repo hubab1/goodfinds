@@ -36,9 +36,19 @@ void test(
       assert.equal(result.isError, undefined, JSON.stringify(result.content));
       return result;
     };
-    const initial = stateFromToolResult(await call("get_goodfinds_workspace", {}));
-    const search = initial.config.searches[0];
-    assert.ok(search);
+    let initial = stateFromToolResult(await call("get_goodfinds_workspace", {}));
+    const original = initial.config.searches[0];
+    assert.ok(original);
+    const search = {
+      ...original,
+      discovery: { scope: "help_choose" as const, model_attribute: "model" },
+    };
+    initial = stateFromToolResult(
+      await call("save_goodfinds_search", {
+        search,
+        expected_entity_revision: initial.revisions.searches[search.id],
+      }),
+    );
     const started = operations.request_search_run.output.parse(
       (
         await call("request_goodfinds_search_run", {
@@ -116,6 +126,30 @@ void test(
     };
     await editCover(cover);
     await editCover(null);
+    const researched = {
+      ...search,
+      discovery: {
+        ...search.discovery,
+        model_attribute: search.discovery?.model_attribute ?? "model",
+        research: {
+          summary: "Official model notes",
+          sources: [{ title: "Manufacturer", url: "https://example.com/model" }],
+          checked_at: new Date().toISOString(),
+          queries: [],
+          candidates: [],
+        },
+      },
+    };
+    const notes = await call("save_goodfinds_search", {
+      expected_entity_revision: revision,
+      search: researched,
+    });
+    revision = operations.save_search.output.parse(notes.structuredContent).revisions.searches[
+      search.id
+    ];
+    await call("renew_goodfinds_search_lease", {
+      request: { run_id: started.id, worker_id: worker },
+    });
     const changed = await call("save_goodfinds_search", {
       expected_entity_revision: revision,
       search: { ...search, values: { ...search.values, max_price_minor: 99900 } },

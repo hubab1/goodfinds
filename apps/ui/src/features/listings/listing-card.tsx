@@ -1,6 +1,9 @@
 import "./listings.css";
 import { Disclosure } from "@/components/ui/disclosure";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { publishListingContext } from "@/lib/client";
+import { listingContext } from "@/lib/selection-context";
+import { z } from "zod";
 import { ArrowDown, ArrowUpRight, MapPin, MessageCircle, Route } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -286,6 +289,7 @@ export function ListingDetail({
   searches,
   seller_conversation,
   onNegotiate,
+  preferredSearchId,
 }: {
   listing: Listing;
   decisions: Decision[];
@@ -294,7 +298,17 @@ export function ListingDetail({
   searches: SavedSearch[];
   seller_conversation?: SellerConversationSummary | undefined;
   onNegotiate?: ((button: HTMLElement) => void) | undefined;
+  preferredSearchId?: string | undefined;
 }) {
+  const selectedSearchId =
+    preferredSearchId ?? (decisions.length === 1 ? decisions[0]?.search_id : undefined);
+  const context = JSON.stringify(
+    listingContext(listing, sample ? "sample" : "live", selectedSearchId),
+  );
+  useEffect(
+    () => publishListingContext(z.record(z.string(), z.unknown()).parse(JSON.parse(context))),
+    [context],
+  );
   const search =
     searches.find((item) => item.id === decisions[0]?.search_id) ??
     searches.find((item) => item.product === listing.product);
@@ -649,6 +663,7 @@ export function ListingCard({
             sample={sample}
             photoIndex={photoIndex}
             searches={searches}
+            preferredSearchId={preferredWatchId}
             seller_conversation={seller_conversation}
             onNegotiate={negotiate}
           />

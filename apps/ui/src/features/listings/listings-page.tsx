@@ -5,7 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Decision, GoodfindsState } from "@goodfinds/contracts/state";
-import { ListingCard } from "@/features/listings/listing-card";
+import { ListingCard, ListingDetail } from "@/features/listings/listing-card";
+import { Dialog } from "@/components/ui/dialog";
 import { SellerConversationPanel } from "@/features/conversations/seller-conversation-panel";
 import { ListingTrends } from "@/features/listings/listing-trends";
 import { EMPTY_SELLER_FILTERS, sellerFilterCount } from "@/lib/seller";
@@ -27,7 +28,9 @@ export function Deals({
   selection,
   recordSeen,
 }: ViewProps & {
-  selection?: { searchId: string; unseen: boolean } | undefined;
+  selection?:
+    | { searchId?: string | undefined; listingKey?: string | undefined; unseen: boolean }
+    | undefined;
   recordSeen: RecordSeen;
 }) {
   const [filter, setFilter] = useState(selection?.searchId ?? "all");
@@ -39,6 +42,8 @@ export function Deals({
   const [shortlistedOnly, setShortlistedOnly] = useState(false);
   const [seenThisVisit, setSeenThisVisit] = useState<Set<string>>(() => new Set());
   const selectedSearch = state.searches.find((item) => item.id === filter);
+  const [linkedKey, setLinkedKey] = useState(selection?.listingKey);
+  const linkedListing = state.listings.find((listing) => listing.key === linkedKey);
   const selectedRun = state.search_runs.find((run) => run.search_id === selectedSearch?.id);
   const searching = selectedRun && ACTIVE_SEARCH_PHASES.has(selectedRun.phase);
   const [sellerKey, setSellerKey] = useState<string>();
@@ -190,6 +195,13 @@ export function Deals({
         onSortChange={setSort}
         resultCount={tracked.length}
       />
+      {((selection?.searchId &&
+        !state.searches.some((search) => search.id === selection.searchId)) ||
+        (linkedKey && !linkedListing)) && (
+        <output className="text-sm text-muted-foreground">
+          This saved search or listing is no longer available in this workspace.
+        </output>
+      )}
       {selectedSearch && (
         <>
           <SearchResultsHeader
@@ -389,6 +401,30 @@ export function Deals({
           }
         />
       )}
+      <Dialog
+        open={Boolean(linkedListing)}
+        onOpenChange={(open) => {
+          if (!open) setLinkedKey(undefined);
+        }}
+      >
+        {linkedListing && (
+          <ListingDetail
+            listing={linkedListing}
+            decisions={decisionsByListing.get(linkedListing.key) ?? EMPTY_DECISIONS}
+            sample={sample}
+            photoIndex={0}
+            searches={state.searches}
+            preferredSearchId={
+              selectedSearch?.product === linkedListing.product ? selectedSearch.id : undefined
+            }
+            seller_conversation={sellerByListing.get(linkedListing.key)}
+            onNegotiate={(button) => {
+              setLinkedKey(undefined);
+              openSellerConversation(linkedListing.key, button);
+            }}
+          />
+        )}
+      </Dialog>
     </section>
   );
 }

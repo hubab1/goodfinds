@@ -116,7 +116,7 @@ void test("installed-style stdio server advertises the panel and persists edits 
       ui: z.object({ resourceUri: z.string() }),
     })
     .parse(open._meta);
-  assert.deepEqual(meta["openai/ui"].entrypoints, [{ type: "thread" }, { type: "global" }]);
+  assert.deepEqual(meta["openai/ui"].entrypoints, [{ type: "thread" }]);
   const resource = await client.readResource({ uri: meta.ui.resourceUri });
   const contents = z.object({ mimeType: z.string(), text: z.string() }).parse(resource.contents[0]);
   assert.equal(contents.mimeType, "text/html;profile=mcp-app");

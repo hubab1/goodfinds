@@ -40,6 +40,7 @@ export const searchRunSchema = z
     started_at: z.iso.datetime().nullable().optional(),
     updated_at: z.iso.datetime(),
     first_result_at: z.iso.datetime().nullable(),
+    waiting_for_capacity: z.boolean().optional(),
     next_step: z.string().max(1000),
     interruption: z.string().max(2000).nullable(),
     worker: z

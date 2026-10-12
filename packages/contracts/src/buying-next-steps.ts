@@ -20,7 +20,7 @@ type BuyingListing = Pick<Listing, "key" | "title" | "url" | "product"> &
       | "condition"
       | "functional"
     >
-  >;
+  > & { field_evidence?: unknown; observation_conflict?: unknown };
 
 export const buyingNextStepSchema = z.object({
   asking_price_minor: z.number().nullable().default(null),
@@ -95,12 +95,46 @@ export function openingMessagePrice(
   return proposed;
 }
 
+function conflictingFields(listing: BuyingListing): string[] {
+  const fields = listing.field_evidence;
+  if (!fields || typeof fields !== "object") return [];
+  return Object.entries(fields)
+    .filter(
+      ([, value]: [string, unknown]) =>
+        value !== null &&
+        typeof value === "object" &&
+        "state" in value &&
+        value.state === "conflicting",
+    )
+    .map(([field]) => field.replaceAll("_", " "));
+}
+export function evidenceConflicts(listing: BuyingListing): string[] {
+  return [
+    ...(listing.verification_checks ?? [])
+      .filter((check) => check.state === "conflicting")
+      .map((check) => check.label),
+    ...conflictingFields(listing),
+    ...(listing.observation_conflict === true ? ["Listing observations"] : []),
+  ];
+}
+
 export function buyingQuestions(
   listing: BuyingListing,
   search: SavedSearch,
   _reasons: string[] = [],
 ): string[] {
-  return openingQuestions(verificationChecks(listing, search.discovery?.verification_checks));
+  return [
+    ...new Set([
+      ...openingQuestions(verificationChecks(listing, search.discovery?.verification_checks)),
+      ...conflictingFields(listing).map(
+        (field) =>
+          `Could you confirm the ${field.replaceAll("_", " ")}? The listing evidence conflicts.`,
+      ),
+      ...(listing.observation_conflict === true
+        ? ["Could you confirm the current listing details? Earlier observations conflict."]
+        : []),
+    ]),
+  ];
 }
 
 export function openingDraft(listing: BuyingListing, search: SavedSearch, reasons: string[] = []) {
@@ -187,6 +221,8 @@ export function recommendations(
     })
     .toSorted(
       (a, b) =>
+        Number(evidenceConflicts(a.listing).length > 0) -
+          Number(evidenceConflicts(b.listing).length > 0) ||
         Number(b.suitability === "suitable") - Number(a.suitability === "suitable") ||
         (b.preference_score ?? 0) - (a.preference_score ?? 0) ||
         Number(b.verification === "complete") - Number(a.verification === "complete") ||
@@ -222,10 +258,15 @@ export function recommendations(
         url: decision.listing.url,
         label: ready ? (price === null ? "Review message" : "Review offer") : "Verify details",
         readiness: ready ? ("ready_to_offer" as const) : ("verify_and_negotiate" as const),
-        reasons: decision.reasons,
+        reasons: [
+          ...evidenceConflicts(decision.listing).map(
+            (label) => `${label}: conflicting evidence needs review`,
+          ),
+          ...decision.reasons,
+        ],
         questions,
         draft_text: null,
-        priority: 4,
+        priority: evidenceConflicts(decision.listing).length ? 6 : 4,
       };
     });
 }
@@ -284,7 +325,13 @@ export function buyingNextSteps(state: BuyingContext): BuyingNextStep[] {
               ? 2
               : item.first_sent_at
                 ? 5
-                : 3,
+                : state.decisions.some(
+                      (d) =>
+                        d.listing.key === item.listing_key &&
+                        evidenceConflicts(d.listing).length > 0,
+                    )
+                  ? 6
+                  : 3,
     }));
   const seen = new Set(items.map((item) => item.listing_key));
   for (const item of recommendations(state))

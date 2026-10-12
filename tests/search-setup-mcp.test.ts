@@ -159,3 +159,30 @@ void test("a text-only MCP client can recover scoped revisions and promote an un
   assert.ok(!direct.isError);
   assert.equal((await read()).drafts.length, 0);
 });
+
+void test("category starters pair product and definition and localize canonical cost fields", async (t) => {
+  const folder = await mkdtemp(resolve(tmpdir(), "goodfinds-cost-starters-"));
+  t.after(() => rm(folder, { recursive: true, force: true }));
+  const { createNativeServer } = await import("./helpers/native-mcp.ts");
+  const { calls } = createNativeServer(folder);
+  const read = calls.get("get_goodfinds_setup_context");
+  assert.ok(read);
+  const result = await read({
+    category: "clothing",
+    preferences: { country: "JP", currency: "JPY" },
+  });
+  assert.equal(result.isError, undefined);
+  const data = operations.get_setup_context.output.parse(result.structuredContent);
+  assert.equal(data.starter?.product, data.starter?.definition.category);
+  assert.deepEqual(data.starter?.values, {});
+  assert.equal(
+    data.starter?.definition.fields.find((f) => f.match?.attribute === "total_cash_cost_minor")
+      ?.display_divisor,
+    1,
+  );
+  assert.deepEqual(
+    data.cost_fields.map((f) => f.match?.attribute),
+    ["total_cash_cost_minor", "price_minor"],
+  );
+  assert.ok(data.cost_fields.every((f) => f.display_divisor === 1));
+});

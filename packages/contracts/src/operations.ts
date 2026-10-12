@@ -1,3 +1,4 @@
+import { workspaceResetPreviewSchema, workspaceResetResultSchema } from "./workspace-reset.ts";
 import { regionalPreferencesSchema, localeHintsSchema, regionalContextSchema } from "./regional.ts";
 import { operationNames, isOperationName } from "./tool-names.ts";
 export { operationForTool, isOperationName } from "./tool-names.ts";
@@ -23,6 +24,7 @@ import { modeSchema, settingsSchema, stateSchema, listingSchema } from "./state.
 import {
   searchInputSchema,
   searchDefinitionSchema,
+  fieldSchema,
   draftInputSchema,
   savedSearchSchema,
   savedDraftSchema,
@@ -225,6 +227,15 @@ const sellerOutput = z.object({
   execution: executionSchema.optional(),
 });
 const sellerMutationOutput = sellerOutput.extend({
+  mutation_receipt: z
+    .object({
+      operation: z.literal("save_seller_message_draft"),
+      listing_key: z.string(),
+      version: z.number().int(),
+      draft_hash: z.string(),
+      committed_at: z.iso.datetime(),
+    })
+    .optional(),
   conversation: conversationSchema
     .omit({ messages: true, events: true, actions: true })
     .extend({ pending_action: sellerActionSchema.nullable() }),
@@ -321,6 +332,23 @@ export const operations = {
     { mode, request_id: z.uuid(), alert_ids: z.array(z.uuid()).min(1).max(50) },
     z.object({ ...common, alert_ids: z.array(z.uuid()), status: z.literal("delivered") }),
   ),
+  preview_workspace_reset: query(
+    operationNames.preview_workspace_reset,
+    {},
+    workspaceResetPreviewSchema,
+  ),
+  reset_workspace: command(
+    operationNames.reset_workspace,
+    {
+      mode,
+      request_id: z.uuid(),
+      reset_token: revisionSchema,
+      confirmation: z.literal("delete_all_goodfinds_data"),
+    },
+    z.object({ ...common, reset: workspaceResetResultSchema }),
+    false,
+    true,
+  ),
   get_workspace: command(
     operationNames.get_workspace,
     {
@@ -329,6 +357,7 @@ export const operations = {
         .string()
         .optional()
         .describe("Open this saved search's live listings in the panel."),
+      listing_key: z.string().min(1).optional().describe("Open this saved listing's details."),
     },
     stateOutput,
     true,
@@ -423,6 +452,19 @@ export const operations = {
         savedSearchSchema.pick({ id: true, name: true, product: true, enabled: true }),
       ),
       draft_index: z.array(savedDraftSchema.pick({ id: true, name: true })),
+      execution_queue: z.object({
+        max_concurrent_searches: z.literal(1),
+        active_run_id: z.uuid().nullable(),
+        instruction: z.string(),
+      }),
+      cost_fields: z.array(fieldSchema),
+      starter: z
+        .object({
+          product: z.string(),
+          definition: searchDefinitionSchema,
+          values: z.record(z.string(), z.unknown()),
+        })
+        .nullable(),
       template_catalog: z.array(z.object({ category: z.string(), title: z.string() })),
       templates: z.array(searchDefinitionSchema),
     }),

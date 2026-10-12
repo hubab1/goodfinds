@@ -29,6 +29,8 @@ const sample: GoodfindsState = { ...live, mode: "sample", searches: saved.search
 const searchId = saved.searches[0]?.id;
 assert.ok(searchId);
 let opened: string[] = [];
+let externalState: GoodfindsState | undefined;
+let monitoringReads = 0;
 let listener: ((state: GoodfindsState, presentation?: PanelPresentation) => void) | undefined;
 let finishRead: (state: GoodfindsState) => void = () => {};
 let failRead: (error: Error) => void = () => {};
@@ -37,6 +39,13 @@ await mock.module(resolve(import.meta.dir, "../../apps/ui/src/lib/client.ts"), (
     throw new Error("Unexpected feedback during startup");
   },
   invoke: () =>
+    externalState
+      ? Promise.resolve(externalState)
+      : new Promise<GoodfindsState>((accept, reject) => {
+          finishRead = accept;
+          failRead = reject;
+        }),
+  readInitialWorkspace: () =>
     new Promise<GoodfindsState>((accept, reject) => {
       finishRead = accept;
       failRead = reject;
@@ -48,7 +57,10 @@ await mock.module(resolve(import.meta.dir, "../../apps/ui/src/lib/client.ts"), (
     };
   },
   readSearchRuns: () => Promise.resolve([]),
-  readMonitoring: () => Promise.resolve({}),
+  readMonitoring: () => {
+    monitoringReads++;
+    return Promise.resolve({ revision: externalState?.revision ?? live.revision, monitoring: [] });
+  },
   requestBrowserSearch: () => Promise.resolve({}),
   requireHostActions: () => Promise.resolve({}),
 }));
@@ -58,9 +70,15 @@ const { useWorkspace } = await import("../../apps/ui/src/app/use-workspace.ts");
 function Panel() {
   const { state, error } = useWorkspace(
     () => {},
-    (id) => opened.push(id),
+    (target) => {
+      if (target.search_id) opened.push(target.search_id);
+    },
   );
-  return createElement("div", null, `${state?.mode ?? "loading"}:${error}`);
+  return createElement(
+    "div",
+    null,
+    `${state?.mode ?? "loading"}:${error}${externalState ? `:${state?.searches.length}` : ""}`,
+  );
 }
 try {
   for (const order of ["host-first", "read-first", "read-error"] as const) {
@@ -101,6 +119,31 @@ try {
     });
     container.remove();
   }
+  const container = document.createElement("div");
+  document.body.append(container);
+  const root = createRoot(container);
+  await act(async () => {
+    root.render(createElement(Panel));
+  });
+  await act(async () => {
+    finishRead(live);
+  });
+  externalState = { ...saved, revision: "another-chat-saved-first-search" };
+  Object.defineProperty(document, "hidden", { value: true, configurable: true });
+  await act(async () => {
+    dom.dispatchEvent(new dom.Event("focus"));
+  });
+  assert.equal(monitoringReads, 0, "Hidden panels suspend polling");
+  Object.defineProperty(document, "hidden", { value: false, configurable: true });
+  await act(async () => {
+    dom.dispatchEvent(new dom.Event("focus"));
+  });
+  assert.equal(monitoringReads, 1, "An empty live panel checks its revision on focus");
+  assert.equal(container.textContent, `live::${saved.searches.length}`);
+  await act(async () => {
+    root.unmount();
+  });
+  container.remove();
 } finally {
   rmSync(folder, { recursive: true, force: true });
   await dom.happyDOM.close();

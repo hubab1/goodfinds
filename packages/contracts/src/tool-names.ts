@@ -1,7 +1,9 @@
 // Lightweight shared names: the panel does not load server result-schema machinery.
 export const operationNames = {
   list_coordination_events: ["list_goodfinds_coordination_events"],
-  get_workspace: ["open_goodfinds_panel", "get_goodfinds_workspace"],
+  preview_workspace_reset: ["preview_goodfinds_workspace_reset"],
+  reset_workspace: ["reset_goodfinds_workspace"],
+  get_workspace: ["open_goodfinds_panel", "open_goodfinds_home", "get_goodfinds_workspace"],
   get_settings: ["get_goodfinds_settings"],
   list_activity: ["list_goodfinds_activity"],
   list_pending_alerts: ["list_goodfinds_pending_alerts"],

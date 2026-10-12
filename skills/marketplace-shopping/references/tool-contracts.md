@@ -24,6 +24,16 @@ Search and seller results include `workflow.actions`: event, canonical operation
 
 Use returned compact resources for follow-up decisions. Page listing summaries and fetch complete evidence for the shortlisted item. Read-only tools never create runs or enable monitoring. Sample mode is an isolated fictional workspace; it cannot establish live access, seller evidence or real schedules.
 
+## Confirm committed work
+
+Only describe a mutation as saved after a successful tool result with its returned resource. Seller draft saves return `mutation_receipt` with listing key, version, draft hash and commit time; retain it in the completion record. Omit `responds_to` only for a new enquiry (defaults to null); for a reply copy the actual incoming message ID. Saving never permits sending. If a call fails, correct it or report the unsaved draft; proposed text in chat is not a persisted draft. For audits, count failures from actual host/tool records, including recovered failures; do not infer zero errors from a successful final state. Report unavailable counts as unknown.
+
+Cover edits and research summary/source/date edits preserve execution. Research queries, candidate model identities, matching rules and buyer answers remain execution inputs: finish research before starting, or deliberately start a replacement run after those change. A claim returning a requested run without your worker is a capacity wait, not permission to browse.
+
+## Delete all workspace data
+
+A request to delete searches alone uses search removal and preserves history. An explicit full-data reset uses `preview_goodfinds_workspace_reset`. Retain buying briefs in the chat first if requested. Show the scope/counts; the user's existing explicit reset request authorizes the deletion. Stop the listed active runs and close their task tabs, delete only the listed Goodfinds host schedules using the host automation tool, then preview again. Never edit automation files directly. Pass the new reset_token, a fresh request_id and confirmation `delete_all_goodfinds_data` to `reset_goodfinds_workspace`. A stale preview requires a fresh preview. Check the successful reset receipt and `media_cleanup_complete`; if false retry the same ID/arguments to finish file cleanup without deleting subsequently added data. The operation resets settings, conversations, run history, connection observations and cached media in that workspace; browser sign-ins, plugin installation, other workspaces and chats stay intact. An unreadable host schedule must be resolved through the host before reset.
+
 ## Journey checks
 
 Use `list_goodfinds_journey_checks({search_id?, offset?, limit?})` for a town-grouped queue. It returns `origin_key`, `enabled`, `origin_confirmed`, `checks`, `total` and `next_offset`. Open each returned maps_url in the selected browser and save `record_goodfinds_journey_check({request_id?, report})`. Report contains `origin_key`, `destination`, `country` (nullable), `listing_keys`, `drive_minutes`, `precision: "town"`, `estimate_kind: "traffic" | "typical"`, `source_url`, `evidence` and actual `checked_at`. No listing import or refreshed observation time is needed. Use the same request ID and payload when retrying a write. See [journey checks](journeys.md) for freshness, approximate results and blocked routes.

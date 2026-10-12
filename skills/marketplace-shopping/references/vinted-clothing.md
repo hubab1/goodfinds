@@ -42,6 +42,8 @@ For “No items available with this filter” or a previously available option d
 
 If bounded recovery fails, record the exact unverified filter and broader scope. A photo-checked candidate can still be useful, but never call that a successful native-filter search. Preserve hard requirements and mark interrupted query coverage partial. Zero results in one scope do not establish no matches across Vinted.
 
+Only mark a query completed after category, selected filter chips, observed URL and refreshed cards agree. A category click alone is not a committed transition. Prefer an observed unique card href or test ID within the catalogue container; exclude duplicate recommendation links. Pass observed names through locator arguments rather than composing CSS selectors from titles containing apostrophes. Read the actual gallery image attributes for media locators.
+
 ## Verify the listing
 
 Keep the main text field empty unless a requested detail has no filter. Recheck category and filters after any text submission. Open visible result-card links, then check garment type, department, brand/size labels and pattern on the detail page and photos; suggested cards or seller-entered attributes can be wrong.

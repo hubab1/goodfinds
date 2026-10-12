@@ -1,3 +1,4 @@
+import { WorkspaceReset } from "./workspace-reset";
 import { RegionalFields } from "./regional-fields";
 import type { Action } from "@/lib/actions";
 import { FormField as Field } from "@/components/ui/form-field";
@@ -225,6 +226,7 @@ export function SettingsForm({
             </Field>
           </fieldset>
         </Disclosure>
+        <WorkspaceReset mode={state.mode} busy={busy} action={action} />
         {validation && (
           <p role="alert" className="text-sm">
             {validation}

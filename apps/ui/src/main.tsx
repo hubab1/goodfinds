@@ -1,3 +1,4 @@
+import { startPanelMeasure } from "@/lib/panel-performance";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { LocationPage } from "@/features/settings/location-page";
@@ -5,6 +6,7 @@ import { GoodfindsApp } from "@/App";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "@/styles.css";
 
+startPanelMeasure("startup");
 const root = document.getElementById("root");
 if (!root) throw new Error("Goodfinds’s panel is missing its root element");
 createRoot(root).render(

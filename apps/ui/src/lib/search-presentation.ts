@@ -3,6 +3,17 @@ import type { Answer, SearchField } from "@goodfinds/contracts/search-definition
 import { money } from "./presentation.ts";
 import type { SavedSearch } from "@goodfinds/contracts/state";
 
+const priceAttributes = new Set([
+  "price_minor",
+  "total_cash_cost_minor",
+  "total_cost_minor",
+  "total_price_minor",
+]);
+
+function isPriceField(field: SearchField): boolean {
+  return priceAttributes.has(field.match?.attribute ?? "");
+}
+
 function hasPreference(answer: Answer | undefined): boolean {
   if (answer == null || answer === "") return false;
   if (Array.isArray(answer)) return answer.length > 0;
@@ -51,7 +62,7 @@ export function searchRequirements(search: SavedSearch) {
         label: field.label,
         value: !hasPreference(answer)
           ? "No preference"
-          : field.match?.attribute === "price_minor" && typeof answer === "number"
+          : isPriceField(field) && typeof answer === "number"
             ? `${money(answer, search.definition.price.currency)}${search.definition.price.period === "once" ? "" : ` per ${search.definition.price.period}`}`
             : formatAnswer(field, answer),
       };
@@ -67,7 +78,8 @@ export function searchSummary(search: SavedSearch): string {
           hasPreference(search.values[field.id]) &&
           field.type !== "location" &&
           !isDistanceField(field) &&
-          !["price_minor", "drive_minutes"].includes(field.match?.attribute ?? ""),
+          !isPriceField(field) &&
+          field.match?.attribute !== "drive_minutes",
       )
       .slice(0, 3)
       .map((field) => compactAnswer(field, search.values[field.id]))
@@ -131,14 +143,20 @@ function searchPriceThreshold(search: SavedSearch) {
   const limits = search.definition.fields
     .filter(
       (field) =>
-        field.match?.attribute === "price_minor" &&
-        field.match.operator === "lte" &&
+        isPriceField(field) &&
+        field.match?.operator === "lte" &&
         isVisible(field, search.values, search.definition),
     )
     .flatMap((field) => {
       const value = search.values[field.id];
       return typeof value === "number"
-        ? [{ value, preferred: field.match?.importance === "preferred" }]
+        ? [
+            {
+              value,
+              preferred: field.match?.importance === "preferred",
+              total: field.match?.attribute !== "price_minor",
+            },
+          ]
         : [];
     });
   const required = limits.filter((limit) => !limit.preferred);
@@ -150,7 +168,9 @@ function searchPriceThreshold(search: SavedSearch) {
 
 export function searchBudget(search: SavedSearch): string {
   const threshold = searchPriceThreshold(search);
-  return threshold ? money(threshold.value, search.definition.price.currency) : "No price limit";
+  return threshold
+    ? `${money(threshold.value, search.definition.price.currency)}${threshold.total ? " total" : ""}`
+    : "Budget not set";
 }
 
 export function searchBudgetLabel(search: SavedSearch): string | null {

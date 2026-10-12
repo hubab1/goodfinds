@@ -172,11 +172,11 @@ void test("one background worker owns a run across clicks, reconnects and progre
       run("update_search_run", {
         request: { run_id: id, expected_version: searchRun.version, phase: "partial" },
       }),
-    /another agent/,
+    /Supply the worker_id/,
   );
   assert.throws(
     () => run("import_listing_observations", { run_id: id, observations: [observation()] }),
-    /another agent/,
+    /Supply the worker_id/,
   );
   assert.equal(
     run("get_workspace").listings.length,
@@ -805,4 +805,56 @@ void test("MCP model results stay compact while app metadata and paginated evide
   const detail = await call("get_goodfinds_listing", { listing_key: page.listings[0]?.key });
   assert.equal(detail.isError, undefined);
   assert.ok(detail.structuredContent?.["listing"]);
+});
+
+void test("separate chats share one execution slot and queued searches survive the wait", (t) => {
+  const { run, store, advance } = fixture(t, true);
+  let state = run("get_workspace");
+  const other = { ...search, id: "second-coffee", name: "Second coffee" };
+  state = run("save_search", {
+    search: other,
+    expected_entity_revision: revisionFor(state, "save_search", { search: other }),
+  });
+  const first = required(
+    run("request_search_run", {
+      request: { search_id: search.id, request_id: randomUUID() },
+    }).search_runs.find((r) => r.search_id === search.id),
+  );
+  const worker = randomUUID();
+  run("claim_search_run", {
+    request: {
+      run_id: first.id,
+      expected_version: first.version,
+      worker_id: worker,
+      agent_id: "chat-one",
+    },
+  });
+  const second = required(
+    run("request_search_run", {
+      request: { search_id: other.id, request_id: randomUUID() },
+    }).search_runs.find((r) => r.search_id === other.id),
+  );
+  const attempt = {
+    run_id: second.id,
+    expected_version: second.version,
+    worker_id: randomUUID(),
+    agent_id: "chat-two",
+  };
+  const queued = required(
+    run("claim_search_run", { request: attempt }).search_runs.find((r) => r.id === second.id),
+  );
+  assert.equal(queued.phase, "requested");
+  assert.equal(queued.worker, null, "A second chat cannot open a concurrent browser search");
+  assert.match(queued.next_step, /waiting|queued/i);
+  advance(SEARCH_LEASE_MS + 1);
+  const waiting = required(run("get_workspace").search_runs.find((r) => r.id === second.id));
+  assert.equal(waiting.phase, "requested", "Time waiting for capacity is not a failed worker");
+  const started = required(
+    run("claim_search_run", {
+      request: { ...attempt, expected_version: waiting.version },
+    }).search_runs.find((r) => r.id === second.id),
+  );
+  assert.equal(started.phase, "discovering", "Expired ownership releases the slot");
+  assert.equal(started.worker?.agent_id, "chat-two");
+  assert.ok(store);
 });

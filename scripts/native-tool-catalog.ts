@@ -30,6 +30,21 @@ const cached = z.object({
   ),
 });
 const extra: Record<string, { input: z.ZodObject; output?: z.ZodObject }> = {
+  search_goodfinds_mentions: {
+    input: z.object({ query: z.string().max(200), mode }).strict(),
+    output: z.object({
+      items: z.array(
+        z.object({
+          type: z.literal("resource_link"),
+          uri: z.string(),
+          name: z.string(),
+          title: z.string(),
+          description: z.string(),
+          mimeType: z.literal("application/json"),
+        }),
+      ),
+    }),
+  },
   get_goodfinds_tool_schema: {
     input: z.object({ name: z.string().min(1) }).strict(),
     output: z.object({
@@ -138,7 +153,9 @@ export function nativeToolCatalog() {
       inputSchema: advertisedInput,
       ...(output ? { outputSchema: z.toJSONSchema(output) } : {}),
     };
-    if (["open_goodfinds_panel", "start_goodfinds_search"].includes(entry.name)) {
+    if (
+      ["open_goodfinds_panel", "open_goodfinds_home", "start_goodfinds_search"].includes(entry.name)
+    ) {
       const meta = z.record(z.string(), z.unknown()).parse(tool["_meta"] ?? {});
       tool["_meta"] = {
         ...meta,

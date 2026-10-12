@@ -16,6 +16,7 @@ import { Searches } from "@/features/searches/searches-page";
 import { Deals } from "@/features/listings/listings-page";
 import { Activity } from "@/app/activity-page";
 import { FeedbackSaveStatus } from "@/features/listings/feedback-save-status";
+import type { PanelPresentation } from "@goodfinds/contracts/panel-presentation";
 
 type Editor = { search: SavedSearch | undefined; draft?: SearchDraft; revision: string };
 export function GoodfindsApp() {
@@ -24,7 +25,8 @@ export function GoodfindsApp() {
   const [deleting, setDeleting] = useState<string>();
   const deleteFocus = useRef<HTMLElement | null>(null);
   const [listingSelection, setListingSelection] = useState<{
-    searchId: string;
+    searchId?: string | undefined;
+    listingKey?: string | undefined;
     unseen: boolean;
     visit: number;
   }>();
@@ -32,6 +34,19 @@ export function GoodfindsApp() {
   const showSearch = useCallback((searchId: string, unseen = false) => {
     setListingSelection((current) => ({ searchId, unseen, visit: (current?.visit ?? 0) + 1 }));
     setView("deals");
+  }, []);
+  const showPanel = useCallback((target: PanelPresentation) => {
+    setEditor(undefined);
+    setDeleting(undefined);
+    if (target.search_id || target.listing_key || target.view === "listings") {
+      setListingSelection((current) => ({
+        searchId: target.search_id,
+        listingKey: target.listing_key,
+        unseen: false,
+        visit: (current?.visit ?? 0) + 1,
+      }));
+      setView("deals");
+    } else setView("searches");
   }, []);
   const {
     state,
@@ -44,7 +59,7 @@ export function GoodfindsApp() {
     recordSeen,
     clearError,
     feedbackSaves,
-  } = useWorkspace(showSample, showSearch);
+  } = useWorkspace(showSample, showPanel);
   if (!state)
     return (
       <WorkspaceStartup

@@ -14,6 +14,8 @@ pub mod mcp;
 pub mod media;
 pub mod queries;
 pub mod recovery;
+pub mod references;
+pub mod reset;
 pub mod runtime;
 pub mod searches;
 pub mod sellers;

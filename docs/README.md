@@ -15,6 +15,7 @@ When a document mixes both audiences, keep the current rules and reproducible pr
 | Regional behavior                   | [Regional coverage](regional-coverage.md)                                                                       |
 | Integration limits and verification | [Marketplace validation](marketplace-validation.md), [regional marketplace tests](us-marketplace-validation.md) |
 | Architecture and terminology        | [Server architecture](server-architecture.md), [domain vocabulary](../CONTEXT.md)                               |
+| ChatGPT panel integration           | [Entrypoints, selected listings, mentions and deep links](chatgpt-integration.md)                               |
 | Performance and diagnostics         | [Coordination measurements](server-performance.md)                                                              |
 | Interface conventions               | [UI design](ui-design.md)                                                                                       |
 | Formal specification                | [Seller-send model](../formal/README.md)                                                                        |

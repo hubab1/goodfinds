@@ -44,7 +44,13 @@ export const sellerMessageDraftSchema = z
     collection: collectionSchema.nullable(),
     text,
     intent: z.enum(["offer", "accept", "decline", "message", "arrange"]),
-    responds_to: z.string().nullable(),
+    responds_to: z
+      .string()
+      .nullable()
+      .default(null)
+      .describe(
+        "Incoming message ID for a reply; null for a new enquiry. A reply must still answer the latest observed incoming message before sending.",
+      ),
     verification_questions: z.array(z.string().trim().min(1).max(500)).max(30).optional(),
   })
   .strict()

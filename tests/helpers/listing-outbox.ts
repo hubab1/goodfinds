@@ -54,6 +54,7 @@ await mock.module(resolve(import.meta.dir, "../../apps/ui/src/lib/client.ts"), (
     if (name === "get_goodfinds_workspace") return Promise.resolve(initial);
     throw new Error(`Unexpected action: ${name}, ${Object.keys(args).join(",")}`);
   },
+  readInitialWorkspace: () => Promise.resolve(initial),
   subscribeToState: (next: (state: GoodfindsState) => void) => {
     listener = next;
     return () => {

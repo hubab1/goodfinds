@@ -142,6 +142,7 @@ fn sync_call(
         };
     }
     match name {
+        "search_goodfinds_mentions" => crate::references::mentions(root, context, args).map(data),
         "get_goodfinds_tool_schema" => {
             let contract = contracts::all()["tool_contracts"]
                 .get(text(args, "name"))
@@ -227,11 +228,21 @@ fn pick(value: &Value, keys: &[&str]) -> Value {
 fn add_panel_presentation(out: &mut Value, name: &str, args: &Value) {
     let search_id = match name {
         "start_goodfinds_search" => args["request"]["search_id"].as_str(),
-        "open_goodfinds_panel" => args["search_id"].as_str(),
+        "open_goodfinds_panel" | "open_goodfinds_home" => args["search_id"].as_str(),
         _ => None,
     };
     if let Some(search_id) = search_id.filter(|id| !id.is_empty()) {
         out["_meta"]["goodfinds_panel"] = json!({"search_id":search_id});
+    }
+    if ["open_goodfinds_panel", "open_goodfinds_home"].contains(&name) {
+        let presentation = &mut out["_meta"]["goodfinds_panel"];
+        if presentation.is_null() {
+            *presentation =
+                json!({"view":if name=="open_goodfinds_home" {"searches"} else {"listings"}});
+        }
+        if let Some(key) = args["listing_key"].as_str() {
+            presentation["listing_key"] = json!(key);
+        }
     }
 }
 

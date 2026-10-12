@@ -38,7 +38,23 @@ pub fn query(ws: &Workspace, action: &str, args: &Value, state: &Value) -> Resul
             &args["hints"],
             s(&args["category"]),
         );
+        let currency = s(&region["currency"]);
+        let cost_fields = json!([
+            {"id":"max_total_cost_minor","label":"Maximum total cost","type":"integer","required":false,"minimum":0,"match":{"attribute":"total_cash_cost_minor","operator":"lte","importance":"required"},"hint":"Include fees, delivery and necessary parts; omit an unknown budget."},
+            {"id":"max_price_minor","label":"Maximum asking price","type":"integer","required":false,"minimum":0,"match":{"attribute":"price_minor","operator":"lte","importance":"required"}}
+        ]);
+        let cost_fields = if currency.is_empty() {
+            cost_fields
+        } else {
+            crate::regional::localize_template(
+                &json!({"price":{"currency":currency,"period":"once"},"fields":cost_fields}),
+                currency,
+            )["fields"]
+                .clone()
+        };
+        let starter = a(templates).iter().find(|t| t["category"] == args["category"]).filter(|_| !currency.is_empty()).map(|t| json!({"product":t["category"],"definition":crate::regional::localize_template(t,currency),"values":{}}));
         return Ok(json!({
+            "cost_fields":cost_fields,"starter":starter, "execution_queue":searches::execution_queue(ws)?,
             "revision": settings["revision"], "revisions": settings["revisions"],
             "access_context": ws.access_context, "origin_confirmed": settings["origin_confirmed"],
             "settings": settings["settings"], "regional_context": region, "device_browser": crate::storage::device_browser(),
@@ -117,7 +133,7 @@ pub fn query(ws: &Workspace, action: &str, args: &Value, state: &Value) -> Resul
     merge(
         &mut result,
         json!({
-            "access_context":ws.access_context,"mode":ws.mode,
+            "access_context":ws.access_context,"mode":ws.mode,"execution_queue":searches::execution_queue(ws)?,
             "paths":{"database":ws.folder().join("workspace.sqlite")},
             "configuration_storage":"SQLite entity rows; workspace_settings stores shared settings",
             "journeys":{"provider":"google_maps_browser","enabled":config["journey_checks_enabled"],"pending_towns":listings::journey_queue(&rows,&selected,config,ws.now).len(),"next_step":"Read list_goodfinds_journey_checks, check each Google Maps driving route in the selected browser, and save record_goodfinds_journey_check. Reuse town-level estimates across listings. Report blocked routes without inventing a duration."},
@@ -136,7 +152,7 @@ pub fn query(ws: &Workspace, action: &str, args: &Value, state: &Value) -> Resul
     );
     merge(
         &mut result,
-        searches::workflow_views(&scope, &runs, &fulfilled, ws.now),
+        searches::workflow_views(&scope, &searches::runs(ws, None)?, &fulfilled, ws.now),
     );
     Ok(result)
 }

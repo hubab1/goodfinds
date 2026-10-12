@@ -1312,7 +1312,7 @@ pub fn verification_checks(row: &Value, expected: &Value) -> Vec<Value> {
             "functional",
             "Working condition",
             "Is everything working properly, with no faults?",
-            row["functional"].is_null(),
+            row["functional"].is_null() && row["product"] != "clothing",
         ),
     ] {
         if needed && !checks.iter().any(|c| c["id"] == id) {
@@ -1343,6 +1343,7 @@ pub fn verification_checks(row: &Value, expected: &Value) -> Vec<Value> {
         && arr(expected).is_empty()
         && row["product"] != "espresso_machine"
         && row["product"] != "rental"
+        && row["product"] != "clothing"
         && !truth(&row["attributes"]["package_contents"])
     {
         checks.push(json!({"id":"package_contents","label":"Included accessories","question":"Could you confirm which parts and accessories are included?","state":"unknown","evidence":null}));
@@ -1568,7 +1569,7 @@ pub fn match_listing(
             .iter()
             .any(|c| c["state"] != "confirmed")
     {
-        uncertain.push("Condition or included accessories need seller confirmation".into());
+        uncertain.push("Listing details need verification".into());
     }
     if budget
         && !arr(&row["setup_costs"]).is_empty()

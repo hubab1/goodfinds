@@ -101,6 +101,15 @@ export const searchGuards = {
     message: "Claim this search before reporting activity.",
     recovery: "Claim with the actual spawned agent identity and current version.",
   },
+  worker_input: {
+    message: "Supply the worker_id from your successful claim before reporting activity.",
+    recovery: "Copy your current worker_id; a missing input does not imply another owner.",
+  },
+  workspace_busy: {
+    message: "Another search is running. This search is queued to keep memory use low.",
+    recovery:
+      "Wait for that search to finish or its lease to expire, then claim this run before opening a browser.",
+  },
   worker_mismatch: {
     message:
       "This background search is owned by another agent or has stopped. Read the run before continuing.",
@@ -143,11 +152,13 @@ export const searchGuards = {
   },
 } as const satisfies Record<string, GuardDefinition>;
 const progressGuards = [
+  "workspace_busy",
   "scheduled_ineligible",
   "revision_conflict",
   "search_changed",
   "run_finished",
   "worker_required",
+  "worker_input",
   "worker_mismatch",
   "lease_expired",
   "run_stopped",
@@ -191,10 +202,12 @@ export const searchEvents = {
     guards: [
       "run_stopped",
       "search_changed",
+      "worker_input",
       "worker_mismatch",
       "lease_expired",
       "revision_conflict",
       "claim_input",
+      "workspace_busy",
       "scheduled_ineligible",
     ],
     meaning: "Claim or renew an active run; requested becomes discovering.",
@@ -209,6 +222,7 @@ export const searchEvents = {
       "run_stopped",
       "search_changed",
       "worker_required",
+      "worker_input",
       "worker_mismatch",
       "lease_expired",
       "scheduled_ineligible",
@@ -292,6 +306,7 @@ export const searchEvents = {
       "run_finished",
       "scheduled_ineligible",
       "worker_required",
+      "worker_input",
       "worker_mismatch",
       "lease_expired",
       "run_stopped",
@@ -357,6 +372,7 @@ export type SearchContext = {
   now: number;
   worker_id?: unknown;
   agent_id?: string | undefined;
+  workspace_busy?: boolean | undefined;
   expected_version?: number | undefined;
   search_current?: boolean | undefined;
   search_exists?: boolean | undefined;
@@ -373,7 +389,7 @@ function ownership(run: SearchRun, context: SearchContext, requireWorker = false
   }
   if (Date.parse(run.worker.lease_expires_at) <= context.now)
     return [blocker(searchGuards, "lease_expired")];
-  if (context.worker_id === undefined) return [blocker(searchGuards, "worker_mismatch", "input")];
+  if (context.worker_id === undefined) return [blocker(searchGuards, "worker_input", "input")];
   if (context.worker_id !== run.worker.id) return [blocker(searchGuards, "worker_mismatch")];
   return [];
 }
@@ -430,6 +446,11 @@ export function searchBlockers(
     if (context.expected_version === undefined) add("revision_conflict", "input");
     else if (run.version !== context.expected_version) add("revision_conflict");
   }
+  if (
+    context.workspace_busy &&
+    ["claim", "progress", "verify", "complete", "import"].includes(event)
+  )
+    add("workspace_busy");
   if (event === "claim" && (!context.agent_id || context.worker_id === undefined))
     add("claim_input", "input");
   const cancelling = context.candidate?.phase === "cancelled";
@@ -467,6 +488,7 @@ export function updateEvent(phase?: SearchPhase): SearchEvent {
   return "progress";
 }
 export function expiredSearchRun(run: SearchRun, now: number): SearchRun {
+  if (run.phase === "requested" && run.waiting_for_capacity && !run.worker) return run;
   const expires =
     run.worker?.lease_expires_at ??
     new Date(Date.parse(run.updated_at) + SEARCH_LEASE_MS).toISOString();

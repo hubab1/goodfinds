@@ -237,7 +237,8 @@ void test("Search now sends a user request to the host chat and reports host rej
   assert.match(selected, /only the saved search with ID "mac-mini"/);
   assert.match(selected, /enabled\/paused setting unchanged/);
   assert.match(selected, /native background subagents/);
-  assert.match(selected, /Return promptly after dispatch/);
+  assert.match(selected, /Return promptly after dispatch only when a supported continuation/);
+  assert.match(selected, /at most one active collection worker/);
   assert.match(selected, /Reuse an already claimed active worker/);
   assert.deepEqual(messages[1], { role: "user", content: [{ type: "text", text: selected }] });
   assert.ok(selected.endsWith(QUIET_BROWSING_GUIDANCE));

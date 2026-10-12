@@ -9,6 +9,7 @@ import { nativeOptions } from "./native-mcp.ts";
 import { seedWorkspace } from "./workspace.ts";
 import { stateFromToolResult } from "@goodfinds/contracts/state";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { panelPath } from "@goodfinds/contracts/panel-presentation";
 
 const dom = new Window({ url: "https://panel.example", width: 1000, height: 900 });
 for (const key of [
@@ -56,17 +57,34 @@ const deliver = (result: CallToolResult) => events.get("toolresult")?.(result);
 const initialForInput = stateFromToolResult(await call("get_goodfinds_workspace"));
 const inputSearch = initialForInput.searches[1];
 assert.ok(inputSearch);
+const initialLink = process.argv.includes("--initial-link");
+const contextUpdates: Record<string, unknown>[] = [];
+let contextSupported = true;
+const hostContext = initialLink
+  ? { "openai/deepLink": { url: panelPath({ search_id: inputSearch.id }) } }
+  : {};
 await mock.module("@modelcontextprotocol/ext-apps", () => ({
   App: class {
     addEventListener(name: string, callback: (event: unknown) => void) {
       events.set(name, callback);
     }
     connect() {
-      events.get("toolinput")?.({ arguments: { request: { search_id: inputSearch.id } } });
+      events.get("toolinput")?.({
+        arguments: {
+          request: { search_id: initialLink ? initialForInput.searches[0]?.id : inputSearch.id },
+        },
+      });
       return Promise.resolve();
     }
     getHostContext() {
-      return {};
+      return hostContext;
+    }
+    getHostCapabilities() {
+      return contextSupported ? { updateModelContext: { structuredContent: {} } } : {};
+    }
+    updateModelContext(value: Record<string, unknown>) {
+      contextUpdates.push(value);
+      return Promise.resolve({});
     }
     callServerTool({
       name,
@@ -112,6 +130,17 @@ try {
     container.querySelector('[aria-label="Current search"] h2')?.textContent,
     inputSearch.name,
   );
+  if (initialLink) {
+    await act(async () => {
+      deliver(await call("open_goodfinds_home"));
+      await pause();
+    });
+    assert.match(
+      selectedTab() ?? "",
+      /^Listings/,
+      "Late opening result cannot replace the initial deep link",
+    );
+  }
   const initial = stateFromToolResult(await call("get_goodfinds_workspace"));
   const search = initial.searches[1];
   assert.ok(search);
@@ -195,6 +224,73 @@ try {
   assert.match(container.textContent ?? "", /Search stopped/);
   assert.doesNotMatch(container.textContent ?? "", /first finds will appear here automatically/);
   assert.equal(stateFromToolResult(await call("get_goodfinds_workspace")).search_runs.length, 1);
+  const listing = stateFromToolResult(firstFind).listings.find(
+    (item) => item.title === "Pending details fixture",
+  );
+  assert.ok(listing);
+  const navigate = async (url: string) => {
+    await act(async () => {
+      events.get("hostcontextchanged")?.({ "openai/deepLink": { url } });
+      await pause();
+    });
+  };
+  await navigate(panelPath({ listing_key: listing.key, search_id: search.id }));
+  assert.equal(document.querySelector('[role="dialog"] h2')?.textContent, listing.title);
+  assert.deepEqual(contextUpdates.at(-1), {
+    structuredContent: {
+      goodfinds: {
+        mode: "live",
+        selected_listing: {
+          listing_key: listing.key,
+          search_id: search.id,
+          title: listing.title,
+          url: listing.url,
+          price_minor: listing.price_minor,
+          currency: listing.currency,
+          price_period: listing.price_period ?? null,
+          observed_at: listing.observed_at ?? null,
+        },
+        detail_tool: "get_goodfinds_listing",
+      },
+    },
+  });
+  await act(async () => {
+    events.get("hostcontextchanged")?.({ theme: "dark" });
+    await pause();
+  });
+  assert.equal(
+    document.querySelectorAll('[role="dialog"]').length,
+    1,
+    "Unrelated context changes preserve the selection",
+  );
+  await navigate("/");
+  assert.equal(selectedTab(), "Searches");
+  assert.deepEqual(contextUpdates.at(-1), {
+    structuredContent: { goodfinds: { selected_listing: null } },
+  });
+  await navigate("/listings/missing");
+  assert.match(container.textContent ?? "", /no longer available/);
+  assert.equal(document.querySelector('[role="dialog"]'), null);
+  await navigate("https://untrusted.test/");
+  assert.match(selectedTab() ?? "", /^Listings/, "Invalid paths do not navigate");
+  contextSupported = false;
+  const before = contextUpdates.length;
+  await navigate(panelPath({ listing_key: listing.key }));
+  assert.equal(document.querySelector('[role="dialog"] h2')?.textContent, listing.title);
+  assert.equal(contextUpdates.length, before, "Unsupported context hosts still open listings");
+  await navigate("/");
+  contextSupported = true;
+  const sampleState = stateFromToolResult(
+    await call("load_goodfinds_sample_workspace", { mode: "sample" }),
+  );
+  const sampleListing = sampleState.listings[0];
+  assert.ok(sampleListing);
+  await navigate(panelPath({ listing_key: sampleListing.key, mode: "sample" }));
+  assert.equal(document.querySelector('[role="dialog"] h2')?.textContent, sampleListing.title);
+  assert.match(container.textContent ?? "", /Sample workspace/);
+  await navigate(panelPath({ listing_key: listing.key }));
+  assert.equal(document.querySelector('[role="dialog"] h2')?.textContent, listing.title);
+  assert.doesNotMatch(container.textContent ?? "", /Sample workspace/);
 } finally {
   await act(async () => root.unmount());
   await server.close();

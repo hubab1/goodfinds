@@ -1,3 +1,7 @@
+import {
+  workspaceResetPreviewSchema,
+  workspaceResetResultSchema,
+} from "@goodfinds/contracts/workspace-reset";
 import { searchRunSchema } from "@goodfinds/contracts/search-workflow";
 import type { PanelTool, PanelInput } from "./actions";
 import { searchRunAction, sellerAction } from "@goodfinds/contracts/tool-names";
@@ -24,8 +28,9 @@ import type { Marketplace } from "@goodfinds/contracts/integrations";
 import { createImageLoader } from "./image-loader";
 import { requestConnectionCheck } from "./connection-checks";
 import { feedbackEventSchema } from "@goodfinds/contracts/discovery";
-import { panelPresentationSchema } from "@goodfinds/contracts/panel-presentation";
+import { panelPresentationSchema, parsePanelPath } from "@goodfinds/contracts/panel-presentation";
 import type { PanelPresentation } from "@goodfinds/contracts/panel-presentation";
+import { createSelectionPublisher } from "./selection-context";
 
 declare global {
   interface Window {
@@ -43,16 +48,26 @@ let latestState: GoodfindsState | undefined;
 let pendingPresentation: PanelPresentation | undefined;
 let openingInputId: string | undefined;
 let openingInputApplied = false;
+let deepLinkMode: "live" | "sample" | undefined;
+let initialDeepLink = false;
+const targetIdentity = (target: PanelPresentation) =>
+  JSON.stringify([target.search_id, target.listing_key]);
 function presentPending(state: GoodfindsState) {
   const target = pendingPresentation;
-  if (!target || !state.searches.some((search) => search.id === target.search_id)) return false;
+  if (!target || (target.mode && target.mode !== state.mode)) return false;
   pendingPresentation = undefined;
-  if (target.search_id === openingInputId) openingInputApplied = true;
+  if (targetIdentity(target) === openingInputId) openingInputApplied = true;
   for (const listener of listeners) listener(state, target);
   return true;
 }
 const revisionsBySnapshot = new Map<string, Revisions>();
 function remember(state: GoodfindsState) {
+  if (deepLinkMode && state.mode !== deepLinkMode) return state;
+  if (
+    latestState &&
+    (latestState.mode !== state.mode || (!state.searches.length && !state.listings.length))
+  )
+    getSavedImage.clear();
   latestState = state;
   presentPending(state);
   revisionsBySnapshot.set(state.revision, state.revisions);
@@ -65,31 +80,53 @@ function remember(state: GoodfindsState) {
 
 function connect(): Promise<App> {
   connection ??= (async () => {
+    let receivedToolResult = false;
     const app = new App(
       { name: "Goodfinds", version: GOODFINDS_VERSION },
       { availableDisplayModes: ["inline", "fullscreen"] },
       { autoResize: true },
     );
-    app.addEventListener("hostcontextchanged", ({ theme }) => {
+    const deepLink = (context: Record<string, unknown> | undefined) => {
+      const value = z.object({ url: z.string() }).safeParse(context?.["openai/deepLink"]);
+      if (!value.success) return;
+      const target = parsePanelPath(value.data.url);
+      if (!target) return;
+      deepLinkMode = target.mode ?? "live";
+      initialDeepLink = !receivedToolResult;
+      pendingPresentation = target;
+      if (latestState && presentPending(latestState)) return;
+      // Initial links may arrive before the fallback workspace read or target another mode.
+      void invoke("get_goodfinds_workspace", { mode: target.mode ?? "live" }).catch(() => {});
+    };
+    app.addEventListener("hostcontextchanged", (context) => {
+      const { theme } = context;
       if (theme) applyDocumentTheme(theme);
+      if ("openai/deepLink" in context) deepLink(context);
     });
     app.addEventListener("toolinput", ({ arguments: input }) => {
+      if (initialDeepLink) return;
+      if (receivedToolResult) deepLinkMode = undefined;
       const args = z
         .object({
           search_id: z.string().optional(),
+          listing_key: z.string().optional(),
           request: z.object({ search_id: z.string() }).optional(),
         })
         .safeParse(input);
       const target = panelPresentationSchema.safeParse({
         search_id: args.success ? (args.data.search_id ?? args.data.request?.search_id) : undefined,
+        listing_key: args.success ? args.data.listing_key : undefined,
       });
       if (!target.success) return;
-      openingInputId = target.data.search_id;
+      deepLinkMode = undefined;
+      initialDeepLink = false;
+      openingInputId = targetIdentity(target.data);
       openingInputApplied = false;
       pendingPresentation = target.data;
       if (latestState) presentPending(latestState);
     });
     app.addEventListener("toolresult", (result) => {
+      receivedToolResult = true;
       const parsed = (() => {
         try {
           return stateFromToolResult(result);
@@ -98,14 +135,17 @@ function connect(): Promise<App> {
         }
       })();
       const presentation = panelPresentationSchema.safeParse(result._meta?.["goodfinds_panel"]);
+      if (presentation.success && !initialDeepLink) deepLinkMode = undefined;
       if (
         presentation.success &&
-        !(openingInputApplied && presentation.data.search_id === openingInputId)
+        !initialDeepLink &&
+        !(openingInputApplied && targetIdentity(presentation.data) === openingInputId)
       )
         pendingPresentation = presentation.data;
       openingInputId = undefined;
       openingInputApplied = false;
-      if (parsed) {
+      initialDeepLink = false;
+      if (parsed && (!deepLinkMode || parsed.mode === deepLinkMode)) {
         const target = pendingPresentation;
         remember(parsed);
         if (target === pendingPresentation) for (const listener of listeners) listener(parsed);
@@ -114,6 +154,7 @@ function connect(): Promise<App> {
     await app.connect();
     const theme = app.getHostContext()?.theme;
     if (theme) applyDocumentTheme(theme);
+    deepLink(app.getHostContext());
     return app;
   })().catch((error: unknown) => {
     connection = undefined;
@@ -121,6 +162,19 @@ function connect(): Promise<App> {
   });
   return connection;
 }
+
+export async function readInitialWorkspace(): Promise<GoodfindsState> {
+  if (!window.__GOODFINDS_PREVIEW__) await connect();
+  const state = await invoke("get_goodfinds_workspace", { mode: deepLinkMode ?? "live" });
+  return deepLinkMode && state.mode !== deepLinkMode ? readInitialWorkspace() : state;
+}
+
+export const publishListingContext = createSelectionPublisher(async (context) => {
+  if (window.__GOODFINDS_PREVIEW__) return;
+  const app = await connect();
+  if (!app.getHostCapabilities()?.updateModelContext?.structuredContent) return;
+  await app.updateModelContext({ structuredContent: { goodfinds: context } });
+});
 
 export function subscribeToState(
   listener: (state: GoodfindsState, presentation?: PanelPresentation) => void,
@@ -199,6 +253,15 @@ export async function openLocationBrowser(mode: "live" | "sample"): Promise<void
 
 export function invoke<K extends PanelTool>(name: K, args: PanelInput<K>): Promise<GoodfindsState>;
 export async function invoke(name: string, args: Record<string, unknown>): Promise<GoodfindsState> {
+  if (
+    deepLinkMode &&
+    name === "get_goodfinds_workspace" &&
+    args["mode"] &&
+    args["mode"] !== deepLinkMode
+  ) {
+    deepLinkMode = undefined;
+    pendingPresentation = undefined;
+  }
   const operation = operationForTool(name);
   const revisions =
     typeof args["snapshot_revision"] === "string"
@@ -214,21 +277,32 @@ export async function invoke(name: string, args: Record<string, unknown>): Promi
             : {}),
         }
       : {};
-  return remember(
-    stateFromToolResult(
-      await callTool(name, {
-        ...Object.fromEntries(Object.entries(args).filter(([key]) => key !== "snapshot_revision")),
-        ...scoped,
-        ...(operation &&
-        !operation.startsWith("get_") &&
-        sellerAction(operation) === undefined &&
-        searchRunAction(operation) === undefined &&
-        operation !== "load_sample_workspace"
-          ? { request_id: args["request_id"] ?? crypto.randomUUID() }
-          : {}),
-      }),
-    ),
-  );
+  const result = await callTool(name, {
+    ...Object.fromEntries(Object.entries(args).filter(([key]) => key !== "snapshot_revision")),
+    ...scoped,
+    ...(operation &&
+    !operation.startsWith("get_") &&
+    sellerAction(operation) === undefined &&
+    searchRunAction(operation) === undefined &&
+    operation !== "load_sample_workspace"
+      ? { request_id: args["request_id"] ?? crypto.randomUUID() }
+      : {}),
+  });
+  const state = remember(stateFromToolResult(result));
+  if (name === "reset_goodfinds_workspace") {
+    const reset = z
+      .object({ structuredContent: z.object({ reset: workspaceResetResultSchema }) })
+      .parse(result).structuredContent.reset;
+    if (!reset.media_cleanup_complete)
+      throw new Error(
+        "Data was deleted, but cached-file cleanup is incomplete. Retry with the same request ID.",
+      );
+  }
+  return state;
+}
+export async function previewWorkspaceReset(mode: "live" | "sample") {
+  const raw = await callTool("preview_goodfinds_workspace_reset", { mode });
+  return z.object({ structuredContent: workspaceResetPreviewSchema }).parse(raw).structuredContent;
 }
 
 const imageResultSchema = z.object({
@@ -237,7 +311,7 @@ const imageResultSchema = z.object({
     z.union([
       z.object({
         type: z.literal("image"),
-        mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+        mimeType: z.enum(["image/jpeg", "image/png", "image/webp", "image/avif"]),
         data: z
           .string()
           .regex(/^[A-Za-z0-9+/=]+$/)

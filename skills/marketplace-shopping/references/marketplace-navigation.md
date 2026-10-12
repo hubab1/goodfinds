@@ -20,6 +20,8 @@ A missing download button does not establish missing media support. Inspect the 
 
 Open the saved browser search link and verify Buy it now is selected. Submit a changed query through the current Search control; if its click leaves old results, press Enter in the observed search field once and check the new heading and cards. Keep purchase type and requested location/delivery filters through the broad query.
 
+After changing postcode or collection radius, reopen the control and verify the persisted value and current result scope. If the site silently reverts after one corrected retry, mark that query partial with the actual applied location; continue other sources and verify individual pickup routes. A requested postcode is not evidence of an applied filter.
+
 Read the exact model and selected variation on the detail page. Results can include other generations, Pro Max variants, accessories and promoted alternatives. Exclude these from exact-model matches. A bid, price range, monthly payment or accessory variation is not the full asking price of the requested phone. Record postage and collection availability separately; a UK result is not proof of nearby collection.
 
 ## Gumtree

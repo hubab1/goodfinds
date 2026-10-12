@@ -13,8 +13,8 @@
   },
   {
     "name": "open_goodfinds_panel",
-    "title": "Goodfinds",
-    "description": "Open Goodfinds beside the conversation; pass search_id to show that search\u2019s live listings. Manage buying searches, compare listings, and see current linked Codex schedule status. Refreshes linked schedules without activating or resuming them.",
+    "title": "Searches and listings",
+    "description": "Open Goodfinds beside the conversation; pass search_id for its listings or listing_key for one listing\u2019s details. Manage buying searches, compare listings, and see current linked Codex schedule status. Refreshes linked schedules without activating or resuming them.",
     "annotations": {
       "readOnlyHint": true,
       "destructiveHint": false,
@@ -32,11 +32,52 @@
         "entrypoints": [
           {
             "type": "thread"
-          },
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "open_goodfinds_home",
+    "title": "Goodfinds",
+    "description": "Open the Goodfinds workspace from the sidebar.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["app"]
+      },
+      "openai/ui": {
+        "entrypoints": [
           {
             "type": "global"
           }
         ]
+      }
+    }
+  },
+  {
+    "name": "search_goodfinds_mentions",
+    "title": "Find saved searches and listings",
+    "description": "Find saved searches and listings to mention in chat. Returns readable Goodfinds resources. Reads the live workspace unless sample mode is explicitly requested.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["app"]
       }
     }
   },
@@ -176,7 +217,7 @@
   {
     "name": "get_goodfinds_setup_context",
     "title": "Start a buying brief",
-    "description": "Read setup in one compact call: settings and scoped revision tokens, saved search/draft names for reuse, and a template catalog. Pass category for its starter definition. Read regional_context before asking questions: explicit preferences override saved preferences, then optional client locale/country hints. Templates use the resolved currency; unresolved currency returns no template. Preserve explicit currency symbols/codes and save regional_context country/locale/fulfilment in search.market. Use returned regional marketplace URLs. Accept the buyer's stated city or area and update an older origin directly. A complete brief saves directly with save_goodfinds_search; new searches default to recurring checks every two hours unless saved timing or an explicit one-off choice applies. Host scheduling must still be verified. Read get_goodfinds_search_context with search_id only when resuming an existing brief.",
+    "description": "Read setup in one compact call: settings and scoped revision tokens, saved search/draft names for reuse, and a template catalog. Pass category for its starter definition. Read regional_context before asking questions: explicit preferences override saved preferences, then optional client locale/country hints. Templates use the resolved currency; unresolved currency returns no template. Preserve explicit currency symbols/codes and save regional_context country/locale/fulfilment in search.market. Use returned regional marketplace URLs. Accept the buyer's stated city or area and update an older origin directly. A complete brief saves directly with save_goodfinds_search; new searches default to recurring checks every two hours unless saved timing or an explicit one-off choice applies. Host scheduling must still be verified. Read get_goodfinds_search_context with search_id only when resuming an existing brief. Reuse starter.product with starter.definition and the canonical cost_fields. execution_queue describes the shared one-search limit.",
     "annotations": {
       "readOnlyHint": true,
       "destructiveHint": false,
@@ -491,7 +532,7 @@
   {
     "name": "claim_goodfinds_search_run",
     "title": "Connect a background search agent",
-    "description": "Called by the actual executor before browsing. A direct single-platform search may execute in the buying chat; delegated work uses its spawned native subagent. Use the executor\u2019s actual agent ID or canonical task name and a new worker UUID. Optional request.execution records actual host-reported profile/model/reasoning_effort, not a recommendation or model switch; omit unknown settings. Atomically claims one current run for five minutes; overlapping workers are rejected. Pass worker_id on subsequent progress and run imports. Never invent an agent identity.",
+    "description": "Called by the actual executor before browsing. A direct single-platform search may execute in the buying chat; delegated work uses its spawned native subagent. Use the executor\u2019s actual agent ID or canonical task name and a new worker UUID. Optional request.execution records actual host-reported profile/model/reasoning_effort, not a recommendation or model switch; omit unknown settings. Atomically claims one current run for five minutes; overlapping workers are rejected. Pass worker_id on subsequent progress and run imports. Never invent an agent identity. The shared workspace permits one executing search: a requested result without your worker means queued. Wait and claim again before opening a browser; do not spawn multiple waiting workers.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
@@ -878,7 +919,7 @@
   {
     "name": "save_goodfinds_seller_message_draft",
     "title": "Save reviewed offer draft",
-    "description": "Save the buyer's exact message, offer and optional collection terms with the current conversation version. Saving does not authorize sending. A reply must reference the incoming message it answers.",
+    "description": "Save the buyer's exact message, offer and optional collection terms with the current conversation version. Saving does not authorize sending. A reply must reference the incoming message it answers. New enquiries default responds_to to null. Confirm success from mutation_receipt and the returned persisted conversation before saying the draft was saved.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": true,
@@ -1378,6 +1419,44 @@
     },
     "execution": {
       "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "preview_goodfinds_workspace_reset",
+    "title": "Review data reset",
+    "description": "Preview exact workspace data counts and deletion scope. Lists active runs to stop and host schedules to remove first. Returns a reset_token; call again after cleanup or data changes. Does not delete anything.",
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
+    }
+  },
+  {
+    "name": "reset_goodfinds_workspace",
+    "title": "Delete all workspace data",
+    "description": "Only after the buyer explicitly requests a full reset: delete all data and cached media in the selected workspace, using the latest preview reset_token and confirmation delete_all_goodfinds_data. Stop listed runs and remove host automations first, then preview again. Preserves browser sign-ins, plugin files, other workspaces and chats. Check reset.media_cleanup_complete; false means cached file cleanup needs retry with the same request_id.",
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    },
+    "_meta": {
+      "ui": {
+        "visibility": ["model", "app"]
+      }
     }
   }
 ]

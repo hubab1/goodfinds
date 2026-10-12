@@ -1,6 +1,6 @@
 {
   "name": "@goodfinds/contracts",
-  "version": "0.2.0",
+  "version": "0.2.3",
   "private": true,
   "type": "module",
   "exports": {
@@ -43,7 +43,8 @@
     "./regional": "./src/regional.ts",
     "./regional-data": "./src/regional-data.ts",
     "./mcp-catalog": "./src/mcp-catalog.ts",
-    "./workspace-schema": "./src/workspace-schema.ts"
+    "./workspace-schema": "./src/workspace-schema.ts",
+    "./workspace-reset": "./src/workspace-reset.ts"
   },
   "scripts": {
     "typecheck": "bun --bun tsc --noEmit"

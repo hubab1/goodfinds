@@ -209,7 +209,8 @@ pub fn localize_template(template: &Value, currency: &str) -> Value {
     let period = s(&next["price"]["period"]).to_owned();
     if let Some(fields) = next["fields"].as_array_mut() {
         for field in fields {
-            if field["match"]["attribute"] != "price_minor" {
+            if !["price_minor", "total_cash_cost_minor"].contains(&s(&field["match"]["attribute"]))
+            {
                 continue;
             }
             field["display_divisor"] =

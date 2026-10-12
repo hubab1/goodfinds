@@ -1032,6 +1032,10 @@ fn raw_runs(ws: &Workspace, search_id: Option<&str>, limit: bool) -> Result<Vec<
     .collect()
 }
 pub fn expired_run(run: &Value, now: i64) -> Value {
+    if run["phase"] == "requested" && run["waiting_for_capacity"] == true && run["worker"].is_null()
+    {
+        return run.clone();
+    }
     let expires = time(s(&run["worker"]["lease_expires_at"]))
         .ok()
         .or_else(|| {
@@ -1102,17 +1106,28 @@ fn save_run(ws: &Workspace, run: &Value) -> Result<()> {
     }
     Ok(())
 }
-pub fn preserve_cover_runs(ws: &Workspace, previous: &Value, next: &Value) -> Result<()> {
+pub fn preserve_evidence_runs(ws: &Workspace, previous: &Value, next: &Value) -> Result<()> {
     let before = hash(previous);
     let after = hash(next);
     let mut previous_brief = previous.clone();
     let mut next_brief = next.clone();
-    previous_brief.as_object_mut().unwrap().remove("cover");
-    next_brief.as_object_mut().unwrap().remove("cover");
+    for brief in [&mut previous_brief, &mut next_brief] {
+        brief.as_object_mut().unwrap().remove("cover");
+        if let Some(discovery) = brief["discovery"].as_object_mut() {
+            discovery.entry("model_attribute").or_insert(json!("model"));
+            // Only the research queries and candidate model names affect discovery.
+            // Notes and citations remain evidence; matching still needs listing sources.
+            if let Some(research) = discovery.remove("research")
+                && (!a(&research["queries"]).is_empty() || !a(&research["candidates"]).is_empty())
+            {
+                discovery.insert("research".into(), json!({"queries":a(&research["queries"]),"candidates":a(&research["candidates"]).iter().map(|c|c["model"].clone()).collect::<Vec<_>>() }));
+            }
+        }
+    }
     if before == after || hash(&previous_brief) != hash(&next_brief) {
         return Ok(());
     }
-    // Cover edits do not renew a lease, revive a run, or change progress versions.
+    // Evidence edits do not renew a lease, revive a run, or change progress versions.
     for mut run in raw_runs(ws, Some(s(&previous["id"])), false)? {
         if run["search_revision"] == before {
             run["search_revision"] = json!(after);
@@ -1267,6 +1282,11 @@ fn blockers(run: Option<&Value>, event: &str, context: &Value) -> Vec<Value> {
             add("revision_conflict", "blocked")
         }
     }
+    if context["workspace_busy"] == true
+        && ["claim", "progress", "verify", "complete", "import"].contains(&event)
+    {
+        add("workspace_busy", "blocked");
+    }
     if event == "claim" && (s(&context["agent_id"]).is_empty() || context["worker_id"].is_null()) {
         add("claim_input", "input")
     }
@@ -1282,7 +1302,7 @@ fn blockers(run: Option<&Value>, event: &str, context: &Value) -> Vec<Value> {
             {
                 add("lease_expired", "blocked")
             } else if context["worker_id"].is_null() {
-                add("worker_mismatch", "input")
+                add("worker_input", "input")
             } else if context["worker_id"] != run["worker"]["id"] {
                 add("worker_mismatch", "blocked")
             }
@@ -1327,6 +1347,36 @@ fn assert_guards(run: Option<&Value>, event: &str, context: &Value) -> Result<()
     if let Some(first) = reasons.first() {
         let mut error = Error::validation(s(&first["message"]));
         error.blockers = Some(Box::new(json!(reasons)));
+        return Err(error);
+    }
+    Ok(())
+}
+// Called under the workspace writer transaction. Include unclaimed legacy
+// executions, and inspect all rows rather than the panel's bounded history.
+fn occupying_run(ws: &Workspace, except: &str) -> Result<Option<Value>> {
+    Ok(raw_runs(ws, None, false)?
+        .into_iter()
+        .map(|r| expired_run(&r, ws.now))
+        .find(|r| {
+            s(&r["id"]) != except
+                && active(r)
+                && (r["phase"] != "requested" || !r["worker"].is_null())
+        }))
+}
+pub fn execution_queue(ws: &Workspace) -> Result<Value> {
+    let current = occupying_run(ws, "")?;
+    Ok(
+        json!({"max_concurrent_searches":1,"active_run_id":current.map(|r|r["id"].clone()),"instruction":"Claim one run before opening its browser. A requested run without a worker is queued, not executing. Close its tabs before completing or cancelling, then claim the next run."}),
+    )
+}
+fn require_capacity(ws: &Workspace, run: &Value) -> Result<()> {
+    if occupying_run(ws, s(&run["id"]))?.is_some() {
+        let mut error = Error::validation(
+            "Another search is running. Wait before executing this queued search.",
+        );
+        error.blockers = Some(Box::new(
+            json!([{"code":"workspace_busy","kind":"blocked","message":error.message,"recovery":"Wait for the current search to finish, then claim the queued run."}]),
+        ));
         return Err(error);
     }
     Ok(())
@@ -1380,7 +1430,13 @@ pub fn run_action(ws: &mut Workspace, action: &str, input: &Value) -> Result<Val
             save_run(ws, &run)?;
             return Ok(run);
         }
-        let run = json!({"id":args["request_id"],"search_id":saved["id"],"search_revision":hash(&saved),"trigger":args["trigger"],"scheduled_at":if args["trigger"]=="scheduled"{json!(iso(ws.now))}else{Value::Null},"version":0,"phase":"requested","queries":query_plan(&saved,a(&ws.config["feedback"])),"listing_keys":[],"verified_keys":[],"created_at":iso(ws.now),"updated_at":iso(ws.now),"first_result_at":null,"next_step":"Search the exact model and broad category queries before detailed verification.","interruption":null,"worker":null});
+        let mut run = json!({"id":args["request_id"],"search_id":saved["id"],"search_revision":hash(&saved),"trigger":args["trigger"],"scheduled_at":if args["trigger"]=="scheduled"{json!(iso(ws.now))}else{Value::Null},"version":0,"phase":"requested","queries":query_plan(&saved,a(&ws.config["feedback"])),"listing_keys":[],"verified_keys":[],"created_at":iso(ws.now),"updated_at":iso(ws.now),"first_result_at":null,"next_step":"Search the exact model and broad category queries before detailed verification.","interruption":null,"worker":null});
+        if occupying_run(ws, s(&run["id"]))?.is_some() {
+            run["waiting_for_capacity"] = json!(true);
+            run["next_step"] = json!(
+                "Queued: waiting for the current search to finish. Claim before opening a browser."
+            );
+        }
         let run = contracts::parse("searchRunSchema", &run)?;
         save_run(ws, &run)?;
         return Ok(run);
@@ -1406,6 +1462,19 @@ pub fn run_action(ws: &mut Workspace, action: &str, input: &Value) -> Result<Val
             &search_context(ws, &run, &args),
         )?;
         if action == "claim" && run["worker"].is_null() {
+            if occupying_run(ws, s(&run["id"]))?.is_some() {
+                if run["waiting_for_capacity"] != true {
+                    run["waiting_for_capacity"] = json!(true);
+                    run["next_step"] = json!(
+                        "Queued: waiting for the current search to finish. Claim before opening a browser."
+                    );
+                    bump(&mut run, ws.now);
+                    save_run(ws, &run)?;
+                }
+                return Ok(run);
+            }
+            run.as_object_mut().unwrap().remove("waiting_for_capacity");
+            run["next_step"] = json!("Search the saved query plan and report sourced evidence.");
             run["worker"] = json!({"id":args["worker_id"],"agent_id":args["agent_id"],"parent_thread_id":args["parent_thread_id"],"claimed_at":iso(ws.now),"last_heartbeat_at":iso(ws.now),"lease_expires_at":iso(ws.now+SEARCH_LEASE_MS)});
             if let Some(execution) = args.get("execution") {
                 run["worker"]["execution"] = execution.clone();
@@ -1489,6 +1558,9 @@ pub fn run_action(ws: &mut Workspace, action: &str, input: &Value) -> Result<Val
     let mut context = search_context(ws, &run, &args);
     context["candidate"] = updated.clone();
     assert_guards(Some(&run), update_event(s(&args["phase"])), &context)?;
+    if ["discovering", "verifying", "completed"].contains(&s(&updated["phase"])) {
+        require_capacity(ws, &run)?;
+    }
     touch_worker(&mut updated, ws.now);
     save_run(ws, &updated)?;
     Ok(updated)
@@ -1572,6 +1644,7 @@ pub fn record_import(
         "import",
         &json!({"now":ws.now,"worker_id":worker_id,"candidate":run}),
     )?;
+    require_capacity(ws, &run)?;
     let mut keys = strings(&run["listing_keys"]);
     let mut verified = strings(&run["verified_keys"]);
     for row in rows {
@@ -1618,7 +1691,7 @@ pub fn workflow_views(
     fulfilled: &HashSet<String>,
     now: i64,
 ) -> Value {
-    let context = |sid: &str, run: Option<&Value>| json!({"now":now,"search_exists":search(config,sid).is_some(),"search_current":search(config,sid).is_some_and(|s|run.is_none_or(|r|hash(s)==r["search_revision"])) ,"fulfilled":fulfilled.contains(sid),"expected_version":run.map(|r|r["version"].clone()).unwrap_or(Value::Null),"scheduled_allowed":run.is_none_or(|r|r["trigger"]!="scheduled"||b(&scheduled_check(config,sid,now,fulfilled,&[],false,None)["allowed"]))});
+    let context = |sid: &str, run: Option<&Value>| json!({"now":now,"workspace_busy":run.is_some_and(|own| runs.iter().any(|r| r["id"] != own["id"] && active(&expired_run(r,now)) && (r["phase"] != "requested" || !r["worker"].is_null()))),"search_exists":search(config,sid).is_some(),"search_current":search(config,sid).is_some_and(|s|run.is_none_or(|r|hash(s)==r["search_revision"])) ,"fulfilled":fulfilled.contains(sid),"expected_version":run.map(|r|r["version"].clone()).unwrap_or(Value::Null),"scheduled_allowed":run.is_none_or(|r|r["trigger"]!="scheduled"||b(&scheduled_check(config,sid,now,fulfilled,&[],false,None)["allowed"]))});
     let by_run: Map<String, Value> = runs
         .iter()
         .map(|r| {
@@ -2984,6 +3057,18 @@ pub fn search_cover_product(search: &Value) -> Option<String> {
             "macbook_pro" => Some("MacBook Pro".into()),
             "mac_mini" => Some("Mac mini".into()),
             "mac_pro" => Some("Mac Pro".into()),
+            "clothing" => a(&search["discovery"]["category_terms"])
+                .iter()
+                .map(s)
+                .map(str::trim)
+                .find(|term| !term.is_empty())
+                .or_else(|| {
+                    search["definition"]["title"]
+                        .as_str()
+                        .map(str::trim)
+                        .filter(|title| !title.is_empty())
+                })
+                .map(str::to_owned),
             _ => None,
         })
 }

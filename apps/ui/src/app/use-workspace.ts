@@ -1,3 +1,4 @@
+import { startPanelMeasure, finishPanelMeasure } from "@/lib/panel-performance";
 import { requestSearches } from "@/features/searches/search-actions";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import {
@@ -7,6 +8,7 @@ import {
   readSearchRuns,
   readMonitoring,
   requireHostActions,
+  readInitialWorkspace,
 } from "@/lib/client";
 import { ACTIVE_SEARCH_PHASES } from "@goodfinds/contracts/search-workflow";
 import { scheduleIsActive } from "@goodfinds/contracts/monitoring";
@@ -19,10 +21,11 @@ import { useFeedbackOutbox } from "@/features/listings/use-feedback-outbox";
 import { feedbackScope, mergeFeedback } from "@/features/listings/feedback-outbox";
 import type { FeedbackResponse } from "@/features/listings/feedback-outbox";
 import type { Dispatch, SetStateAction } from "react";
+import type { PanelPresentation } from "@goodfinds/contracts/panel-presentation";
 
 export function useWorkspace(
   onSampleLoaded: () => void,
-  onPanelOpened?: (searchId: string) => void,
+  onPanelOpened?: (target: PanelPresentation) => void,
 ) {
   const [baseState, setBaseState] = useState<GoodfindsState>();
   const setState = useCallback<Dispatch<SetStateAction<GoodfindsState | undefined>>>(
@@ -128,7 +131,7 @@ export function useWorkspace(
     [mode, onSampleLoaded, state, feedbackQueue, setState],
   );
 
-  const presentSearch = useEffectEvent((searchId: string) => onPanelOpened?.(searchId));
+  const presentSearch = useEffectEvent((target: PanelPresentation) => onPanelOpened?.(target));
   useEffect(() => {
     let active = true;
     let receivedHostState = false;
@@ -136,15 +139,18 @@ export function useWorkspace(
       receivedHostState = true;
       if (active) {
         setState(next);
-        if (presentation && next.searches.some((search) => search.id === presentation.search_id))
-          presentSearch(presentation.search_id);
+        if (presentation) presentSearch(presentation);
       }
     });
     // Hosts can deliver the opening tool result before this fallback read resolves.
     // Preserve that result's workspace (especially sample mode) in either ordering.
-    void invoke("get_goodfinds_workspace", { mode: "live" })
+    startPanelMeasure("workspace-read");
+    void readInitialWorkspace()
       .then((next) => {
-        if (active && !receivedHostState) setState(next);
+        finishPanelMeasure("workspace-read");
+        if (active && !receivedHostState) {
+          setState(next);
+        }
       })
       .catch((failure: unknown) => {
         if (active && !receivedHostState) setError(errorMessage(failure));
@@ -155,12 +161,18 @@ export function useWorkspace(
     };
   }, [setState]);
 
+  const loaded = state !== undefined;
+  useEffect(() => {
+    if (!loaded) return undefined;
+    const frame = window.requestAnimationFrame(() => finishPanelMeasure("startup"));
+    return () => window.cancelAnimationFrame(frame);
+  }, [loaded]);
   const hasSavedSearches = (state?.searches.length ?? 0) > 0;
   const reloadChangedConfig = useEffectEvent(async (revision: string) => {
     return state?.revision !== revision ? invoke("get_goodfinds_workspace", { mode }) : null;
   });
   useEffect(() => {
-    if (mode === "sample" || !hasSavedSearches) return undefined;
+    if (mode === "sample" || !loaded) return undefined;
     let active = true;
     let polling = false;
     const poll = async () => {
@@ -233,7 +245,7 @@ export function useWorkspace(
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onVisible);
     };
-  }, [mode, hasSavedSearches, setState]);
+  }, [mode, loaded, setState]);
 
   const progressKey =
     state?.search_runs

@@ -669,5 +669,102 @@
         }
       }
     ]
+  },
+  {
+    "schema_version": 1,
+    "version": 1,
+    "category": "clothing",
+    "title": "Clothing",
+    "description": "Adapt the optional fields to the buyer\u2019s stated requirements.",
+    "price": {
+      "currency": "GBP",
+      "period": "once"
+    },
+    "comparison_attributes": ["model"],
+    "fields": [
+      {
+        "id": "max_total_cost_minor",
+        "label": "Maximum total cost",
+        "type": "integer",
+        "required": false,
+        "minimum": 0,
+        "display_divisor": 100,
+        "hint": "Include fees, delivery and necessary parts. Leave blank when no budget was given.",
+        "match": {
+          "attribute": "total_cash_cost_minor",
+          "operator": "lte",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "sizes",
+        "label": "Sizes",
+        "type": "multiple_choice",
+        "required": false,
+        "options": [
+          {
+            "value": "XS",
+            "label": "XS"
+          },
+          {
+            "value": "S",
+            "label": "S"
+          },
+          {
+            "value": "M",
+            "label": "M"
+          },
+          {
+            "value": "L",
+            "label": "L"
+          },
+          {
+            "value": "XL",
+            "label": "XL"
+          },
+          {
+            "value": "XXL",
+            "label": "XXL"
+          },
+          {
+            "value": "XXXL",
+            "label": "XXXL"
+          }
+        ],
+        "match": {
+          "attribute": "size",
+          "operator": "in",
+          "importance": "required"
+        }
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "version": 1,
+    "category": "espresso_machine",
+    "title": "Espresso machine",
+    "description": "Adapt the optional fields to the buyer\u2019s stated requirements.",
+    "price": {
+      "currency": "GBP",
+      "period": "once"
+    },
+    "comparison_attributes": ["model"],
+    "fields": [
+      {
+        "id": "max_total_cost_minor",
+        "label": "Maximum total cost",
+        "type": "integer",
+        "required": false,
+        "minimum": 0,
+        "display_divisor": 100,
+        "hint": "Include fees, delivery and necessary parts. Leave blank when no budget was given.",
+        "match": {
+          "attribute": "total_cash_cost_minor",
+          "operator": "lte",
+          "importance": "required"
+        }
+      }
+    ]
   }
 ]

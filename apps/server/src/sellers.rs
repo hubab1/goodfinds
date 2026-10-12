@@ -1610,6 +1610,25 @@ pub fn fulfilled_searches(conversations: &[Value]) -> HashSet<String> {
         .flat_map(|c| arr(&c["search_ids"]).iter().map(|v| s(v).to_string()))
         .collect()
 }
+pub fn evidence_conflicts(row: &Value) -> Vec<Value> {
+    let mut labels: Vec<Value> = arr(&row["verification_checks"])
+        .iter()
+        .filter(|c| c["state"] == "conflicting")
+        .map(|c| c["label"].clone())
+        .collect();
+    if let Some(fields) = row["field_evidence"].as_object() {
+        labels.extend(
+            fields
+                .iter()
+                .filter(|(_, v)| v["state"] == "conflicting")
+                .map(|(field, _)| json!(field.replace('_', " "))),
+        );
+    }
+    if row["observation_conflict"] == true {
+        labels.push(json!("Listing observations"));
+    }
+    labels
+}
 pub fn buying_questions(row: &Value, search: &Value) -> Vec<Value> {
     let checks =
         crate::listings::verification_checks(row, &search["discovery"]["verification_checks"]);
@@ -1618,6 +1637,25 @@ pub fn buying_questions(row: &Value, search: &Value) -> Vec<Value> {
         .filter(|c| contains(&["unknown", "conflicting"], &c["state"]))
         .collect();
     let mut questions = vec![];
+    if let Some(fields) = row["field_evidence"].as_object() {
+        questions.extend(
+            fields
+                .iter()
+                .filter(|(_, v)| v["state"] == "conflicting")
+                .map(|(field, _)| {
+                    json!(format!(
+                        "Could you confirm the {}? The listing evidence conflicts.",
+                        field.replace('_', " ")
+                    ))
+                }),
+        );
+    }
+    if row["observation_conflict"] == true {
+        questions.push(json!(
+            "Could you confirm the current listing details? Earlier observations conflict."
+        ));
+    }
+
     if unresolved.iter().any(|c| {
         contains(
             &[
@@ -1869,8 +1907,9 @@ pub fn recommendations(
         })
         .collect();
     candidates.sort_by(|a, b| {
-        (b["suitability"] == "suitable")
-            .cmp(&(a["suitability"] == "suitable"))
+        (!evidence_conflicts(&a["listing"]).is_empty())
+            .cmp(&(!evidence_conflicts(&b["listing"]).is_empty()))
+            .then_with(|| (b["suitability"] == "suitable").cmp(&(a["suitability"] == "suitable")))
             .then_with(|| {
                 b["preference_score"]
                     .as_f64()
@@ -1893,11 +1932,11 @@ pub fn recommendations(
             .then_with(|| s(&a["listing"]["key"]).cmp(s(&b["listing"]["key"])))
     });
     let mut seen = HashSet::new();
-    candidates.into_iter().filter(|d|seen.insert(s(&d["listing"]["key"]).to_string())).take(3).map(|d|{let row=&d["listing"];let search=searches.iter().find(|x|x["id"]==d["search_id"]).unwrap();let questions=buying_questions(row,search);let ready=d["suitability"]=="suitable"&&d["verification"]=="complete"&&questions.is_empty();let price=opening_draft(row,search)["price_minor"].clone();json!({"asking_price_minor":row["price_minor"],"proposed_price_minor":price,"agreed_price_minor":null,"currency":row["currency"].as_str().unwrap_or("GBP"),"listing_key":row["key"],"search_id":search["id"],"title":row["title"],"url":row["url"],"label":if ready{if price.is_null(){"Review message"}else{"Review offer"}}else{"Verify details"},"readiness":if ready{"ready_to_offer"}else{"verify_and_negotiate"},"reasons":d["reasons"],"questions":questions,"draft_text":null,"priority":4})}).collect()
+    candidates.into_iter().filter(|d|seen.insert(s(&d["listing"]["key"]).to_string())).take(3).map(|d|{let row=&d["listing"];let search=searches.iter().find(|x|x["id"]==d["search_id"]).unwrap();let questions=buying_questions(row,search);let conflicts=evidence_conflicts(row);let mut reasons:Vec<Value>=conflicts.iter().map(|label|json!(format!("{}: conflicting evidence needs review",s(label)))).collect();reasons.extend_from_slice(arr(&d["reasons"]));let ready=d["suitability"]=="suitable"&&d["verification"]=="complete"&&questions.is_empty();let price=opening_draft(row,search)["price_minor"].clone();json!({"asking_price_minor":row["price_minor"],"proposed_price_minor":price,"agreed_price_minor":null,"currency":row["currency"].as_str().unwrap_or("GBP"),"listing_key":row["key"],"search_id":search["id"],"title":row["title"],"url":row["url"],"label":if ready{if price.is_null(){"Review message"}else{"Review offer"}}else{"Verify details"},"readiness":if ready{"ready_to_offer"}else{"verify_and_negotiate"},"reasons":reasons,"questions":questions,"draft_text":null,"priority":if conflicts.is_empty(){4}else{6}})}).collect()
 }
 pub fn next_steps(state: &Value) -> Value {
     let fulfilled = fulfilled_searches(arr(&state["seller_conversations"]));
-    let mut items:Vec<Value>=arr(&state["seller_conversations"]).iter().filter(|c|c["outcome"]=="open"&&(!arr(&c["search_ids"]).iter().any(|id|fulfilled.contains(s(id)))||c["pending_action"]["status"]=="uncertain")&&(present(&c["draft_text"])||present(&c["first_sent_at"])||present(&c["pending_action"]))).map(|c|{let first=present(&c["first_sent_at"]);let related=|d:&&Value|d["listing"]["key"]==c["listing_key"]&&arr(&c["search_ids"]).contains(&d["search_id"]);let decision=arr(&state["decisions"]).iter().find(related);let mut reasons=vec![c["label"].clone()];if !first&&let Some(d)=decision{reasons.extend_from_slice(arr(&d["reasons"]))}let verify=!first&&(!arr(&c["verification_questions"]).is_empty()||arr(&state["decisions"]).iter().filter(related).any(|d|d["verification"]!="complete"));json!({"asking_price_minor":arr(&state["decisions"]).iter().find(|d|d["listing"]["key"]==c["listing_key"]).map(|d|d["listing"]["price_minor"].clone()).unwrap_or(Value::Null),"proposed_price_minor":if c["phase"]=="accepted"{Value::Null}else{c["price_minor"].clone()},"agreed_price_minor":c["agreed_price_minor"],"currency":c["currency"],"listing_key":c["listing_key"],"search_id":arr(&c["search_ids"]).first().cloned().unwrap_or(Value::Null),"title":c["title"],"url":c["url"],"label":c["action_label"],"readiness":if verify{"verify_and_negotiate"}else{"conversation"},"reasons":reasons,"questions":c["verification_questions"],"draft_text":c["draft_text"],"priority":if contains(&["Check send","Action needed"],&c["label"]){0}else if contains(&["Counteroffer","Needs reply","Needs review"],&c["label"]){1}else if c["phase"]=="accepted"{2}else if first{5}else{3}})}).collect();
+    let mut items:Vec<Value>=arr(&state["seller_conversations"]).iter().filter(|c|c["outcome"]=="open"&&(!arr(&c["search_ids"]).iter().any(|id|fulfilled.contains(s(id)))||c["pending_action"]["status"]=="uncertain")&&(present(&c["draft_text"])||present(&c["first_sent_at"])||present(&c["pending_action"]))).map(|c|{let first=present(&c["first_sent_at"]);let related=|d:&&Value|d["listing"]["key"]==c["listing_key"]&&arr(&c["search_ids"]).contains(&d["search_id"]);let decision=arr(&state["decisions"]).iter().find(related);let mut reasons=vec![c["label"].clone()];if !first&&let Some(d)=decision{reasons.extend_from_slice(arr(&d["reasons"]))}let verify=!first&&(!arr(&c["verification_questions"]).is_empty()||arr(&state["decisions"]).iter().filter(related).any(|d|d["verification"]!="complete"));json!({"asking_price_minor":arr(&state["decisions"]).iter().find(|d|d["listing"]["key"]==c["listing_key"]).map(|d|d["listing"]["price_minor"].clone()).unwrap_or(Value::Null),"proposed_price_minor":if c["phase"]=="accepted"{Value::Null}else{c["price_minor"].clone()},"agreed_price_minor":c["agreed_price_minor"],"currency":c["currency"],"listing_key":c["listing_key"],"search_id":arr(&c["search_ids"]).first().cloned().unwrap_or(Value::Null),"title":c["title"],"url":c["url"],"label":c["action_label"],"readiness":if verify{"verify_and_negotiate"}else{"conversation"},"reasons":reasons,"questions":c["verification_questions"],"draft_text":c["draft_text"],"priority":if contains(&["Check send","Action needed"],&c["label"]){0}else if contains(&["Counteroffer","Needs reply","Needs review"],&c["label"]){1}else if c["phase"]=="accepted"{2}else if first{5}else if decision.is_some_and(|d|!evidence_conflicts(&d["listing"]).is_empty()){6}else{3}})}).collect();
     let mut seen: HashSet<String> = items
         .iter()
         .map(|c| s(&c["listing_key"]).to_string())

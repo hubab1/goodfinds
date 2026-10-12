@@ -111,7 +111,7 @@ export function verificationChecks(
       state: "unknown",
       evidence: null,
     });
-  if (!checks.has("functional") && listing.functional == null)
+  if (!checks.has("functional") && listing.functional == null && listing.product !== "clothing")
     checks.set("functional", {
       id: "functional",
       label: "Working condition",
@@ -148,6 +148,7 @@ export function verificationChecks(
     !expected.length &&
     listing.product !== "espresso_machine" &&
     listing.product !== "rental" &&
+    listing.product !== "clothing" &&
     !listing.attributes?.["package_contents"]
   )
     checks.set("package_contents", {
