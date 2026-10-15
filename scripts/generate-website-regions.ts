@@ -1,8 +1,9 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import { MARKETPLACES, marketHome } from "@goodfinds/contracts/integrations";
 import { REGIONAL_MARKETS } from "@goodfinds/contracts/regional-data";
 import { resolveRegion } from "@goodfinds/contracts/regional";
-import { format } from "oxfmt";
+import { formatSource } from "./format-source.ts";
 
 const countries = [
   ...new Set([
@@ -36,11 +37,7 @@ const regions = Object.fromEntries(
   ]),
 );
 const path = new URL("../website/marketplace-regions.json", import.meta.url);
-const formatted = await format("marketplace-regions.json", JSON.stringify(regions), {
-  printWidth: 100,
-});
-if (formatted.errors.length) throw new Error("Could not format website regions");
-const contents = formatted.code;
+const contents = await formatSource(fileURLToPath(path), JSON.stringify(regions));
 if (process.argv.includes("--check")) {
   if ((await readFile(path, "utf8")) !== contents)
     throw new Error("Website regions are stale. Run bun scripts/generate-website-regions.ts");

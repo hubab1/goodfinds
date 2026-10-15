@@ -19,9 +19,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.4.2"
+      - uses: ./.github/actions/setup-bun
       - uses: dtolnay/rust-toolchain@1.92.0
       - uses: Swatinem/rust-cache@v2
         with:
@@ -42,9 +40,7 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.4.2"
+      - uses: ./.github/actions/setup-bun
       - uses: actions/download-artifact@v4
         with:
           pattern: goodfinds-mac-payload-*
@@ -77,9 +73,7 @@ jobs:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.4.2"
+      - uses: ./.github/actions/setup-bun
       - uses: dtolnay/rust-toolchain@1.92.0
       - uses: Swatinem/rust-cache@v2
         with:

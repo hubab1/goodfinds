@@ -9,6 +9,8 @@ import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { Clock, Effect } from "effect";
 import { z } from "zod";
+import { Database } from "bun:sqlite";
+import { expiredSearchRun } from "@goodfinds/contracts/search-run-model";
 import { NativeWorkspace } from "./helpers/native-workspace.ts";
 import { createNativeServer } from "./helpers/native-mcp.ts";
 import { savedSearchSchema, searchDefinitionSchema } from "@goodfinds/contracts/search-definition";
@@ -807,25 +809,26 @@ void test("MCP model results stay compact while app metadata and paginated evide
   assert.ok(detail.structuredContent?.["listing"]);
 });
 
-void test("separate chats share one execution slot and queued searches survive the wait", (t) => {
-  const { run, store, advance } = fixture(t, true);
-  let state = run("get_workspace");
+void test("independent searches overlap while each search retains its own worker", (t) => {
+  const { run } = fixture(t, true);
   const other = { ...search, id: "second-coffee", name: "Second coffee" };
-  state = run("save_search", {
+  run("save_search", {
     search: other,
-    expected_entity_revision: revisionFor(state, "save_search", { search: other }),
+    expected_entity_revision: revisionFor(run("get_workspace"), "save_search", { search: other }),
   });
+  const current = (id: string) =>
+    required(run("get_workspace").search_runs.find((r) => r.id === id));
   const first = required(
     run("request_search_run", {
       request: { search_id: search.id, request_id: randomUUID() },
     }).search_runs.find((r) => r.search_id === search.id),
   );
-  const worker = randomUUID();
+  const firstWorker = randomUUID();
   run("claim_search_run", {
     request: {
       run_id: first.id,
       expected_version: first.version,
-      worker_id: worker,
+      worker_id: firstWorker,
       agent_id: "chat-one",
     },
   });
@@ -834,27 +837,142 @@ void test("separate chats share one execution slot and queued searches survive t
       request: { search_id: other.id, request_id: randomUUID() },
     }).search_runs.find((r) => r.search_id === other.id),
   );
-  const attempt = {
-    run_id: second.id,
-    expected_version: second.version,
-    worker_id: randomUUID(),
-    agent_id: "chat-two",
-  };
-  const queued = required(
-    run("claim_search_run", { request: attempt }).search_runs.find((r) => r.id === second.id),
+  const claimAction = run("get_workspace").search_run_workflows[second.id]?.actions.find(
+    (action) => action.event === "claim",
   );
-  assert.equal(queued.phase, "requested");
-  assert.equal(queued.worker, null, "A second chat cannot open a concurrent browser search");
-  assert.match(queued.next_step, /waiting|queued/i);
+  assert.ok(claimAction);
+  assert.notEqual(claimAction.availability, "blocked");
+  const secondWorker = randomUUID();
+  run("claim_search_run", {
+    request: {
+      run_id: second.id,
+      expected_version: second.version,
+      worker_id: secondWorker,
+      agent_id: "chat-two",
+    },
+  });
+  assert.equal(current(first.id).phase, "discovering");
+  assert.equal(current(second.id).phase, "discovering");
+
+  for (const [index, [id, worker]] of [
+    [first.id, firstWorker],
+    [second.id, secondWorker],
+  ].entries()) {
+    assert.ok(id && worker);
+    const owned = current(id);
+    const repeated = run("request_search_run", {
+      request: { search_id: owned.search_id, request_id: randomUUID() },
+    }).search_runs.filter((r) => r.search_id === owned.search_id);
+    assert.equal(repeated.length, 1);
+    assert.equal(repeated[0]?.id, id);
+    assert.equal(repeated[0]?.worker?.id, worker);
+    assert.throws(
+      () =>
+        run("claim_search_run", {
+          request: {
+            run_id: id,
+            expected_version: owned.version,
+            worker_id: randomUUID(),
+            agent_id: "competing-chat",
+          },
+        }),
+      /another agent/,
+    );
+    assert.throws(
+      () =>
+        run("import_listing_observations", {
+          run_id: id,
+          worker_id: randomUUID(),
+          observations: [observation()],
+        }),
+      /another agent/,
+    );
+    run("renew_search_lease", { request: { run_id: id, worker_id: worker } });
+    run("import_listing_observations", {
+      run_id: id,
+      worker_id: worker,
+      observations: [observation(String(123456789 + index))],
+    });
+    const imported = current(id);
+    assert.equal(imported.listing_keys.length, 1);
+    run("update_search_run", {
+      request: {
+        run_id: id,
+        worker_id: worker,
+        expected_version: imported.version,
+        phase: "verifying",
+        query: {
+          ...required(imported.queries.find((q) => q.purpose === "category")),
+          status: "completed",
+        },
+      },
+    });
+  }
+  const peerBeforeCompletion = current(second.id);
+  for (const query of current(first.id).queries.filter((q) => q.status !== "completed")) {
+    run("update_search_run", {
+      request: {
+        run_id: first.id,
+        worker_id: firstWorker,
+        expected_version: current(first.id).version,
+        query: { ...query, status: "skipped", reason: "Covered by the completed category query." },
+      },
+    });
+  }
+  run("update_search_run", {
+    request: {
+      run_id: first.id,
+      worker_id: firstWorker,
+      expected_version: current(first.id).version,
+      phase: "completed",
+    },
+  });
+  assert.equal(current(first.id).phase, "completed");
+  assert.deepEqual(current(second.id), peerBeforeCompletion);
+  run("cancel_search_run", { request: { run_id: second.id } });
+  assert.equal(current(second.id).phase, "cancelled");
+  assert.equal(current(first.id).phase, "completed");
+});
+
+void test("legacy capacity reservations expire normally and can resume", (t) => {
+  const { run, store, advance } = fixture(t, true);
+  const pending = required(
+    run("request_search_run", {
+      request: { search_id: search.id, request_id: randomUUID() },
+    }).search_runs.find((r) => r.search_id === search.id),
+  );
+  const db = new Database(store.databasePath);
+  try {
+    db.query(
+      "UPDATE search_runs SET document_json=json_set(document_json,'$.waiting_for_capacity',json('true')) WHERE id=?",
+    ).run(pending.id);
+  } finally {
+    db.close();
+  }
   advance(SEARCH_LEASE_MS + 1);
-  const waiting = required(run("get_workspace").search_runs.find((r) => r.id === second.id));
-  assert.equal(waiting.phase, "requested", "Time waiting for capacity is not a failed worker");
-  const started = required(
-    run("claim_search_run", {
-      request: { ...attempt, expected_version: waiting.version },
-    }).search_runs.find((r) => r.id === second.id),
+  const expired = required(run("get_workspace").search_runs.find((r) => r.id === pending.id));
+  assert.equal(expired.phase, "blocked");
+  const legacy = { ...pending, waiting_for_capacity: true };
+  assert.equal(
+    expiredSearchRun(legacy, Date.parse(pending.updated_at) + SEARCH_LEASE_MS + 1).phase,
+    "blocked",
   );
-  assert.equal(started.phase, "discovering", "Expired ownership releases the slot");
-  assert.equal(started.worker?.agent_id, "chat-two");
-  assert.ok(store);
+  const resumed = required(
+    run("request_search_run", {
+      request: { search_id: search.id, request_id: randomUUID(), resume: true },
+    }).search_runs.find((r) => r.id === pending.id),
+  );
+  const worker = randomUUID();
+  const claimed = required(
+    run("claim_search_run", {
+      request: {
+        run_id: resumed.id,
+        expected_version: resumed.version,
+        worker_id: worker,
+        agent_id: "recovery-chat",
+      },
+    }).search_runs.find((r) => r.id === pending.id),
+  );
+  assert.equal(claimed.phase, "discovering");
+  assert.equal(claimed.worker?.id, worker);
 });

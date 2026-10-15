@@ -993,6 +993,10 @@ pub fn query_plan(search: &Value, feedback: &[Value]) -> Vec<Value> {
 const RUN_SELECT: &str = "SELECT search_runs.document_json, search_run_workers.document_json FROM search_runs LEFT JOIN search_run_workers ON search_run_workers.run_id=search_runs.id";
 fn decode_run(data: String, worker: Option<String>) -> Result<Value> {
     let mut run: Value = serde_json::from_str(&data)?;
+    // Legacy capacity reservations now follow the normal claim and expiry rules.
+    if let Some(object) = run.as_object_mut() {
+        object.remove("waiting_for_capacity");
+    }
     run["worker"] = worker
         .map(|v| serde_json::from_str(&v))
         .transpose()?
@@ -1032,10 +1036,6 @@ fn raw_runs(ws: &Workspace, search_id: Option<&str>, limit: bool) -> Result<Vec<
     .collect()
 }
 pub fn expired_run(run: &Value, now: i64) -> Value {
-    if run["phase"] == "requested" && run["waiting_for_capacity"] == true && run["worker"].is_null()
-    {
-        return run.clone();
-    }
     let expires = time(s(&run["worker"]["lease_expires_at"]))
         .ok()
         .or_else(|| {
@@ -1282,11 +1282,6 @@ fn blockers(run: Option<&Value>, event: &str, context: &Value) -> Vec<Value> {
             add("revision_conflict", "blocked")
         }
     }
-    if context["workspace_busy"] == true
-        && ["claim", "progress", "verify", "complete", "import"].contains(&event)
-    {
-        add("workspace_busy", "blocked");
-    }
     if event == "claim" && (s(&context["agent_id"]).is_empty() || context["worker_id"].is_null()) {
         add("claim_input", "input")
     }
@@ -1351,36 +1346,6 @@ fn assert_guards(run: Option<&Value>, event: &str, context: &Value) -> Result<()
     }
     Ok(())
 }
-// Called under the workspace writer transaction. Include unclaimed legacy
-// executions, and inspect all rows rather than the panel's bounded history.
-fn occupying_run(ws: &Workspace, except: &str) -> Result<Option<Value>> {
-    Ok(raw_runs(ws, None, false)?
-        .into_iter()
-        .map(|r| expired_run(&r, ws.now))
-        .find(|r| {
-            s(&r["id"]) != except
-                && active(r)
-                && (r["phase"] != "requested" || !r["worker"].is_null())
-        }))
-}
-pub fn execution_queue(ws: &Workspace) -> Result<Value> {
-    let current = occupying_run(ws, "")?;
-    Ok(
-        json!({"max_concurrent_searches":1,"active_run_id":current.map(|r|r["id"].clone()),"instruction":"Claim one run before opening its browser. A requested run without a worker is queued, not executing. Close its tabs before completing or cancelling, then claim the next run."}),
-    )
-}
-fn require_capacity(ws: &Workspace, run: &Value) -> Result<()> {
-    if occupying_run(ws, s(&run["id"]))?.is_some() {
-        let mut error = Error::validation(
-            "Another search is running. Wait before executing this queued search.",
-        );
-        error.blockers = Some(Box::new(
-            json!([{"code":"workspace_busy","kind":"blocked","message":error.message,"recovery":"Wait for the current search to finish, then claim the queued run."}]),
-        ));
-        return Err(error);
-    }
-    Ok(())
-}
 fn search_context(ws: &Workspace, run: &Value, args: &Value) -> Value {
     let current = search(&ws.config, s(&run["search_id"]))
         .is_some_and(|v| hash(v) == s(&run["search_revision"]));
@@ -1430,13 +1395,7 @@ pub fn run_action(ws: &mut Workspace, action: &str, input: &Value) -> Result<Val
             save_run(ws, &run)?;
             return Ok(run);
         }
-        let mut run = json!({"id":args["request_id"],"search_id":saved["id"],"search_revision":hash(&saved),"trigger":args["trigger"],"scheduled_at":if args["trigger"]=="scheduled"{json!(iso(ws.now))}else{Value::Null},"version":0,"phase":"requested","queries":query_plan(&saved,a(&ws.config["feedback"])),"listing_keys":[],"verified_keys":[],"created_at":iso(ws.now),"updated_at":iso(ws.now),"first_result_at":null,"next_step":"Search the exact model and broad category queries before detailed verification.","interruption":null,"worker":null});
-        if occupying_run(ws, s(&run["id"]))?.is_some() {
-            run["waiting_for_capacity"] = json!(true);
-            run["next_step"] = json!(
-                "Queued: waiting for the current search to finish. Claim before opening a browser."
-            );
-        }
+        let run = json!({"id":args["request_id"],"search_id":saved["id"],"search_revision":hash(&saved),"trigger":args["trigger"],"scheduled_at":if args["trigger"]=="scheduled"{json!(iso(ws.now))}else{Value::Null},"version":0,"phase":"requested","queries":query_plan(&saved,a(&ws.config["feedback"])),"listing_keys":[],"verified_keys":[],"created_at":iso(ws.now),"updated_at":iso(ws.now),"first_result_at":null,"next_step":"Search the exact model and broad category queries before detailed verification.","interruption":null,"worker":null});
         let run = contracts::parse("searchRunSchema", &run)?;
         save_run(ws, &run)?;
         return Ok(run);
@@ -1462,18 +1421,6 @@ pub fn run_action(ws: &mut Workspace, action: &str, input: &Value) -> Result<Val
             &search_context(ws, &run, &args),
         )?;
         if action == "claim" && run["worker"].is_null() {
-            if occupying_run(ws, s(&run["id"]))?.is_some() {
-                if run["waiting_for_capacity"] != true {
-                    run["waiting_for_capacity"] = json!(true);
-                    run["next_step"] = json!(
-                        "Queued: waiting for the current search to finish. Claim before opening a browser."
-                    );
-                    bump(&mut run, ws.now);
-                    save_run(ws, &run)?;
-                }
-                return Ok(run);
-            }
-            run.as_object_mut().unwrap().remove("waiting_for_capacity");
             run["next_step"] = json!("Search the saved query plan and report sourced evidence.");
             run["worker"] = json!({"id":args["worker_id"],"agent_id":args["agent_id"],"parent_thread_id":args["parent_thread_id"],"claimed_at":iso(ws.now),"last_heartbeat_at":iso(ws.now),"lease_expires_at":iso(ws.now+SEARCH_LEASE_MS)});
             if let Some(execution) = args.get("execution") {
@@ -1558,9 +1505,6 @@ pub fn run_action(ws: &mut Workspace, action: &str, input: &Value) -> Result<Val
     let mut context = search_context(ws, &run, &args);
     context["candidate"] = updated.clone();
     assert_guards(Some(&run), update_event(s(&args["phase"])), &context)?;
-    if ["discovering", "verifying", "completed"].contains(&s(&updated["phase"])) {
-        require_capacity(ws, &run)?;
-    }
     touch_worker(&mut updated, ws.now);
     save_run(ws, &updated)?;
     Ok(updated)
@@ -1644,7 +1588,6 @@ pub fn record_import(
         "import",
         &json!({"now":ws.now,"worker_id":worker_id,"candidate":run}),
     )?;
-    require_capacity(ws, &run)?;
     let mut keys = strings(&run["listing_keys"]);
     let mut verified = strings(&run["verified_keys"]);
     for row in rows {
@@ -1691,7 +1634,7 @@ pub fn workflow_views(
     fulfilled: &HashSet<String>,
     now: i64,
 ) -> Value {
-    let context = |sid: &str, run: Option<&Value>| json!({"now":now,"workspace_busy":run.is_some_and(|own| runs.iter().any(|r| r["id"] != own["id"] && active(&expired_run(r,now)) && (r["phase"] != "requested" || !r["worker"].is_null()))),"search_exists":search(config,sid).is_some(),"search_current":search(config,sid).is_some_and(|s|run.is_none_or(|r|hash(s)==r["search_revision"])) ,"fulfilled":fulfilled.contains(sid),"expected_version":run.map(|r|r["version"].clone()).unwrap_or(Value::Null),"scheduled_allowed":run.is_none_or(|r|r["trigger"]!="scheduled"||b(&scheduled_check(config,sid,now,fulfilled,&[],false,None)["allowed"]))});
+    let context = |sid: &str, run: Option<&Value>| json!({"now":now,"search_exists":search(config,sid).is_some(),"search_current":search(config,sid).is_some_and(|s|run.is_none_or(|r|hash(s)==r["search_revision"])) ,"fulfilled":fulfilled.contains(sid),"expected_version":run.map(|r|r["version"].clone()).unwrap_or(Value::Null),"scheduled_allowed":run.is_none_or(|r|r["trigger"]!="scheduled"||b(&scheduled_check(config,sid,now,fulfilled,&[],false,None)["allowed"]))});
     let by_run: Map<String, Value> = runs
         .iter()
         .map(|r| {

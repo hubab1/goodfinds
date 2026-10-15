@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { formatSource } from "./format-source.ts";
 import { z } from "zod";
 import { operationNames } from "@goodfinds/contracts/tool-names";
 import { operations } from "@goodfinds/contracts/operations";
@@ -302,22 +303,7 @@ export function renderStateModel(): string {
   return lines.join("\n");
 }
 export async function formattedStateModel(): Promise<string> {
-  const child = Bun.spawn(
-    [process.execPath, "--bun", "oxfmt", "--stdin-filepath", stateModelPath],
-    {
-      cwd: resolve(import.meta.dir, ".."),
-      stdin: new TextEncoder().encode(renderStateModel()),
-      stdout: "pipe",
-      stderr: "pipe",
-    },
-  );
-  const [output, error, status] = await Promise.all([
-    new Response(child.stdout).text(),
-    new Response(child.stderr).text(),
-    child.exited,
-  ]);
-  if (status !== 0) throw new Error(`Cannot format generated state reference: ${error}`);
-  return output;
+  return formatSource(stateModelPath, renderStateModel());
 }
 export async function checkStateModelDocs(path = stateModelPath): Promise<void> {
   const expected = await formattedStateModel();

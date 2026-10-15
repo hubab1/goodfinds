@@ -54,7 +54,7 @@ pub fn query(ws: &Workspace, action: &str, args: &Value, state: &Value) -> Resul
         };
         let starter = a(templates).iter().find(|t| t["category"] == args["category"]).filter(|_| !currency.is_empty()).map(|t| json!({"product":t["category"],"definition":crate::regional::localize_template(t,currency),"values":{}}));
         return Ok(json!({
-            "cost_fields":cost_fields,"starter":starter, "execution_queue":searches::execution_queue(ws)?,
+            "cost_fields":cost_fields,"starter":starter,
             "revision": settings["revision"], "revisions": settings["revisions"],
             "access_context": ws.access_context, "origin_confirmed": settings["origin_confirmed"],
             "settings": settings["settings"], "regional_context": region, "device_browser": crate::storage::device_browser(),
@@ -133,7 +133,7 @@ pub fn query(ws: &Workspace, action: &str, args: &Value, state: &Value) -> Resul
     merge(
         &mut result,
         json!({
-            "access_context":ws.access_context,"mode":ws.mode,"execution_queue":searches::execution_queue(ws)?,
+            "access_context":ws.access_context,"mode":ws.mode,
             "paths":{"database":ws.folder().join("workspace.sqlite")},
             "configuration_storage":"SQLite entity rows; workspace_settings stores shared settings",
             "journeys":{"provider":"google_maps_browser","enabled":config["journey_checks_enabled"],"pending_towns":listings::journey_queue(&rows,&selected,config,ws.now).len(),"next_step":"Read list_goodfinds_journey_checks, check each Google Maps driving route in the selected browser, and save record_goodfinds_journey_check. Reuse town-level estimates across listings. Report blocked routes without inventing a duration."},

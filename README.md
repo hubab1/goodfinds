@@ -15,7 +15,11 @@ Goodfinds recognizes Facebook Marketplace, eBay, Vinted, Gumtree, UK Auto Trader
 
 ## Run locally
 
-Source builds require Rust 1.92 or later, a C compiler, and Bun 1.4.2 or later for the UI and shared contracts. Installed plugins need none of these tools.
+Source builds require Rust 1.92 or later, a C compiler, and the exact Bun canary pinned in `package.json` for the UI, shared contracts, linting and formatting. Installed plugins need none of these tools.
+
+Install the pinned runtime with `npm install --global bun@1.4.3-canary.20261015.1+a407eae`. CI reads the same pin from `packageManager`. `bun --revision` identifies this build as `1.4.4-canary.1+5f5799ed1`.
+
+`bun run lint` and `bun run format` use Bun’s built-in tools. The existing `.oxlintrc.json` and `.oxfmtrc.json` retain the project’s rule and formatting settings; `eslint-node-test` supplies the custom test rules.
 
 ```sh
 bun install

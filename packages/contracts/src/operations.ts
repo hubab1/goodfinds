@@ -452,11 +452,6 @@ export const operations = {
         savedSearchSchema.pick({ id: true, name: true, product: true, enabled: true }),
       ),
       draft_index: z.array(savedDraftSchema.pick({ id: true, name: true })),
-      execution_queue: z.object({
-        max_concurrent_searches: z.literal(1),
-        active_run_id: z.uuid().nullable(),
-        instruction: z.string(),
-      }),
       cost_fields: z.array(fieldSchema),
       starter: z
         .object({

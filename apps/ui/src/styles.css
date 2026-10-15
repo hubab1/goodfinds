@@ -26,12 +26,7 @@
 }
 
 :root {
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
   --radius: 0.75rem;
   color-scheme: light dark;
   --background: light-dark(#ffffff, #111111);

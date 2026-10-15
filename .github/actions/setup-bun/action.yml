@@ -1,0 +1,13 @@
+name: Set up pinned Bun
+description: Install the exact Bun npm release recorded in package.json
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "24"
+    # setup-bun resolves GitHub release tags, which do not pin dated npm canaries.
+    - shell: bash
+      run: npm install --global "$(node -p 'require("./package.json").packageManager')"
+    - shell: bash
+      run: bun --revision

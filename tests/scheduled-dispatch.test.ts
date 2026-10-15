@@ -203,6 +203,56 @@ void test("replayed wake-ups and competing wake-ups reuse reservations and claim
   assert.equal(f.batch().runs[0]?.run_id, run.run_id, "Next due check resumes unfinished coverage");
 });
 
+void test("a shared wake-up can claim every independent search before any finishes", (t) => {
+  const f = fixture(t);
+  f.report();
+  const batch = f.batch();
+  const workers = batch.runs.map((run) => ({
+    run_id: run.run_id,
+    search_id: run.search_id,
+    version: run.version,
+    worker_id: randomUUID(),
+  }));
+  assert.equal(workers.length, 3);
+  for (const run of workers) {
+    f.request("claim_search_run", {
+      request: {
+        run_id: run.run_id,
+        expected_version: run.version,
+        worker_id: run.worker_id,
+        agent_id: `scheduled-${run.search_id}`,
+      },
+    });
+  }
+  for (const run of workers) {
+    const current = required(f.state().search_runs.find((r) => r.id === run.run_id));
+    assert.equal(current.phase, "discovering");
+    assert.equal(current.worker?.id, run.worker_id);
+    assert.throws(
+      () =>
+        f.request("claim_search_run", {
+          request: {
+            run_id: current.id,
+            expected_version: current.version,
+            worker_id: randomUUID(),
+            agent_id: "duplicate-scheduled-worker",
+          },
+        }),
+      /another agent/,
+    );
+  }
+  const replay = f.batch();
+  assert.equal(replay.runs.length, workers.length);
+  for (const run of workers) {
+    assert.equal(replay.runs.find((r) => r.run_id === run.run_id)?.worker_id, run.worker_id);
+  }
+  f.request("cancel_search_run", { request: { run_id: required(workers[0]).run_id } });
+  for (const run of workers.slice(1)) {
+    f.request("renew_search_lease", { request: { run_id: run.run_id, worker_id: run.worker_id } });
+    assert.equal(f.state().search_runs.find((r) => r.id === run.run_id)?.phase, "discovering");
+  }
+});
+
 void test("pausing and removing one member preserves peers; the final member requires a stopped host", (t) => {
   const f = fixture(t);
   f.report();
