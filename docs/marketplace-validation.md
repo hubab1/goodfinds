@@ -17,6 +17,20 @@ Live signed-in/out detection and offer/contact flows have **not** been validated
 
 There is no automated native-offer submission adapter. A public button label alone does not establish availability; cached or extracted pages may contain controls for an unavailable item. Fresh visible-page inspection and active listing evidence remain necessary.
 
+## Vinted search recovery verification
+
+The [Vinted browsing guide](../skills/marketplace-shopping/references/vinted-clothing.md) includes a broader discovery fallback for empty native filters and stale client-side results. Live checks on 17 October 2026 in the signed-out in-app browser reproduced empty Size and Brand menus despite 500+ listings. Category clicks could change headings without updating the URL or cards; text submission could update the URL while retaining old cards. These observations do not identify the underlying network or site failure, or establish behavior in other browser profiles.
+
+Repeat the read-only check in one temporary tab, preserving existing sessions and saved buying data:
+
+1. Open Vinted UK and follow the observed Men → Outerwear link. Capture the category URL, count and a few leading listing IDs. Open Size. An empty-options message alongside populated cards reproduces the reported failure; it is not a zero-result search. Check one close/reopen and one reload before recording the unavailable filter.
+2. Follow an observed garment-category link, such as Jackets → Fleece jackets. If a click changes only the heading, load that link's exact observed `href` as a full page. Assert that the URL and rendered category now agree.
+3. Submit a relevant term through the visible catalogue textbox. Retain the resulting URL and compare cards with the previous scope. If cards remain inconsistent with the submitted term after settling, reload the observed URL once. Assert that the category and query are retained and that relevant fresh cards or an explicit empty-result state appear. Same-card overlap and capped result counts alone are not failures.
+4. Open one observed result link and confirm that listing details can be inspected. Check actual attributes and conflicting wording; keywords alone are not suitability evidence. An observed category-and-brand breadcrumb can also be loaded directly and verified through its brand chip and results.
+5. Record unavailable filters, actual fallback scope and partial coverage. Close the temporary tab. This diagnostic does not import buying results, change monitoring, contact sellers or establish a fully verified recommendation.
+
+The text-search recovery passed for Patagonia and Patagonia black within Fleece jackets, and waterproof within Outerwear. Loading the observed Patagonia Fleece jackets breadcrumb also applied the brand scope. These are live recovery checks, not a guarantee that Vinted filters will recover. The native menus remained unavailable. There is no automated site-controlled browser regression test; local protocol tests do not validate this live behavior.
+
 ## Contact evidence and execution boundaries
 
 `report_goodfinds_listing_contact` binds observed message and offer controls to a saved canonical listing, marketplace, selected browser and host/profile. The panel combines that observation with current browser access and session reports. Protected actions require signed-in evidence; explicitly observed guest routes have separate message/offer authentication requirements. Reports become unusable after thirty minutes or a host restart; denied site access, profile mismatch, expired/unknown sessions and inactive listings hide new contact actions. Existing conversation history remains accessible. Listing actions expire while the panel stays open; settings evaluates badge freshness when rendered.

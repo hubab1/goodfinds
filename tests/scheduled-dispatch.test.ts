@@ -13,6 +13,7 @@ import { createNativeServer } from "./helpers/native-mcp.ts";
 import { operations } from "@goodfinds/contracts/operations";
 import { dispatcherPlan } from "@goodfinds/contracts/scheduled-dispatch";
 import { revisionFor } from "./helpers/revisions.ts";
+import { availabilityIdentities } from "./helpers/availability-fixtures.ts";
 
 function required<T>(value: T | null | undefined): T {
   assert.ok(value !== null && value !== undefined);
@@ -143,6 +144,123 @@ function fixture(t: TestContext, observed = false) {
     },
   };
 }
+
+void test("scheduled completion requires direct checks across every marketplace", (t) => {
+  const f = fixture(t);
+  const search = required(f.state().searches.find((s) => s.id === f.ids[0]));
+  const identities = availabilityIdentities(search.product);
+  f.request("import_listing_observations", {
+    observations: identities.map((identity) =>
+      Object.assign({}, identity, {
+        title: "Earlier find",
+        observed_at: "2026-10-07T08:00:00Z",
+        availability: "active",
+        price_minor: 1000,
+        price_kind: "asking",
+      }),
+    ),
+  });
+  f.report();
+  const queued = required(f.batch().runs.find((r) => r.search_id === search.id));
+  const current = () => required(f.state().search_runs.find((r) => r.id === queued.run_id));
+  let worker = randomUUID();
+  f.request("claim_search_run", {
+    request: {
+      run_id: queued.run_id,
+      expected_version: current().version,
+      worker_id: worker,
+      agent_id: "availability-worker",
+    },
+  });
+  for (const query of current().queries)
+    f.request("update_search_run", {
+      request: {
+        run_id: queued.run_id,
+        expected_version: current().version,
+        worker_id: worker,
+        phase: "discovering",
+        query: { ...query, status: "completed" },
+      },
+    });
+  const complete = () =>
+    f.request("update_search_run", {
+      request: {
+        run_id: queued.run_id,
+        expected_version: current().version,
+        worker_id: worker,
+        phase: "completed",
+      },
+    });
+  assert.throws(complete, /Recheck saved listings/);
+  f.at("2026-10-08T08:01:00Z");
+  f.request("import_listing_observations", {
+    run_id: queued.run_id,
+    worker_id: worker,
+    observations: identities.map((identity) =>
+      Object.assign({}, identity, {
+        collection_stage: "availability",
+        observed_at: "2026-10-08T08:01:00Z",
+        availability: "active",
+        availability_text: "Buy now",
+      }),
+    ),
+  });
+  assert.equal(current().listing_keys.length, 0, "A status check is not a new discovery");
+  f.request("update_search_run", {
+    request: {
+      run_id: queued.run_id,
+      expected_version: current().version,
+      worker_id: worker,
+      phase: "partial",
+      interruption: "Interrupted before finishing",
+    },
+  });
+  f.at("2026-10-08T09:00:00Z");
+  assert.equal(f.batch().runs.find((r) => r.search_id === search.id)?.run_id, queued.run_id);
+  worker = randomUUID();
+  f.request("claim_search_run", {
+    request: {
+      run_id: queued.run_id,
+      expected_version: current().version,
+      worker_id: worker,
+      agent_id: "resumed-availability-worker",
+    },
+  });
+  assert.throws(
+    complete,
+    /Recheck saved listings/,
+    "Each scheduled wake must recheck even when it resumes an earlier run",
+  );
+  f.at("2026-10-08T09:01:00Z");
+  f.request("import_listing_observations", {
+    run_id: queued.run_id,
+    worker_id: worker,
+    observations: identities.slice(0, -1).map((identity) =>
+      Object.assign({}, identity, {
+        collection_stage: "availability",
+        observed_at: "2026-10-08T09:01:00Z",
+        availability: "sold",
+        availability_text: "Sold",
+      }),
+    ),
+  });
+  assert.throws(complete, /Recheck saved listings/, "The last marketplace still needs a check");
+  f.request("import_listing_observations", {
+    run_id: queued.run_id,
+    worker_id: worker,
+    observations: [
+      {
+        ...required(identities.at(-1)),
+        collection_stage: "availability",
+        observed_at: "2026-10-08T09:01:00Z",
+        availability: "unknown_unavailable",
+        availability_text: "Vehicle no longer available",
+      },
+    ],
+  });
+  complete();
+  assert.equal(current().phase, "completed");
+});
 
 void test("shared wake-ups preserve hourly and two-hour searches and reserve only due work", (t) => {
   const f = fixture(t);

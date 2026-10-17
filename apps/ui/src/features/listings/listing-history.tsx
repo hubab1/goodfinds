@@ -66,13 +66,26 @@ export function ListingHistory({
         value: <RelativeTime value={listing.first_observed_at} empty="Not recorded" />,
       },
       {
-        label: "Last checked",
+        label: "Details checked",
         value:
           listing.last_successful_at === null ? (
             "Not confirmed"
           ) : (
             <RelativeTime value={listing.last_successful_at ?? listing.last_observed_at} />
           ),
+      },
+      {
+        label: "Availability checked",
+        value: (
+          <RelativeTime
+            value={
+              listing.availability_checked_at ??
+              listing.last_successful_at ??
+              listing.last_observed_at
+            }
+            empty="Not confirmed"
+          />
+        ),
       },
       {
         label: "Availability",

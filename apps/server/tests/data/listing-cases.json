@@ -1807,6 +1807,7 @@
     "first_observed_at": "2026-10-06T12:00:00.000Z",
     "last_observed_at": "2026-10-07T12:00:00.000Z",
     "last_successful_at": "2026-10-07T12:00:00.000Z",
+    "availability_checked_at": "2026-10-07T12:00:00.000Z",
     "first_confirmed_active_at": "2026-10-06T12:00:00.000Z",
     "last_confirmed_active_at": "2026-10-07T12:00:00.000Z",
     "observation_conflict": false
@@ -3709,6 +3710,7 @@
       }
     ],
     "mixed_current": {
+      "availability_checked_at": "2026-10-08T12:00:00.000Z",
       "key": "synthetic:book-1",
       "price_kind": "asking",
       "listing_id": "book-1",

@@ -806,6 +806,12 @@ export const operations = {
         .array(
           z
             .object({
+              collection_stage: z
+                .enum(["discovery", "verification", "availability"])
+                .optional()
+                .describe(
+                  "Use availability for a saved listing's status-only check: supply source, provenance, listing_id, canonical url, product, actual observed_at, check_outcome, availability and availability_text. Other saved facts and media keep their original timestamps.",
+                ),
               category_path: z
                 .string()
                 .max(2000)

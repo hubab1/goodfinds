@@ -2,6 +2,7 @@ import { formatAnswer } from "@goodfinds/contracts/search-definition";
 import { firstDiscovery } from "@goodfinds/contracts/listing-discovery";
 import type { Listing } from "@goodfinds/contracts/state";
 import type { Decision, SavedSearch } from "@goodfinds/contracts/state";
+import { listingIsUnavailable } from "@goodfinds/contracts/listing-query";
 import { money, storage } from "./presentation.ts";
 
 const FACT_LABELS: Record<string, string> = {
@@ -22,8 +23,21 @@ const AVAILABILITY: Record<string, string> = {
   sold: "Sold",
   reserved: "Reserved",
   removed: "Removed",
+  out_of_stock: "Out of stock",
+  ended_unsold: "Ended",
+  expired: "Expired",
+  unknown_unavailable: "Unavailable",
   unknown: "Not confirmed",
 };
+
+export function listingAvailabilityLabel(
+  listing: Pick<Listing, "availability" | "check_outcome">,
+): string {
+  if (listingIsUnavailable(listing))
+    return AVAILABILITY[listing.availability ?? ""] ?? "Unavailable";
+  if (listing.check_outcome && listing.check_outcome !== "success") return "Check availability";
+  return AVAILABILITY[listing.availability ?? "unknown"] ?? "Not confirmed";
+}
 
 export function listingDetailFacts(listing: Listing, search?: SavedSearch) {
   const facts: { label: string; value: string }[] = [];
@@ -90,11 +104,7 @@ export function listingDetailFacts(listing: Listing, search?: SavedSearch) {
     facts.push({ label: "Drive", value: `${listing.drive_minutes} min` });
   facts.push({
     label: "Availability",
-    value:
-      !listing.availability || listing.availability === "unknown"
-        ? "Not confirmed"
-        : (AVAILABILITY[listing.availability] ??
-          listing.availability.replaceAll("_", " ").replace(/^./u, (first) => first.toUpperCase())),
+    value: listingAvailabilityLabel(listing),
   });
   return facts;
 }

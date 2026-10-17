@@ -2,6 +2,8 @@
 
 Read this for `cargurus`, `cars_com` or `autotrader_us`. These integrations are US-only. `autotrader` is the separate UK service. Use the search's saved country, currency, origin and collection/delivery preference. A retained site ZIP or browser locale does not override them. Do not add CarGurus UK or other regional brands merely because a domain exists.
 
+When collecting or refreshing vehicle status, apply [availability evidence](availability-checks.md#marketplace-evidence). Every scheduled run rechecks saved listings through that guide before discovery; a contact or Check availability form alone does not confirm inventory.
+
 ## Search and inspect
 
 Open the returned marketplace route once. Use the site's make/model, ZIP, radius, used/new, year, transmission, mileage and full-price filters. Verify the applied filters in the results heading/chips before collecting. A US public test ZIP is only for development tests; buying searches use the buyer's origin. For collection searches, turn off delivery/shippable inventory after the other filters settle, then verify it remains off. All three sites can enable it by default; navigation can reset it. Verify actual seller location and delivery terms per listing.

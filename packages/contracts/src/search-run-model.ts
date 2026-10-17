@@ -137,6 +137,11 @@ export const searchGuards = {
     recovery:
       "Complete queries or skip them with reasons. Failed queries require recovery or a partial run.",
   },
+  availability_checks_pending: {
+    message: "Recheck saved listings before completing this scheduled search, or mark it partial.",
+    recovery:
+      "Page list_goodfinds_listings with search_id, availability_check_before set to the run's scheduled_at (created_at for manual runs), include_dismissed and include_excluded true. Import each direct check using collection_stage availability.",
+  },
   interruption_required: {
     message: "Explain the search interruption.",
     recovery: "Provide an interruption when marking a run blocked.",
@@ -267,7 +272,12 @@ export const searchEvents = {
       "request.phase=completed",
       "request.worker_id (when claimed)",
     ],
-    guards: [...progressGuards, "category_query_unchecked", "query_coverage_incomplete"],
+    guards: [
+      ...progressGuards,
+      "category_query_unchecked",
+      "query_coverage_incomplete",
+      "availability_checks_pending",
+    ],
     meaning: "Complete coverage, independently of listing evidence and buying outcome.",
   },
   interrupt: {
@@ -371,6 +381,7 @@ export type SearchContext = {
   fulfilled?: boolean | undefined;
   scheduled_allowed?: boolean | undefined;
   request_supplied?: boolean | undefined;
+  availability_checks_pending?: number | undefined;
   candidate?: SearchRun | undefined;
 };
 function ownership(run: SearchRun, context: SearchContext, requireWorker = false): Blocker[] {
@@ -461,6 +472,12 @@ export function searchBlockers(
         candidate.queries.some((q) => ["planned", "running", "failed"].includes(q.status))
       )
         add("query_coverage_incomplete");
+      if (
+        candidate.phase === "completed" &&
+        run.trigger === "scheduled" &&
+        (context.availability_checks_pending ?? 0) > 0
+      )
+        add("availability_checks_pending");
       if (candidate.phase === "blocked" && !candidate.interruption) add("interruption_required");
     }
   }

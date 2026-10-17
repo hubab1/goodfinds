@@ -18,6 +18,7 @@ const relationshipSchema = z.object({
   evidence: z.string().trim().min(1),
 });
 export const listingObservationSchema = listingSchema.extend({
+  collection_stage: z.enum(["discovery", "verification", "availability"]).optional(),
   source: z.enum(sourceNames),
   photos: listingSchema.shape.photos.unwrap().optional(),
   videos: listingSchema.shape.videos.unwrap().optional(),

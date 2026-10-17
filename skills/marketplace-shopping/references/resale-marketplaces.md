@@ -2,6 +2,8 @@
 
 Use this guide for `poshmark` (US), `depop` (US/UK), or `mercari` (US). Country/category/fulfilment recommendations are curated; do not expand regional scope because another website exists. Preserve saved marketplace choices and explicit currencies. These are delivery-oriented defaults; a listing needs its own collection/delivery evidence.
 
+When collecting or refreshing listing status, apply [availability evidence](availability-checks.md#marketplace-evidence). Every scheduled run rechecks saved listings through that guide before discovery; distinguish sold items from temporarily paused purchasing.
+
 ## Search once in the correct region
 
 | Source      | Search                                                            | Canonical listing and `listing_id`                                                |

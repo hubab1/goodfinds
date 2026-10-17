@@ -1,4 +1,8 @@
-import { selectListings, shortlistEvents } from "@goodfinds/contracts/listing-query";
+import {
+  selectListings,
+  shortlistEvents,
+  listingIsUnavailable,
+} from "@goodfinds/contracts/listing-query";
 import type { ListingQuery } from "@goodfinds/contracts/listing-query";
 import { LearnedPreferences } from "@/features/listings/listing-feedback";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -121,13 +125,18 @@ export function Deals({
   );
   const filtered = shortlistedOnly ? shortlisted : available;
   // Keep cards in place while their automatic receipt saves; clearing a count must not move the list.
-  const tracked = useMemo(
+  const visible = useMemo(
     () =>
       unseenOnly
         ? filtered.filter((listing) => isUnseen(listing) || seenThisVisit.has(listing.key))
         : filtered,
     [filtered, unseenOnly, seenThisVisit, isUnseen],
   );
+  const tracked = useMemo(
+    () => visible.filter((listing) => !listingIsUnavailable(listing)),
+    [visible],
+  );
+  const unavailable = useMemo(() => visible.filter(listingIsUnavailable), [visible]);
   const onSeen = useCallback<RecordSeen>(
     (pairs) => {
       setSeenThisVisit(
@@ -193,7 +202,7 @@ export function Deals({
         onFiltersChange={setSellerFilters}
         sort={sort}
         onSortChange={setSort}
-        resultCount={tracked.length}
+        resultCount={visible.length}
       />
       {((selection?.searchId &&
         !state.searches.some((search) => search.id === selection.searchId)) ||
@@ -250,14 +259,14 @@ export function Deals({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b">
           <TabsList
             variant="line"
-            className="w-full min-w-0 justify-start @sm:w-auto @sm:flex-1"
+            className="grid w-full min-w-0 grid-cols-2 justify-start group-data-[orientation=horizontal]/tabs:h-auto @md:flex @md:w-auto @md:flex-1"
             aria-label="Listing results"
           >
             <TabsTrigger
               value="tracked"
               className="min-w-0 flex-1 px-1 text-xs sm:flex-none sm:px-3 sm:text-sm"
             >
-              All listings <span className="ml-1 text-xs">{tracked.length}</span>
+              Current <span className="ml-1 text-xs">{tracked.length}</span>
             </TabsTrigger>
             <TabsTrigger
               value="suitable"
@@ -274,6 +283,12 @@ export function Deals({
               className="min-w-0 flex-1 px-1 text-xs sm:flex-none sm:px-3 sm:text-sm"
             >
               Good deals <span className="ml-1 text-xs">{deals.length}</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="unavailable"
+              className="min-w-0 flex-1 px-1 text-xs sm:flex-none sm:px-3 sm:text-sm"
+            >
+              Unavailable <span className="ml-1 text-xs">{unavailable.length}</span>
             </TabsTrigger>
           </TabsList>
           <Button
@@ -313,11 +328,13 @@ export function Deals({
                     ? "You’re all caught up"
                     : filteringSeller
                       ? "No listings match your filters"
-                      : searching
-                        ? "Your search is getting started"
-                        : selectedRun?.phase === "completed"
-                          ? "No listings found in this search"
-                          : "No listings yet"
+                      : unavailable.length
+                        ? "No current listings"
+                        : searching
+                          ? "Your search is getting started"
+                          : selectedRun?.phase === "completed"
+                            ? "No listings found in this search"
+                            : "No listings yet"
               }
             >
               <p className="max-w-sm text-sm leading-relaxed">
@@ -329,17 +346,30 @@ export function Deals({
                     ? "No new listings match your filters."
                     : filteringSeller
                       ? "Change or clear your seller filters to see more listings."
-                      : searching
-                        ? "The first finds will appear here automatically. You can keep this panel open or continue in chat."
-                        : selectedRun?.phase === "completed"
-                          ? "Check the search summary in chat, or adjust your requirements and search again."
-                          : "Listings will appear here after your next search."}
+                      : unavailable.length
+                        ? "Previously saved items are in Unavailable. New finds will appear here after your next search."
+                        : searching
+                          ? "The first finds will appear here automatically. You can keep this panel open or continue in chat."
+                          : selectedRun?.phase === "completed"
+                            ? "Check the search summary in chat, or adjust your requirements and search again."
+                            : "Listings will appear here after your next search."}
               </p>
             </Empty>
           )}
         </TabsContent>
         <TabsContent value="suitable" className="space-y-4">
           {renderListings(suitable)}
+        </TabsContent>
+        <TabsContent value="unavailable" className="space-y-4">
+          {unavailable.length ? (
+            renderListings(unavailable)
+          ) : (
+            <Empty title="No unavailable listings">
+              <p className="max-w-sm text-sm leading-relaxed">
+                Sold, reserved and removed listings will appear here after they are checked.
+              </p>
+            </Empty>
+          )}
         </TabsContent>
         <TabsContent value="deals" className="space-y-4">
           {deals.length ? (
@@ -349,7 +379,7 @@ export function Deals({
               <p className="max-w-sm text-sm leading-relaxed">
                 {filteringSeller
                   ? "Change or clear your seller filters to see more deals."
-                  : "Good deals need to meet your requirements and cost less than similar listings. You can still browse everything in All listings."}
+                  : "Good deals need to meet your requirements and cost less than similar listings. You can still browse Current listings."}
               </p>
               {import.meta.env["DEV"] && !filteringSeller && !sample && (
                 <Button

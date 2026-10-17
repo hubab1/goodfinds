@@ -156,6 +156,7 @@ export const listingSchema = z
     last_observed_at: z.string().optional(),
     last_successful_at: z.string().nullish(),
     last_attempted_at: z.string().optional(),
+    availability_checked_at: z.string().optional(),
     check_outcome: z.string().optional(),
     total_cash_cost_minor: z.number().nullish(),
     publication: z

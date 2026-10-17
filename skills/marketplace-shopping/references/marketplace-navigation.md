@@ -2,6 +2,8 @@
 
 Read the section for the current marketplace after the shared search workflow. These are navigation checks, not stable selectors or a promise that inventory matches its filters. Use the selected browser's current UI and documented APIs.
 
+When collecting or refreshing listing status, apply [availability evidence](availability-checks.md#marketplace-evidence). Every scheduled run rechecks saved listings through that guide before discovery, including items temporarily unavailable.
+
 ## Shared controls and recovery
 
 Use a fresh DOM snapshot for locator names and iframe boundaries. Batch known inputs and their resulting state check. Extract relevant controls and result cards rather than repeatedly printing a whole catalogue. Accessibility names and DOM names can differ.

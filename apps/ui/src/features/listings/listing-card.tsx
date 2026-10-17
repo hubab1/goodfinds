@@ -21,7 +21,12 @@ import {
 } from "@/components/ui/dialog";
 import type { Decision, Listing, SavedSearch, GoodfindsState } from "@goodfinds/contracts/state";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { friendlyDecisionReasons, listingDetailFacts } from "@/lib/listing-presentation";
+import {
+  friendlyDecisionReasons,
+  listingDetailFacts,
+  listingAvailabilityLabel,
+} from "@/lib/listing-presentation";
+import { listingIsUnavailable } from "@goodfinds/contracts/listing-query";
 import { firstDiscovery } from "@goodfinds/contracts/listing-discovery";
 import { unseenSearchIds } from "@goodfinds/contracts/listing-reading";
 import { RelativeTime } from "@/relative-time";
@@ -44,6 +49,15 @@ import type { Action } from "@/lib/actions";
 import { setupCostTotal } from "@goodfinds/contracts/verification";
 import { DetailFacts } from "@/components/ui/detail-facts";
 import "@/features/listings/listing-detail.css";
+
+function AvailabilityChip({ listing }: { listing: Listing }) {
+  if (
+    listing.availability === "active" &&
+    (!listing.check_outcome || listing.check_outcome === "success")
+  )
+    return null;
+  return <Badge variant="secondary">{listingAvailabilityLabel(listing)}</Badge>;
+}
 
 function listingFacts(listing: Listing): string[] {
   if (listing.product === "macbook_pro" || listing.product === "mac_mini") {
@@ -335,6 +349,7 @@ export function ListingDetail({
         <DialogTitle>{listing.title}</DialogTitle>
         <DialogDescription className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
           <MarketplaceBadge source={listing.source} />
+          <AvailabilityChip listing={listing} />
           {sample && <span>Sample listing</span>}
           {listing.location && (
             <span className="inline-flex items-center gap-1.5">
@@ -512,12 +527,6 @@ export function ListingCard({
   const condition =
     listing.condition === "unknown" ? null : listing.condition?.replaceAll("_", " ");
   const buyingAction = state.next_steps.find((item) => item.listing_key === listing.key);
-  const availability =
-    listing.check_outcome && listing.check_outcome !== "success"
-      ? "Check availability"
-      : listing.availability === "active"
-        ? null
-        : listing.availability?.replaceAll("_", " ") || "Availability not confirmed";
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -534,6 +543,7 @@ export function ListingCard({
                 <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
                   <span>{primary?.search_name ?? "Saved listing"}</span>
                   <MarketplaceBadge source={listing.source} />
+                  <AvailabilityChip listing={listing} />
                   {(discovery || listing.first_observed_at) && (
                     <span className="text-muted-foreground">
                       Found{" "}
@@ -590,13 +600,13 @@ export function ListingCard({
                   {listing.drive_minutes} min drive
                 </span>
               )}
-              {[condition, availability].filter(Boolean).map((detail) => (
+              {[condition].filter(Boolean).map((detail) => (
                 <span key={detail} className="capitalize">
                   {detail}
                 </span>
               ))}
             </p>
-            {primary && (
+            {primary && !listingIsUnavailable(listing) && (
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 <DecisionBadge
                   decision={primary}

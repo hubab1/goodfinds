@@ -94,6 +94,10 @@ Use `Disclosure` for preferences, settings and listing detail sections: the same
 
 Recovery runs in the host's buying workflow. Existing schedules retry at permitted times; a worker may retry a transient read once. The panel does not itself create agents, activate schedules or claim an automatic retry is underway before a worker has actually claimed it.
 
+## Listing availability
+
+The Listings page separates Current and Unavailable results. Sold, reserved, removed, expired and out-of-stock items retain their history in Unavailable and show a status chip on cards and details. Current includes unknown availability with an explicit label; it does not promise every item has been checked. Failed checks preserve the last known status. Availability-only checks keep fact and price timestamps unchanged.
+
 ## Listing details
 
 Keep the listing title, marketplace logo and location together in the header. The scrollable body starts with a full-width gallery and a summary: side by side from 768 px, stacked below that. Price leads the summary; specifications share a label/value grid, followed by the compact seller profile. Keep Open listing and the message action together in the persistent footer.

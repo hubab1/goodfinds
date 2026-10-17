@@ -26,6 +26,8 @@ export const listingQuerySchema = z
       )
       .optional(),
     result_type: z.enum(["all", "promising", "good_deals"]).default("all"),
+    availability: z.enum(["all", "current", "unavailable"]).default("all"),
+    availability_check_before: z.iso.datetime().optional(),
     seen: z.enum(["all", "unseen", "seen"]).default("all"),
     shortlisted: z.boolean().default(false),
     include_dismissed: z.boolean().default(false),
@@ -69,6 +71,9 @@ type SelectableListing = SellerFilterListing &
     | "observed_at"
     | "first_found_runs"
     | "seen_in_searches"
+    | "availability"
+    | "availability_checked_at"
+    | "last_attempted_at"
   >;
 
 export function selectListings<L extends SelectableListing>(
@@ -84,6 +89,8 @@ export function selectListings<L extends SelectableListing>(
     search_id?: string | undefined;
     sellerFilters: SellerFilters;
     result_type?: ListingQuery["result_type"];
+    availability?: ListingQuery["availability"];
+    availability_check_before?: ListingQuery["availability_check_before"];
     seen?: ListingQuery["seen"];
     shortlisted?: boolean;
     include_dismissed?: boolean;
@@ -105,6 +112,15 @@ export function selectListings<L extends SelectableListing>(
   return state.listings
     .filter((listing) => {
       if (search && listing.product !== search.product) return false;
+      const unavailable = listingIsUnavailable(listing);
+      if (options.availability === "current" && unavailable) return false;
+      if (options.availability === "unavailable" && !unavailable) return false;
+      if (
+        options.availability_check_before &&
+        !listingNeedsAvailabilityCheck(listing, options.availability_check_before)
+      )
+        return false;
+      if (unavailable && options.result_type && options.result_type !== "all") return false;
       if (
         options.shortlisted &&
         !shortlistEvents(listing, search ? [search] : state.searches, state.config.feedback).length
@@ -177,6 +193,36 @@ export function selectListings<L extends SelectableListing>(
           Date.parse(a.last_observed_at ?? a.observed_at ?? "") || a.key.localeCompare(b.key)
       );
     });
+}
+
+const TERMINAL_AVAILABILITY = new Set([
+  "sold",
+  "out_of_stock",
+  "ended_unsold",
+  "expired",
+  "removed",
+  "unknown_unavailable",
+]);
+
+export function listingIsUnavailable(listing: Pick<Listing, "availability">): boolean {
+  return (
+    listing.availability === "reserved" || TERMINAL_AVAILABILITY.has(listing.availability ?? "")
+  );
+}
+
+export function listingNeedsAvailabilityCheck(
+  listing: Pick<
+    Listing,
+    "availability" | "availability_checked_at" | "last_attempted_at" | "observed_at"
+  >,
+  before: string,
+): boolean {
+  if (["sold", "ended_unsold", "expired", "removed"].includes(listing.availability ?? ""))
+    return false;
+  const checked = Date.parse(
+    listing.last_attempted_at ?? listing.availability_checked_at ?? listing.observed_at ?? "",
+  );
+  return !Number.isFinite(checked) || checked < Date.parse(before);
 }
 
 export type ListingCountRange = { min?: number; max?: number };

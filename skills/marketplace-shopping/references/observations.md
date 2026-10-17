@@ -70,6 +70,8 @@ Always separate the time a page was checked (`observed_at`) from the original ad
 
 An exact timestamp requires equal `earliest_at` and `latest_at`, a timezone and source `evidence`. A bounded publication requires both endpoints and evidence establishing the range. Both must precede the observation. Otherwise retain only the approximate wording. The earliest evidenced original publication is preserved across later updates; all supplied snapshots remain retained.
 
+For status-only refreshes of saved items, follow [availability checks](availability-checks.md). Use `collection_stage: availability` with only identity, the actual observation time, check outcome, availability and source wording; this preserves earlier facts and their timestamps.
+
 `availability_text` preserves the platform wording. `availability` records its supported normalized meaning. A sold label is a seller/platform status, not proof of a completed transaction or final sale price. Out of stock, reservation, expiry and removal stay distinct. Reopening is allowed. A search miss never changes listing availability.
 
 Use `check_outcome: success|login_required|forbidden|rate_limited|network_error|parser_error|not_found|not_inspected`. A failed direct check can use a minimal record containing source, provenance, listing ID, canonical URL, observation time and outcome. It leaves prior successfully observed details in history, records the failed attempt and withholds current-availability and price-comparison eligibility. Do not set `sold` after an error, hidden item or missing search result. Missing details in a new successful observation are unknown; they do not silently inherit prior seller verification.

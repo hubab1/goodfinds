@@ -1327,6 +1327,12 @@ fn blockers(run: Option<&Value>, event: &str, context: &Value) -> Vec<Value> {
             {
                 add("query_coverage_incomplete", "blocked")
             }
+            if candidate["phase"] == "completed"
+                && run["trigger"] == "scheduled"
+                && n(&context["availability_checks_pending"]) > 0
+            {
+                add("availability_checks_pending", "blocked")
+            }
             if candidate["phase"] == "blocked" && s(&candidate["interruption"]).is_empty() {
                 add("interruption_required", "blocked")
             }
@@ -1504,6 +1510,24 @@ pub fn run_action(ws: &mut Workspace, action: &str, input: &Value) -> Result<Val
     }
     let mut context = search_context(ws, &run, &args);
     context["candidate"] = updated.clone();
+    if updated["phase"] == "completed" && run["trigger"] == "scheduled" {
+        let saved = search(&ws.config, s(&run["search_id"]))
+            .ok_or_else(|| Error::validation("Choose a saved search"))?;
+        let rows = crate::listings::load_current(ws, Some(&[saved["product"].clone()]))?;
+        context["availability_checks_pending"] = json!(
+            rows.iter()
+                .filter(|row| crate::listings::needs_availability_check(
+                    row,
+                    time(s(if run["scheduled_at"].is_null() {
+                        &run["created_at"]
+                    } else {
+                        &run["scheduled_at"]
+                    }))
+                    .unwrap_or(ws.now)
+                ))
+                .count()
+        );
+    }
     assert_guards(Some(&run), update_event(s(&args["phase"])), &context)?;
     touch_worker(&mut updated, ws.now);
     save_run(ws, &updated)?;
@@ -1591,6 +1615,9 @@ pub fn record_import(
     let mut keys = strings(&run["listing_keys"]);
     let mut verified = strings(&run["verified_keys"]);
     for row in rows {
+        if row["collection_stage"] == "availability" {
+            continue;
+        }
         let key = s(&row["key"]).to_owned();
         if !keys.contains(&key) {
             keys.push(key.clone())
@@ -1608,7 +1635,10 @@ pub fn record_import(
     }
     run["listing_keys"] = json!(keys);
     run["verified_keys"] = json!(verified);
-    if !rows.is_empty() {
+    if rows
+        .iter()
+        .any(|row| row["collection_stage"] != "availability")
+    {
         if run["started_at"].is_null() {
             run["started_at"] = json!(iso(ws.now))
         }
@@ -1620,7 +1650,12 @@ pub fn record_import(
     touch_worker(&mut run, ws.now);
     contracts::parse("searchRunSchema", &run)?;
     save_run(ws, &run)?;
-    for key in rows.iter().map(|v| s(&v["key"])).collect::<HashSet<_>>() {
+    for key in rows
+        .iter()
+        .filter(|row| row["collection_stage"] != "availability")
+        .map(|v| s(&v["key"]))
+        .collect::<HashSet<_>>()
+    {
         ws.db.execute("INSERT INTO listing_search_discoveries(listing_key,search_id,run_id,run_started_at,recorded_at) VALUES (?,?,?,?,?) ON CONFLICT(listing_key,search_id) DO UPDATE SET run_id=excluded.run_id,run_started_at=excluded.run_started_at,recorded_at=excluded.recorded_at WHERE julianday(excluded.run_started_at)<julianday(listing_search_discoveries.run_started_at)",params![key,s(&run["search_id"]),run_id,s(&run["created_at"]),iso(ws.now)])?;
     }
     Ok(())

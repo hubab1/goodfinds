@@ -75,6 +75,14 @@ fn terminal(value: &str) -> bool {
     ]
     .contains(&value)
 }
+pub fn needs_availability_check(row: &Value, before: i64) -> bool {
+    // Stock shortages and unexplained unavailability can be temporary.
+    !["sold", "ended_unsold", "expired", "removed"].contains(&s(&row["availability"]))
+        && t(&default(
+            &row["last_attempted_at"],
+            default(&row["availability_checked_at"], row["observed_at"].clone()),
+        )) < before
+}
 fn documents(ws: &Workspace, sql: &str, params: &[&dyn ToSql]) -> Result<Vec<Value>> {
     let mut stmt = ws.db.prepare(sql)?;
     let rows = stmt.query_map(params, |r| r.get::<_, String>(0))?;
@@ -249,6 +257,35 @@ pub fn normalize(input: &Value, demo: bool, now: i64) -> Result<Value> {
         && !["active", "reserved", "unknown"].contains(&s(&row["availability"]))
     {
         return fail("Unsupported availability state");
+    }
+    if row["collection_stage"] == "availability" {
+        if !truth(&input["observed_at"]) {
+            return fail("Availability checks require their actual observed_at");
+        }
+        if row["check_outcome"] == "success" && s(&row["availability_text"]).trim().is_empty() {
+            return fail("Availability checks require observed availability_text");
+        }
+        let allowed = [
+            "source",
+            "provenance",
+            "listing_id",
+            "url",
+            "product",
+            "observed_at",
+            "collection_method",
+            "collection_stage",
+            "check_outcome",
+            "availability",
+            "availability_text",
+        ];
+        if input
+            .as_object()
+            .is_some_and(|o| o.keys().any(|key| !allowed.contains(&key.as_str())))
+        {
+            return fail(
+                "Availability-only checks accept identity, status and source wording; import fresh facts separately",
+            );
+        }
     }
     for key in [
         "availability_text",
@@ -609,6 +646,7 @@ pub fn rebuild_history(key: &str, history: &[Value]) -> Option<(Value, Vec<Value
     let mut conflict = false;
     let mut successes = Vec::<Value>::new();
     let mut seen = HashMap::<String, String>::new();
+    let mut availability_seen = HashMap::<String, String>::new();
     let mut events = Vec::new();
     for row in history {
         if row["check_outcome"] != "success" {
@@ -620,6 +658,37 @@ pub fn rebuild_history(key: &str, history: &[Value]) -> Option<(Value, Vec<Value
             }
             current["check_outcome"] = row["check_outcome"].clone();
             current["last_attempted_at"] = row["observed_at"].clone();
+            continue;
+        }
+        if availability_seen
+            .insert(
+                s(&row["observed_at"]).into(),
+                s(&row["availability"]).into(),
+            )
+            .is_some_and(|old| old != s(&row["availability"]))
+        {
+            conflict = true;
+        }
+        if !current.is_null() && row["availability"] != current["availability"] {
+            events.push(json!({"kind":"status_changed","observed_at":row["observed_at"],"previous_state":default(&current["availability"],json!("unknown")),"state":row["availability"],"earliest_at":default(&current["availability_checked_at"], current["observed_at"].clone()),"latest_at":row["observed_at"]}));
+        }
+        if row["availability"] == "active" {
+            if first_active.is_null() {
+                first_active = row["observed_at"].clone();
+            }
+            last_active = row["observed_at"].clone();
+        }
+        if row["collection_stage"] == "availability" && !current.is_null() {
+            current["availability"] = row["availability"].clone();
+            current["availability_text"] = row["availability_text"].clone();
+            current["availability_checked_at"] = row["observed_at"].clone();
+            current["last_attempted_at"] = row["observed_at"].clone();
+            current["check_outcome"] = row["check_outcome"].clone();
+            if !current["evidence"].is_object() {
+                current["evidence"] = json!({});
+            }
+            current["evidence"]["availability"] = row["availability_text"].clone();
+            remove(&mut current["field_evidence"], "availability");
             continue;
         }
         successes.push(row["observed_at"].clone());
@@ -650,9 +719,6 @@ pub fn rebuild_history(key: &str, history: &[Value]) -> Option<(Value, Vec<Value
             {
                 events.push(json!({"kind":"price_changed","observed_at":row["observed_at"],"previous_price_minor":prior["price_minor"],"price_minor":row["price_minor"],"currency":row["currency"],"earliest_at":prior["observed_at"],"latest_at":row["observed_at"]}));
             }
-            if row["availability"] != prior["availability"] {
-                events.push(json!({"kind":"status_changed","observed_at":row["observed_at"],"previous_state":default(&prior["availability"],json!("unknown")),"state":default(&row["availability"],json!("unknown")),"earliest_at":prior["observed_at"],"latest_at":row["observed_at"]}));
-            }
             if fingerprint(row) != fingerprint(&prior) {
                 events.push(json!({"kind":"content_changed","observed_at":row["observed_at"]}));
             }
@@ -661,12 +727,6 @@ pub fn rebuild_history(key: &str, history: &[Value]) -> Option<(Value, Vec<Value
             if !arr(&prior["relationships"]).contains(relation) {
                 events.push(json!({"kind":"relationship_observed","observed_at":row["observed_at"],"relationship":relation}));
             }
-        }
-        if row["availability"] == "active" {
-            if first_active.is_null() {
-                first_active = row["observed_at"].clone();
-            }
-            last_active = row["observed_at"].clone();
         }
         let original = current["publication"].clone();
         let photos = merge_media(
@@ -823,6 +883,7 @@ pub fn rebuild_history(key: &str, history: &[Value]) -> Option<(Value, Vec<Value
             }
         }
         current["last_attempted_at"] = row["observed_at"].clone();
+        current["availability_checked_at"] = row["observed_at"].clone();
         prior = row.clone();
     }
     let first = history.first()?;
@@ -895,7 +956,7 @@ fn observations(ws: &Workspace, key: Option<&str>) -> Result<Vec<Value>> {
 }
 fn apply_history(row: &mut Value, history: &[Value], events: Vec<Value>) {
     row["events"] = json!(events);
-    row["price_history"]=json!(history.iter().rev().filter(|h|h["check_outcome"]=="success").map(|h|json!({"evaluated_at":default(&h["ingested_at"],h["observed_at"].clone()),"observed_at":h["observed_at"],"price_minor":if h["price_kind"]=="asking"{h["price_minor"].clone()}else{Value::Null},"currency":h["currency"],"price_period":default(&h["price_period"],json!("once"))})).collect::<Vec<_>>());
+    row["price_history"]=json!(history.iter().rev().filter(|h|h["check_outcome"]=="success" && h["collection_stage"]!="availability").map(|h|json!({"evaluated_at":default(&h["ingested_at"],h["observed_at"].clone()),"observed_at":h["observed_at"],"price_minor":if h["price_kind"]=="asking"{h["price_minor"].clone()}else{Value::Null},"currency":h["currency"],"price_period":default(&h["price_period"],json!("once"))})).collect::<Vec<_>>());
     if !truth(&row["first_confirmed_active_at"]) {
         row["duration"] = json!({"lower_days":null,"upper_days":null,"unfinished":true,"basis":"No confirmed active observation"});
         return;
@@ -1358,9 +1419,17 @@ pub fn quality(row: &Value, config: &Value, now: i64, peers: &[Value]) -> Value 
     if default(&row["check_outcome"], json!("success")) != "success" {
         stock.push("The latest listing check did not succeed".into());
     }
-    let stamp = default(&row["observed_at"], row["last_observed_at"].clone());
+    let stamp = default(
+        &row["availability_checked_at"],
+        default(&row["observed_at"], row["last_observed_at"].clone()),
+    );
     if truth(&stamp) && (now - t(&stamp)) as f64 > n(&policy["max_check_age_hours"]) * 3600000. {
         stock.push("Listing availability needs a fresh check".into());
+    }
+    if t(&stamp) > t(&row["observed_at"])
+        && (now - t(&row["observed_at"])) as f64 > n(&policy["max_check_age_hours"]) * 3600000.
+    {
+        price.push("Listing facts need a fresh check".into());
     }
     if row["availability"] != "active" {
         stock.push("Listing is not confirmed active".into());
@@ -1963,6 +2032,32 @@ pub fn evaluate(
 ) -> Result<Value> {
     let demo = ws.mode == "sample";
     let rows = normalize_observations(observations_input, demo, ws.now)?;
+    for row in rows
+        .iter()
+        .filter(|r| r["collection_stage"] == "availability")
+    {
+        let saved: Option<String> = ws
+            .db
+            .query_row(
+                "SELECT document_json FROM listings WHERE listing_key=?",
+                [s(&row["key"])],
+                |r| r.get(0),
+            )
+            .optional()?;
+        let saved: Value = saved
+            .map(|v| serde_json::from_str(&v))
+            .transpose()?
+            .ok_or_else(|| {
+                Error::validation("Availability checks require a previously saved listing")
+            })?;
+        if saved["product"] != row["product"]
+            || t(&row["observed_at"]) <= t(&saved["first_observed_at"])
+        {
+            return fail(
+                "Availability checks must match the saved product and follow its first observation",
+            );
+        }
+    }
     let coverage = normalize_coverage(coverage_input, ws.now, &ws.config["searches"])?;
     let stamp = iso(ws.now);
     let eval_id = id();
@@ -2798,6 +2893,10 @@ fn projection(row: &Value, state: &Value, search_id: &Value) -> Value {
         "travel_source",
         "travel_checked_at",
         "availability",
+        "listing_id",
+        "availability_checked_at",
+        "last_attempted_at",
+        "check_outcome",
         "chip",
         "ram_gb",
         "ssd_gb",
@@ -2971,6 +3070,16 @@ pub fn query(ws: &Workspace, action: &str, args: &Value, state: &Value) -> Resul
     let mut selected: Vec<_> = arr(&state["listings"])
         .iter()
         .filter(|row| {
+            let unavailable =
+                terminal(s(&row["availability"])) || row["availability"] == "reserved";
+            if (q["availability"] == "current" && unavailable)
+                || (q["availability"] == "unavailable" && !unavailable)
+                || (!q["availability_check_before"].is_null()
+                    && !needs_availability_check(row, t(&q["availability_check_before"])))
+                || (unavailable && q["result_type"] != "all")
+            {
+                return false;
+            }
             if !q["search_id"].is_null() && !searches.iter().any(|s| s["product"] == row["product"])
             {
                 return false;
