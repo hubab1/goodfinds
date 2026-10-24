@@ -14,7 +14,7 @@
   {
     "name": "open_goodfinds_panel",
     "title": "Searches and listings",
-    "description": "Open Goodfinds beside the conversation; pass search_id for its listings or listing_key for one listing\u2019s details. Manage buying searches, compare listings, and see current linked Codex schedule status. Refreshes linked schedules without activating or resuming them.",
+    "description": "Request a Goodfinds panel display; pass search_id for its listings or listing_key for one listing\u2019s details. Reuse an existing panel first: every call can open another host tab. Use for the first display or an explicit reopen after closure, not refresh or focus. Reads linked schedule status without activating or resuming monitoring.",
     "annotations": {
       "readOnlyHint": true,
       "destructiveHint": false,
@@ -494,7 +494,7 @@
   {
     "name": "start_goodfinds_search",
     "title": "Goodfinds",
-    "description": "Use for a buyer's direct search request after saving its brief. Queues or reuses the manual run and opens Goodfinds focused on that search, with progress and listings updating automatically. Call immediately, before fetching a cover or browsing. Continue to claim or dispatch the returned run; requested means waiting, not an executing worker. Reuse an active owner. Scheduled checks, collection workers and searches already queued by the panel use request_goodfinds_search_run instead, without opening a panel.",
+    "description": "Queue or reuse a manual run and request the first Goodfinds panel display in this buying chat. Call after saving a ready brief and confirming an executor, before cover fetching or browsing. Every call can open another tab, including retries. When a panel was already shown, use request_goodfinds_search_run for manual runs, refinements or retries; reuse supplied active runs. Continue to claim or dispatch the returned run; requested means waiting, not an executing worker. Scheduled checks and collection workers always use non-displaying tools.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
@@ -513,7 +513,7 @@
   {
     "name": "request_goodfinds_search_run",
     "title": "Start or resume a search",
-    "description": "Queue a run without displaying a panel; use start_goodfinds_search for a buyer\u2019s direct search request. Save a durable query plan before background dispatch. Pass trigger scheduled for every automation wake-up: the server enforces quiet hours, saved daily times and check intervals before creating work. A skipped scheduled_check is normal; do not dispatch. Explicit manual searches use trigger manual and can run during quiet hours without changing monitoring. Reuses an active run without resetting its owner or progress. Only claim_goodfinds_search_run proves an agent started.",
+    "description": "Queue or reuse a run without displaying a panel. Use for manual searches when Goodfinds was already shown, refinements, retries and workers; only the first display needs start_goodfinds_search. Save a durable query plan before dispatch. Pass trigger scheduled for automation wake-ups: the server enforces quiet hours, saved daily times and check intervals. A skipped scheduled_check is normal; do not dispatch. Explicit manual searches use trigger manual and can run during quiet hours without changing monitoring. Reuses an active run without resetting its owner or progress. Only claim_goodfinds_search_run proves an agent started.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": false,
@@ -627,7 +627,7 @@
   {
     "name": "save_goodfinds_search",
     "title": "Save a search",
-    "description": "Create or edit a search using its validated definition and answers. Apply the search-name rules in references/search-setup.md. Every stated must-have needs a matching definition field and values answer; description text and comparison_attributes alone do not filter listings. Item state (used/new/refurbished) is separate from condition grade. A complete brief can be saved directly without a draft. New searches save recurring monitoring at the saved cadence, defaulting to two hours. Pass initial_monitoring with preference once for an explicit one-off request, or recurring with custom timing. Edits preserve the existing monitoring preference. Use expected_entity_revision = revisions.absent for a new search, or revisions.searches[search.id] for an edit. To promote a draft, also pass draft_id and expected_draft_revision = revisions.drafts[draft_id]; the entity token still belongs to the destination search. Never use the top-level workspace revision. Keep explicit no-budget answers null with the price field required:false; never invent a ceiling. For a direct search request, call start_goodfinds_search after this save to display progress immediately. Resolve cover_follow_up at the start of collection, before marketplace discovery: choose an accepted model or clearly labelled representative family photo, cache and attach it, or report the concrete blocker. Follow references/search-covers.md. Then resolve returned monitoring.next_action through the skill's evaluation-delivery guide; saving alone does not schedule checks. Increment definition.version when fields change. Prices are integer pence.",
+    "description": "Create or edit a search using its validated definition and answers. Apply the search-name rules in references/search-setup.md. Every stated must-have needs a matching definition field and values answer; description text and comparison_attributes alone do not filter listings. Item state (used/new/refurbished) is separate from condition grade. A complete brief can be saved directly without a draft. New searches save recurring monitoring at the saved cadence, defaulting to two hours. Pass initial_monitoring with preference once for an explicit one-off request, or recurring with custom timing. Edits preserve the existing monitoring preference. Use expected_entity_revision = revisions.absent for a new search, or revisions.searches[search.id] for an edit. To promote a draft, also pass draft_id and expected_draft_revision = revisions.drafts[draft_id]; the entity token still belongs to the destination search. Never use the top-level workspace revision. Keep explicit no-budget answers null with the price field required:false; never invent a ceiling. Follow the skill\u2019s panel handoff for the first display; edits keep the existing panel and run, using request_goodfinds_search_run when another run is needed. Resolve cover_follow_up at the start of collection, before marketplace discovery: choose an accepted model or clearly labelled representative family photo, cache and attach it, or report the concrete blocker. Follow references/search-covers.md. Then resolve returned monitoring.next_action through the skill's evaluation-delivery guide; saving alone does not schedule checks. Increment definition.version when fields change. Prices are integer pence.",
     "annotations": {
       "readOnlyHint": false,
       "destructiveHint": true,

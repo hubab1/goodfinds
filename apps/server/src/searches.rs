@@ -741,6 +741,9 @@ pub fn search_cohort(row: &Value, search: &Value) -> Option<String> {
     let mut values = Vec::new();
     for name in dimensions {
         let mut value = attribute(row, &name);
+        if row["product"] == "vehicle" && name == "mileage" {
+            value = vehicle_mileage_band(row)?;
+        }
         if value.is_null() || value.as_str() == Some("") {
             return None;
         }
@@ -760,6 +763,22 @@ pub fn search_cohort(row: &Value, search: &Value) -> Option<String> {
         search["definition"]["price"],
         values
     ])))
+}
+
+fn vehicle_mileage_band(row: &Value) -> Option<Value> {
+    let mileage = attribute(row, "mileage").as_f64()?;
+    if !mileage.is_finite() || mileage < 0. {
+        return None;
+    }
+    let unit = attribute(row, "mileage_unit");
+    let miles = match s(&unit).trim().to_lowercase().as_str() {
+        "mi" | "mile" | "miles" => mileage,
+        "km" | "kilometre" | "kilometres" | "kilometer" | "kilometers" => mileage / 1.609344,
+        _ => return None,
+    };
+    // Explicit units keep mixed-unit adverts out of misleading price comparisons.
+    // Bands allow equivalent cars to differ in their exact odometer readings.
+    Some(json!({"mileage_band_miles": (miles / 25_000.).floor() * 25_000.}))
 }
 pub fn applies_to_search(event: &Value, search: &Value) -> bool {
     !b(&event["undone"])
@@ -1385,7 +1404,9 @@ pub fn run_action(ws: &mut Workspace, action: &str, input: &Value) -> Result<Val
         if let Some(mut run) = runs(ws, Some(s(&saved["id"])))?
             .into_iter()
             .find(|r| resumable(r) && s(&r["search_revision"]) == hash(&saved))
-            && (b(&args["resume"]) || active(&run))
+            // Scheduled eligibility has already selected a new occurrence. Keep
+            // live work, but never carry an older attempt's discovery into it.
+            && ((b(&args["resume"]) && args["trigger"] != "scheduled") || active(&run))
         {
             if active(&run) {
                 return Ok(run);
@@ -1941,8 +1962,15 @@ pub fn canonical_rule(rule: &str) -> String {
         .collect::<Vec<_>>()
         .join(";")
 }
-fn local_slot(times: &[String], zone: &str, now: i64) -> Option<String> {
-    let (date, minute) = local_parts(now, zone);
+fn interval_grace_minutes(timing: &Value) -> i64 {
+    if timing["mode"] == "interval" {
+        (n(&timing["interval_minutes"]) / 4).min(5)
+    } else {
+        0
+    }
+}
+fn local_slot(times: &[String], zone: &str, now: i64, grace: i64) -> Option<String> {
+    let (date, minute) = local_parts(now + grace * 60_000, zone);
     times
         .iter()
         .filter(|v| minute_of_day(v) <= minute)
@@ -2048,10 +2076,13 @@ pub fn scheduled_check(
     if timing["mode"] == "daily"
         || (b(&plan["quiet_hours"]["enabled"]) && !b(&plan["guard_required"]))
     {
-        let minute = local_parts(now, s(&plan["timezone"])).1;
+        // Interval schedules compiled into daily slots need the same bounded
+        // early-wake tolerance as interval-only plans. Quiet hours above remain strict.
+        let grace = interval_grace_minutes(&timing);
+        let minute = local_parts(now + grace * 60_000, s(&plan["timezone"])).1;
         let due = times.iter().any(|t| {
             let at = minute_of_day(t);
-            minute >= at && minute - at < 15 && !quiet_minute(at, &plan["quiet_hours"])
+            minute >= at && minute - at < 15 + grace && !quiet_minute(at, &plan["quiet_hours"])
         });
         if !due {
             return result(
@@ -2064,15 +2095,15 @@ pub fn scheduled_check(
         }
         if started.is_some_and(|r| {
             time(s(&r["scheduled_at"])).ok().is_some_and(|t| {
-                local_slot(&times, s(&plan["timezone"]), t)
-                    == local_slot(&times, s(&plan["timezone"]), now)
+                local_slot(&times, s(&plan["timezone"]), t, grace)
+                    == local_slot(&times, s(&plan["timezone"]), now, grace)
             })
         }) {
             return result(
                 false,
                 "already_started",
                 "This daily search time has already been started.".into(),
-                next_local_time(&times, s(&plan["timezone"]), now),
+                next_local_time(&times, s(&plan["timezone"]), now + grace * 60_000),
             );
         }
     } else if let Some(run) = started
@@ -2800,7 +2831,13 @@ fn scheduled_batch(ws: &mut Workspace, input: &Value) -> Result<Value> {
         let plan = dispatcher_plan(&ws.config, std::slice::from_ref(&sid), &fulfilled, ws.now);
         let times = strings(&plan["times"]);
         let slot = if !times.is_empty() {
-            local_slot(&times, s(&plan["timezone"]), ws.now).unwrap_or_else(|| iso(ws.now))
+            local_slot(
+                &times,
+                s(&plan["timezone"]),
+                ws.now,
+                interval_grace_minutes(&timing_for(&ws.config, &sid)),
+            )
+            .unwrap_or_else(|| iso(ws.now))
         } else {
             format!(
                 "{}:{}",
@@ -2823,7 +2860,7 @@ fn scheduled_batch(ws: &mut Workspace, input: &Value) -> Result<Value> {
             run_action(
                 ws,
                 "start",
-                &json!({"search_id":sid,"request_id":occurrence,"trigger":"scheduled","resume":true}),
+                &json!({"search_id":sid,"request_id":occurrence,"trigger":"scheduled"}),
             )?
         };
         result["runs"].as_array_mut().unwrap().push(json!({"search_id":sid,"run_id":run["id"],"version":run["version"],"phase":run["phase"],"worker_id":run["worker"]["id"],"agent_id":run["worker"]["agent_id"]}));

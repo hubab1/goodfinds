@@ -11,7 +11,7 @@ import { App, applyDocumentTheme } from "@modelcontextprotocol/ext-apps";
 import { entityRevision, entityTarget } from "@goodfinds/contracts/revisions";
 import type { Revisions } from "@goodfinds/contracts/revisions";
 import { operationForTool } from "@goodfinds/contracts/tool-names";
-import { stateFromToolResult } from "@goodfinds/contracts/state";
+import { stateFromToolResult, ToolCallError } from "@goodfinds/contracts/state";
 import type { GoodfindsState } from "@goodfinds/contracts/state";
 import {
   AUTOMATION_UNAVAILABLE,
@@ -31,6 +31,7 @@ import { feedbackEventSchema } from "@goodfinds/contracts/discovery";
 import { panelPresentationSchema, parsePanelPath } from "@goodfinds/contracts/panel-presentation";
 import type { PanelPresentation } from "@goodfinds/contracts/panel-presentation";
 import { createSelectionPublisher } from "./selection-context";
+import { reconcileSearchEdit } from "./search-edit";
 
 declare global {
   interface Window {
@@ -60,7 +61,10 @@ function presentPending(state: GoodfindsState) {
   for (const listener of listeners) listener(state, target);
   return true;
 }
-const revisionsBySnapshot = new Map<string, Revisions>();
+const revisionsBySnapshot = new Map<
+  string,
+  { revisions: Revisions; searches: GoodfindsState["config"]["searches"] }
+>();
 function remember(state: GoodfindsState) {
   if (deepLinkMode && state.mode !== deepLinkMode) return state;
   if (
@@ -70,7 +74,10 @@ function remember(state: GoodfindsState) {
     getSavedImage.clear();
   latestState = state;
   presentPending(state);
-  revisionsBySnapshot.set(state.revision, state.revisions);
+  revisionsBySnapshot.set(state.revision, {
+    revisions: state.revisions,
+    searches: state.config.searches,
+  });
   if (revisionsBySnapshot.size > 100) {
     const oldest = revisionsBySnapshot.keys().next().value;
     if (oldest) revisionsBySnapshot.delete(oldest);
@@ -263,10 +270,11 @@ export async function invoke(name: string, args: Record<string, unknown>): Promi
     pendingPresentation = undefined;
   }
   const operation = operationForTool(name);
-  const revisions =
+  const snapshot =
     typeof args["snapshot_revision"] === "string"
       ? revisionsBySnapshot.get(args["snapshot_revision"])
       : undefined;
+  const revisions = snapshot?.revisions;
   const target = operation ? entityTarget(operation, args) : undefined;
   const scoped =
     revisions && target
@@ -277,7 +285,7 @@ export async function invoke(name: string, args: Record<string, unknown>): Promi
             : {}),
         }
       : {};
-  const result = await callTool(name, {
+  const input = {
     ...Object.fromEntries(Object.entries(args).filter(([key]) => key !== "snapshot_revision")),
     ...scoped,
     ...(operation &&
@@ -287,8 +295,44 @@ export async function invoke(name: string, args: Record<string, unknown>): Promi
     operation !== "load_sample_workspace"
       ? { request_id: args["request_id"] ?? crypto.randomUUID() }
       : {}),
-  });
-  const state = remember(stateFromToolResult(result));
+  };
+  const result = await callTool(name, input);
+  let next: GoodfindsState;
+  try {
+    next = stateFromToolResult(result);
+  } catch (failure) {
+    const base = snapshot?.searches.find((search) => search.id === target?.id);
+    if (
+      name !== "save_goodfinds_search" ||
+      !base ||
+      !(failure instanceof ToolCallError) ||
+      failure.code !== "revision_conflict" ||
+      failure.resource !== `searches:${base.id}`
+    )
+      throw failure;
+    const fresh = await invoke("get_goodfinds_workspace", {
+      mode: args["mode"] === "sample" ? "sample" : "live",
+    });
+    for (const listener of listeners) listener(fresh);
+    const current = fresh.config.searches.find((search) => search.id === base.id);
+    if (!current)
+      throw new Error(
+        "This search was removed while you were editing. Your entries are still here.",
+        { cause: failure },
+      );
+    next = stateFromToolResult(
+      await callTool(name, {
+        ...input,
+        search: reconcileSearchEdit(base, args["search"], current),
+        expected_entity_revision: entityRevision(fresh.revisions, {
+          kind: "searches",
+          id: base.id,
+        }),
+        request_id: crypto.randomUUID(),
+      }),
+    );
+  }
+  const state = remember(next);
   if (name === "reset_goodfinds_workspace") {
     const reset = z
       .object({ structuredContent: z.object({ reset: workspaceResetResultSchema }) })

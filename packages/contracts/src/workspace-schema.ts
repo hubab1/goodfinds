@@ -66,6 +66,7 @@ export const listingObservationSchema = listingSchema.extend({
   first_confirmed_active_at: z.string().nullish(),
   last_confirmed_active_at: z.string().nullish(),
   observation_conflict: z.boolean().optional(),
+  availability_conflict: z.boolean().optional(),
   field_evidence: z
     .record(
       z.string(),

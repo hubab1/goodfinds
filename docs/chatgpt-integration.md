@@ -6,6 +6,14 @@ Goodfinds implements the [OpenAI MCP Extensions specification](https://github.co
 
 The sidebar opens **Goodfinds** through `open_goodfinds_home`. A chat can open **Searches and listings** through `open_goodfinds_panel`. Each tool advertises one entrypoint and accepts empty arguments. Both use the same panel resource and saved workspace. The existing panel tool also accepts `search_id` and `listing_key`; ordinary workspace reads do not change the current view.
 
+## Panel reuse
+
+The buying workflow requests one automatic panel display per chat, including setup. `start_goodfinds_search` combines the first display with a manual run request. Further manual runs and retries use `request_goodfinds_search_run`; brief edits, progress reads and result delivery keep the existing panel. A buyer can explicitly reopen a closed panel.
+
+Display metadata is attached to the opening tools, so every invocation can create another host tab even when the backend reuses the same run. The server has no host tab inventory, focus handle or display acknowledgement. A workspace-wide “already opened” flag would incorrectly suppress other chats and could not distinguish closure from failed presentation. The workflow limits display requests; it does not establish exactly-once host presentation.
+
+Codex exposes existing full-screen MCP App tabs through the `mcpapps` browser backend, separately from ordinary in-app browser tabs. Agents can bind and operate one existing Goodfinds panel. The currently exposed MCP Apps API has no dedicated focus operation; visible selection requires a supported host control or observed native UI. Opening tools are not a focus fallback. See the skill's panel handoff for the reuse procedure. A strict one-tab guarantee needs host-owned reuse and focus keyed to the app and chat, including delivery of the requested search or listing to that existing instance.
+
 ## Selected listing context
 
 While a listing's detail dialog is open, the panel provides its identity, selected search when known, title, source URL, observed asking price, currency, price period and observation time as structured model context. Chat can use `get_goodfinds_listing` to fetch current evidence. Opening a dialog does not attach private seller conversations or photo/video bytes, send a message, or authorize a buying action.

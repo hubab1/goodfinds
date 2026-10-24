@@ -80,8 +80,9 @@ void test(`native: first search displays its queued run and quiet reads never re
   }
   const initial = stateFromToolResult(await call("get_goodfinds_workspace"));
   assert.equal(initial.searches.length, 0);
+  const searchInput = { ...example.searches[0], id: "first-search", cover: undefined };
   const saved = await call("save_goodfinds_search", {
-    search: { ...example.searches[0], id: "first-search", cover: undefined },
+    search: searchInput,
     expected_entity_revision: initial.revisions.absent,
     request_id: crypto.randomUUID(),
     initial_monitoring: { preference: "once" },
@@ -104,6 +105,19 @@ void test(`native: first search displays its queued run and quiet reads never re
     operations.request_search_run.output.parse(repeated.structuredContent).search_run?.id,
     run.id,
   );
+  assert.equal(
+    panel(repeated)?.search_id,
+    "first-search",
+    "Run idempotency does not suppress an opening tool's presentation",
+  );
+  const quietRetry = await call("request_goodfinds_search_run", input);
+  assert.ok(!quietRetry.isError, JSON.stringify(quietRetry));
+  assert.equal(
+    operations.request_search_run.output.parse(quietRetry.structuredContent).search_run?.id,
+    run.id,
+    "A non-displaying retry recovers the original foreground run",
+  );
+  assert.equal(panel(quietRetry), undefined);
   const reopened = await call("open_goodfinds_panel", { search_id: "first-search" });
   assert.equal(panel(reopened)?.search_id, "first-search");
   assert.equal(stateFromToolResult(reopened).search_runs.length, 1);
@@ -118,6 +132,24 @@ void test(`native: first search displays its queued run and quiet reads never re
   });
   assert.equal(missing.isError, true);
   assert.equal(stateFromToolResult(await call("get_goodfinds_workspace")).search_runs.length, 1);
+
+  const current = stateFromToolResult(refreshed);
+  const search = current.searches[0];
+  assert.ok(search);
+  const refined = await call("save_goodfinds_search", {
+    search: { ...searchInput, values: { ...search.values, max_drive_minutes: 60 } },
+    expected_entity_revision: current.revisions.searches[search.id],
+    request_id: crypto.randomUUID(),
+  });
+  assert.ok(!refined.isError, JSON.stringify(refined));
+  assert.equal(panel(refined), undefined);
+  const continued = await call("request_goodfinds_search_run", {
+    request: { ...input.request, request_id: crypto.randomUUID() },
+  });
+  assert.ok(!continued.isError, JSON.stringify(continued));
+  assert.ok(operations.request_search_run.output.parse(continued.structuredContent).search_run);
+  assert.equal(panel(continued), undefined, "Refining a displayed search needs no new panel");
+  assert.equal(stateFromToolResult(continued).searches[0]?.values["max_drive_minutes"], 60);
 });
 
 void test("Panel cache keys change with frontend inputs and ignore filesystem ordering", async () => {

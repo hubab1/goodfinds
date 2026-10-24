@@ -11,11 +11,11 @@ const descriptions: Record<string, string> = {
   get_goodfinds_setup_context:
     "Start a brief: category returns a starter definition, regional settings and scoped revisions. Use the buyer's supplied answers; save complete briefs directly.",
   save_goodfinds_search:
-    "Save a brief using the setup template and scoped revision. Set initial_monitoring.preference=once for one-off requests. Then start_goodfinds_search to show results. Read the full schema for custom definitions.",
+    "Save a brief using the setup template and scoped revision. Set initial_monitoring.preference=once for one-off requests. Follow panel handoff for the first display; edits reuse the existing panel. Read the full schema for custom definitions.",
   start_goodfinds_search:
-    "Queue or reuse a manual run and open its live results panel. Call immediately after saving the brief, before cover fetching or browsing. Claim the returned run to execute it.",
+    "Queue a manual run and request the first panel display in this buying chat. Every call can open another tab. After a panel was shown, use request_goodfinds_search_run instead. Claim the returned run to execute it.",
   request_goodfinds_search_run:
-    "Queue a run without opening a panel. Use trigger=scheduled for automation wake-ups and honor skipped checks. Direct buyer requests use start_goodfinds_search.",
+    "Queue or reuse a run without opening a panel. Use for manual searches after a panel was shown, retries and workers. Use trigger=scheduled for automation wake-ups and honor skipped checks.",
   claim_goodfinds_search_run:
     "Claim a run before browsing using the actual executor's agent ID or canonical task name and a new worker UUID. A direct single-platform search may execute in the buying chat. Renew its lease during work.",
   get_goodfinds_tool_schema:

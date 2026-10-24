@@ -417,12 +417,35 @@ export const toolResultSchema = z
   })
   .loose();
 
+const toolErrorSchema = z.object({
+  error: z.object({ code: z.string(), message: z.string(), resource: z.string().optional() }),
+});
+
+export class ToolCallError extends Error {
+  readonly code: string;
+  readonly resource: string | undefined;
+  constructor(details: z.infer<typeof toolErrorSchema>["error"]) {
+    super(details.message);
+    this.name = "ToolCallError";
+    this.code = details.code;
+    this.resource = details.resource;
+  }
+}
+
 export function stateFromToolResult(result: unknown): GoodfindsState {
   const parsed = toolResultSchema.parse(result);
   if (parsed.isError) {
-    throw new Error(
-      parsed.content.find((item) => item.type === "text")?.text ?? "Could not complete that action",
-    );
+    const text = parsed.content.find((item) => item.type === "text")?.text;
+    let details = toolErrorSchema.safeParse(parsed.structuredContent);
+    if (!details.success && text) {
+      try {
+        details = toolErrorSchema.safeParse(JSON.parse(text) as unknown);
+      } catch {
+        // Unstructured transport errors retain their readable text.
+      }
+    }
+    if (details.success) throw new ToolCallError(details.data.error);
+    throw new Error(text ?? "Could not complete that action");
   }
   return z.object({ _meta: z.object({ goodfinds_state: stateSchema }) }).parse(result)._meta
     .goodfinds_state;

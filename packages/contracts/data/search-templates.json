@@ -223,7 +223,7 @@
         "minimum": 1,
         "maximum": 100000000,
         "display_divisor": 100,
-        "unit": "\u00a3",
+        "unit": "£",
         "match": {
           "attribute": "price_minor",
           "operator": "lte",
@@ -274,7 +274,7 @@
         "required": false,
         "question_stage": "refinement",
         "minimum": 0,
-        "hint": "Optional \u00b7 number of current Marketplace listings. Leave either limit blank. Unavailable counts need checking.",
+        "hint": "Optional · number of current Marketplace listings. Leave either limit blank. Unavailable counts need checking.",
         "match": {
           "attribute": "seller_listing_count",
           "operator": "range",
@@ -443,7 +443,7 @@
         "minimum": 1,
         "maximum": 100000000,
         "display_divisor": 100,
-        "unit": "\u00a3",
+        "unit": "£",
         "match": {
           "attribute": "price_minor",
           "operator": "lte",
@@ -494,7 +494,7 @@
         "required": false,
         "question_stage": "refinement",
         "minimum": 0,
-        "hint": "Optional \u00b7 number of current Marketplace listings. Leave either limit blank. Unavailable counts need checking.",
+        "hint": "Optional · number of current Marketplace listings. Leave either limit blank. Unavailable counts need checking.",
         "match": {
           "attribute": "seller_listing_count",
           "operator": "range",
@@ -646,7 +646,7 @@
         "minimum": 1,
         "maximum": 100000000,
         "display_divisor": 100,
-        "unit": "\u00a3 / month",
+        "unit": "£ / month",
         "hint": "Full monthly rent, excluding separately quoted bills and deposits.",
         "match": {
           "attribute": "price_minor",
@@ -661,7 +661,7 @@
         "required": false,
         "question_stage": "refinement",
         "minimum": 0,
-        "hint": "Optional \u00b7 number of current Marketplace listings. Leave either limit blank. Unavailable counts need checking.",
+        "hint": "Optional · number of current Marketplace listings. Leave either limit blank. Unavailable counts need checking.",
         "match": {
           "attribute": "seller_listing_count",
           "operator": "range",
@@ -675,7 +675,7 @@
     "version": 1,
     "category": "clothing",
     "title": "Clothing",
-    "description": "Adapt the optional fields to the buyer\u2019s stated requirements.",
+    "description": "Adapt the optional fields to the buyer’s stated requirements.",
     "price": {
       "currency": "GBP",
       "period": "once"
@@ -744,7 +744,7 @@
     "version": 1,
     "category": "espresso_machine",
     "title": "Espresso machine",
-    "description": "Adapt the optional fields to the buyer\u2019s stated requirements.",
+    "description": "Adapt the optional fields to the buyer’s stated requirements.",
     "price": {
       "currency": "GBP",
       "period": "once"
@@ -764,6 +764,160 @@
           "operator": "lte",
           "importance": "required"
         }
+      }
+    ]
+  },
+  {
+    "schema_version": 1,
+    "version": 1,
+    "category": "vehicle",
+    "title": "Vehicle",
+    "description": "Find vehicles by make, model, year, transmission, history, condition, price and travel limits. Verify full cash prices and odometer units.",
+    "price": {
+      "currency": "GBP",
+      "period": "once"
+    },
+    "comparison_attributes": [
+      "make",
+      "model",
+      "year",
+      "transmission",
+      "fuel_type",
+      "engine_litres",
+      "body_type",
+      "trim",
+      "mileage"
+    ],
+    "fields": [
+      {
+        "id": "make",
+        "label": "Make",
+        "type": "text",
+        "required": false,
+        "match": {
+          "attribute": "make",
+          "operator": "eq",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "model",
+        "label": "Model",
+        "type": "text",
+        "required": false,
+        "match": {
+          "attribute": "model",
+          "operator": "eq",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "min_year",
+        "label": "Earliest registration year",
+        "type": "integer",
+        "required": false,
+        "match": {
+          "attribute": "year",
+          "operator": "gte",
+          "importance": "required"
+        },
+        "minimum": 1900,
+        "maximum": 2100
+      },
+      {
+        "id": "max_year",
+        "label": "Latest registration year",
+        "type": "integer",
+        "required": false,
+        "match": {
+          "attribute": "year",
+          "operator": "lte",
+          "importance": "required"
+        },
+        "minimum": 1900,
+        "maximum": 2100
+      },
+      {
+        "id": "transmission",
+        "label": "Transmission",
+        "type": "single_choice",
+        "required": false,
+        "match": {
+          "attribute": "transmission",
+          "operator": "eq",
+          "importance": "required"
+        },
+        "options": [
+          {
+            "value": "automatic",
+            "label": "Automatic"
+          },
+          {
+            "value": "manual",
+            "label": "Manual"
+          }
+        ]
+      },
+      {
+        "id": "clean_history",
+        "label": "No category, write-off or accident history",
+        "type": "boolean",
+        "required": false,
+        "match": {
+          "attribute": "clean_history",
+          "operator": "eq",
+          "importance": "required"
+        },
+        "hint": "Keep seller claims, platform history checks and independently checked records distinct. An omitted category is unknown."
+      },
+      {
+        "id": "fully_functioning",
+        "label": "Fully functioning vehicle",
+        "type": "boolean",
+        "required": false,
+        "match": {
+          "attribute": "fully_functioning",
+          "operator": "eq",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "not_spares_repair",
+        "label": "Whole vehicle, excluding spares or repair",
+        "type": "boolean",
+        "required": false,
+        "match": {
+          "attribute": "not_spares_repair",
+          "operator": "eq",
+          "importance": "required"
+        }
+      },
+      {
+        "id": "max_price_minor",
+        "label": "Maximum asking price",
+        "type": "integer",
+        "required": false,
+        "match": {
+          "attribute": "price_minor",
+          "operator": "lte",
+          "importance": "required"
+        },
+        "minimum": 0,
+        "display_divisor": 100,
+        "unit": "GBP"
+      },
+      {
+        "id": "max_drive_minutes",
+        "label": "Maximum driving time",
+        "type": "integer",
+        "required": false,
+        "match": {
+          "attribute": "drive_minutes",
+          "operator": "lte",
+          "importance": "required"
+        },
+        "minimum": 0,
+        "unit": "minutes"
       }
     ]
   }

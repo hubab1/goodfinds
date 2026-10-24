@@ -35,6 +35,8 @@ jobs:
       - run: bun scripts/package-plugin.ts
       - run: cargo build --manifest-path apps/server/Cargo.toml --locked --profile test-support --features test-support --example test-driver --bin goodfinds
       - run: bun test --timeout 30000 ./tests/build-target.test.ts ./tests/plugin-formats.test.ts ./tests/search-setup-mcp.test.ts ./tests/panel-handoff.test.ts
+      - name: Vehicle evidence and recurring search regressions
+        run: bun test --timeout 30000 ./tests/vehicle-search.test.ts ./tests/evidence-recovery.test.ts ./tests/vehicle-enquiries.test.ts ./tests/scheduled-dispatch.test.ts ./tests/search-timing.test.ts ./tests/search-edit-conflict.test.ts
       - if: runner.os == 'Linux'
         run: bun test --timeout 30000 ./tests/marketplace-actions.test.ts ./tests/listing-shortlist-ui.test.ts
       - run: bun run package:check

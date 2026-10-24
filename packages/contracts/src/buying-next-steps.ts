@@ -123,18 +123,50 @@ export function buyingQuestions(
   search: SavedSearch,
   _reasons: string[] = [],
 ): string[] {
-  return [
-    ...new Set([
-      ...openingQuestions(verificationChecks(listing, search.discovery?.verification_checks)),
-      ...conflictingFields(listing).map(
-        (field) =>
-          `Could you confirm the ${field.replaceAll("_", " ")}? The listing evidence conflicts.`,
-      ),
-      ...(listing.observation_conflict === true
-        ? ["Could you confirm the current listing details? Earlier observations conflict."]
-        : []),
-    ]),
-  ];
+  const checks = verificationChecks(listing, search.discovery?.verification_checks);
+  const unresolved = (id: string) =>
+    checks.some((check) => check.id === id && ["unknown", "conflicting"].includes(check.state));
+  const conflicts = conflictingFields(listing);
+  const questions: string[] = [];
+  if (listing.product === "vehicle") {
+    if (unresolved("clean_history"))
+      questions.push("Has it ever been written off, categorised or accident-damaged?");
+    const automatic = search.definition.fields.some(
+      (field) =>
+        field.match?.attribute === "transmission" && search.values[field.id] === "automatic",
+    );
+    if (
+      automatic &&
+      (listing.attributes?.["transmission"] !== "automatic" ||
+        unresolved("automatic_gearbox") ||
+        unresolved("transmission") ||
+        conflicts.includes("transmission"))
+    )
+      questions.push("Can you confirm it has an automatic gearbox?");
+    if (
+      unresolved("fully_functioning") ||
+      (!checks.some((check) => check.id === "fully_functioning") &&
+        ["functional", "functionality", "working", "working_condition"].some(unresolved))
+    )
+      questions.push("Does it run and drive without any faults?");
+  } else {
+    questions.push(...openingQuestions(checks));
+  }
+  const clarification: Record<string, string> = {
+    mileage: "What is the current mileage?",
+    "mileage unit": "Is the mileage shown in miles or kilometres?",
+    transmission: "Is the gearbox automatic or manual?",
+    year: "What is the registration year?",
+  };
+  for (const field of conflicts) {
+    if (
+      field === "transmission" &&
+      questions.includes("Can you confirm it has an automatic gearbox?")
+    )
+      continue;
+    questions.push(clarification[field] ?? `Could you confirm the ${field}?`);
+  }
+  return [...new Set(questions)].slice(0, 2);
 }
 
 export function openingDraft(listing: BuyingListing, search: SavedSearch, reasons: string[] = []) {
