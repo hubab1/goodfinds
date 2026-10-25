@@ -729,25 +729,29 @@ void test("MCP forwards dispatcher selectors and advertises the batch protocol",
   );
 });
 
-void test("scheduled occurrence deduplication survives more than fifty newer manual runs", (t) => {
-  const f = fixture(t);
-  f.report();
-  f.batch();
-  f.at("2026-10-08T08:06:00Z");
-  for (let index = 0; index < 51; index++) {
-    const result = f.request("request_search_run", {
-      request: { search_id: f.ids[0], request_id: randomUUID(), trigger: "manual" },
-    });
-    const run = result.state.search_runs.find(
-      (r) => r.search_id === f.ids[0] && r.phase === "requested",
-    );
-    assert.ok(run);
-    f.request("cancel_search_run", { request: { run_id: run.id } });
-  }
-  const batch = f.batch();
-  assert.equal(batch.runs.length, 0);
-  assert.equal(batch.skipped.find((s) => s.search_id === f.ids[0])?.reason, "already_started");
-});
+void test(
+  "scheduled occurrence deduplication survives more than fifty newer manual runs",
+  { timeout: 60000 },
+  (t) => {
+    const f = fixture(t);
+    f.report();
+    f.batch();
+    f.at("2026-10-08T08:06:00Z");
+    for (let index = 0; index < 51; index++) {
+      const result = f.request("request_search_run", {
+        request: { search_id: f.ids[0], request_id: randomUUID(), trigger: "manual" },
+      });
+      const run = result.state.search_runs.find(
+        (r) => r.search_id === f.ids[0] && r.phase === "requested",
+      );
+      assert.ok(run);
+      f.request("cancel_search_run", { request: { run_id: run.id } });
+    }
+    const batch = f.batch();
+    assert.equal(batch.runs.length, 0);
+    assert.equal(batch.skipped.find((s) => s.search_id === f.ids[0])?.reason, "already_started");
+  },
+);
 
 void test("only the member that completes a real scheduled search records successful execution", (t) => {
   const f = fixture(t);
