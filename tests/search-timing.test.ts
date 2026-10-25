@@ -153,7 +153,7 @@ void test("scheduled starts skip overnight without creating work while manual se
   assert.equal(f.state().config.monitoring[0]?.allow_quiet_hours, false);
 });
 
-void test("a failed scheduled run keeps monitoring enabled and resumes at the next permitted check", (t) => {
+void test("a failed scheduled run keeps monitoring enabled and retries fresh at the next check", (t) => {
   const f = fixture(t);
   f.choose();
   const first = f.start("scheduled").state.search_runs[0];
@@ -166,10 +166,11 @@ void test("a failed scheduled run keeps monitoring enabled and resumes at the ne
   f.at("2026-10-06T13:00:00Z");
   assert.equal(f.check().allowed, true);
   const resumed = f.start("scheduled").state.search_runs[0];
-  assert.equal(resumed?.id, first.id, "Recovery keeps saved coverage");
+  assert.ok(resumed);
+  assert.notEqual(resumed.id, first.id, "A new occurrence starts fresh discovery");
   assert.equal(resumed?.phase, "requested");
   assert.equal(resumed?.worker, null);
-  f.request("cancel_search_run", { request: { run_id: first.id } });
+  f.request("cancel_search_run", { request: { run_id: resumed.id } });
   f.change("set_search_enabled", { search_id: f.search.id, enabled: false });
   f.at("2026-10-06T14:00:00Z");
   assert.equal(f.check().allowed, false, "An explicit pause stops automatic recovery");

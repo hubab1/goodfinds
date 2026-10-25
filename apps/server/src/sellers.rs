@@ -1637,39 +1637,77 @@ pub fn buying_questions(row: &Value, search: &Value) -> Vec<Value> {
         .filter(|c| contains(&["unknown", "conflicting"], &c["state"]))
         .collect();
     let mut questions = vec![];
+    let vehicle = row["product"] == "vehicle";
+    let unknown = |id: &str| unresolved.iter().any(|c| c["id"] == id);
+    if vehicle {
+        if unknown("clean_history") {
+            questions.push(json!(
+                "Has it ever been written off, categorised or accident-damaged?"
+            ));
+        }
+        let automatic = arr(&search["definition"]["fields"]).iter().any(|field| {
+            field["match"]["attribute"] == "transmission"
+                && search["values"][s(&field["id"])] == "automatic"
+        });
+        if automatic
+            && (row["attributes"]["transmission"] != "automatic"
+                || unknown("automatic_gearbox")
+                || unknown("transmission")
+                || row["field_evidence"]["transmission"]["state"] == "conflicting")
+        {
+            questions.push(json!("Can you confirm it has an automatic gearbox?"));
+        }
+        if unknown("fully_functioning")
+            || (!checks.iter().any(|c| c["id"] == "fully_functioning")
+                && [
+                    "functional",
+                    "functionality",
+                    "working",
+                    "working_condition",
+                ]
+                .iter()
+                .any(|id| unknown(id)))
+        {
+            questions.push(json!("Does it run and drive without any faults?"));
+        }
+    }
+    if !vehicle
+        && unresolved.iter().any(|c| {
+            contains(
+                &[
+                    "functional",
+                    "functionality",
+                    "working",
+                    "working_condition",
+                ],
+                &c["id"],
+            )
+        })
+    {
+        questions.push(json!("Does it all work okay?"));
+    } else if !vehicle && unknown("condition") {
+        questions.push(json!("Is it in good condition?"));
+    }
+    let automatic_question =
+        questions.contains(&json!("Can you confirm it has an automatic gearbox?"));
     if let Some(fields) = row["field_evidence"].as_object() {
         questions.extend(
             fields
                 .iter()
-                .filter(|(_, v)| v["state"] == "conflicting")
+                .filter(|(field, v)| {
+                    v["state"] == "conflicting"
+                        && !(field.as_str() == "transmission" && automatic_question)
+                })
                 .map(|(field, _)| {
-                    json!(format!(
-                        "Could you confirm the {}? The listing evidence conflicts.",
-                        field.replace('_', " ")
-                    ))
+                    json!(match field.as_str() {
+                        "mileage" => "What is the current mileage?".to_owned(),
+                        "mileage_unit" => "Is the mileage shown in miles or kilometres?".to_owned(),
+                        "transmission" => "Is the gearbox automatic or manual?".to_owned(),
+                        "year" => "What is the registration year?".to_owned(),
+                        _ => format!("Could you confirm the {}?", field.replace('_', " ")),
+                    })
                 }),
         );
-    }
-    if row["observation_conflict"] == true {
-        questions.push(json!(
-            "Could you confirm the current listing details? Earlier observations conflict."
-        ));
-    }
-
-    if unresolved.iter().any(|c| {
-        contains(
-            &[
-                "functional",
-                "functionality",
-                "working",
-                "working_condition",
-            ],
-            &c["id"],
-        )
-    }) {
-        questions.push(json!("Does it all work okay?"))
-    } else if unresolved.iter().any(|c| c["id"] == "condition") {
-        questions.push(json!("Is it in good condition?"))
     }
     let part = |id: &str| match id {
         "portafilter" => Some("the portafilter"),
@@ -1689,7 +1727,7 @@ pub fn buying_questions(row: &Value, search: &Value) -> Vec<Value> {
                 || regex.is_match(&format!("{} {}", s(&c["id"]), s(&c["label"])))
         })
         .collect();
-    if !contents.is_empty() {
+    if !vehicle && !contents.is_empty() {
         questions.push(json!(if contents.len() == 1 {
             part(s(&contents[0]["id"]))
                 .map(|p| format!("Does it include {p}?"))
@@ -1698,6 +1736,8 @@ pub fn buying_questions(row: &Value, search: &Value) -> Vec<Value> {
             "Are all the parts and accessories included?".to_string()
         }))
     }
+    dedup(&mut questions);
+    questions.truncate(2);
     questions
 }
 pub fn search_offer_price(search: &Value, include_target: bool) -> Option<i64> {

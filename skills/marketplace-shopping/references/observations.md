@@ -6,6 +6,8 @@ For MCP imports, apply the request-ID and retry rules in [tool contracts](tool-c
 
 Imports are observations, not field patches. Each correction includes the required source/identity, title and product category from the current browser pass. Start with that pass's latest complete observation and change the corrected field and its evidence; retain the verified detail/gallery fields. Keep corrections inside the owned run before marking it completed. A discovery-card payload must not replace a just-verified record merely to correct its availability. Older stored facts still need a fresh page check before receiving a new observation timestamp.
 
+Different payloads for the same fact timestamp remain in the audit history. A later successful detail verification can resolve that historical collision for current facts while preserving explicit unknown/conflicting checks. A later status-only check resolves current availability, not vehicle specifications; historically ambiguous availability still limits duration statistics. Use the actual time of a fresh check, and read back the current checks and quality after a correction.
+
 ## Discovery, verification and complete setup costs
 
 Pass `run_id` beside observations to associate an import with a resumable run. `collection_stage: discovery` records visible search-card facts without claiming a detailed review; it never triggers a deal alert. `collection_stage: verification` records the inspected detail page and gallery. A later discovery sighting retains earlier detailed evidence but makes the item provisional until checked again. Every import uses the current observation schema advertised by the tool.

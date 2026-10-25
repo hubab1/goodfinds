@@ -643,7 +643,10 @@ pub fn rebuild_history(key: &str, history: &[Value]) -> Option<(Value, Vec<Value
     let mut prior = Value::Null;
     let mut first_active = Value::Null;
     let mut last_active = Value::Null;
-    let mut conflict = false;
+    let mut content_conflict_at = None;
+    let mut availability_conflict_at = None;
+    let mut last_verified_at = i64::MIN;
+    let mut last_availability_at = i64::MIN;
     let mut successes = Vec::<Value>::new();
     let mut seen = HashMap::<String, String>::new();
     let mut availability_seen = HashMap::<String, String>::new();
@@ -660,14 +663,19 @@ pub fn rebuild_history(key: &str, history: &[Value]) -> Option<(Value, Vec<Value
             current["last_attempted_at"] = row["observed_at"].clone();
             continue;
         }
-        if availability_seen
-            .insert(
-                s(&row["observed_at"]).into(),
-                s(&row["availability"]).into(),
-            )
-            .is_some_and(|old| old != s(&row["availability"]))
-        {
-            conflict = true;
+        let at = t(&row["observed_at"]);
+        if !row["availability"].is_null() && row["availability"] != "unknown" {
+            last_availability_at = at;
+            if availability_seen
+                .insert(
+                    s(&row["observed_at"]).into(),
+                    s(&row["availability"]).into(),
+                )
+                .is_some_and(|old| old != s(&row["availability"]))
+            {
+                availability_conflict_at = Some(at);
+                events.push(json!({"kind":"observation_conflict","scope":"availability","observed_at":row["observed_at"]}));
+            }
         }
         if !current.is_null() && row["availability"] != current["availability"] {
             events.push(json!({"kind":"status_changed","observed_at":row["observed_at"],"previous_state":default(&current["availability"],json!("unknown")),"state":row["availability"],"earliest_at":default(&current["availability_checked_at"], current["observed_at"].clone()),"latest_at":row["observed_at"]}));
@@ -692,19 +700,18 @@ pub fn rebuild_history(key: &str, history: &[Value]) -> Option<(Value, Vec<Value
             continue;
         }
         successes.push(row["observed_at"].clone());
-        let payload = format!(
-            "{}{}{}",
-            fingerprint(row),
-            row["price_minor"],
-            s(&row["availability"])
-        );
+        let payload = format!("{}{}", fingerprint(row), row["price_minor"]);
         if seen
             .get(s(&row["observed_at"]))
             .is_some_and(|p| p != &payload)
         {
-            conflict = true;
+            content_conflict_at = Some(at);
+            events.push(json!({"kind":"observation_conflict","scope":"content","observed_at":row["observed_at"]}));
         }
         seen.insert(s(&row["observed_at"]).into(), payload);
+        if row["collection_stage"] != "discovery" {
+            last_verified_at = at;
+        }
         if prior.is_null() {
             events.push(json!({"kind":"first_observed_at","observed_at":row["observed_at"]}));
         } else {
@@ -899,7 +906,12 @@ pub fn rebuild_history(key: &str, history: &[Value]) -> Option<(Value, Vec<Value
     current["last_successful_at"] = successes.last().cloned().unwrap_or(Value::Null);
     current["first_confirmed_active_at"] = first_active;
     current["last_confirmed_active_at"] = last_active;
-    current["observation_conflict"] = json!(conflict);
+    let availability_conflict =
+        availability_conflict_at.is_some_and(|at| at >= last_availability_at);
+    current["availability_conflict"] = json!(availability_conflict);
+    current["observation_conflict"] = json!(
+        availability_conflict || content_conflict_at.is_some_and(|at| at >= last_verified_at)
+    );
     Some((current, events))
 }
 fn observations(ws: &Workspace, key: Option<&str>) -> Result<Vec<Value>> {
@@ -1451,7 +1463,11 @@ pub fn quality(row: &Value, config: &Value, now: i64, peers: &[Value]) -> Value 
         flags.push(json!({"code":"conflicting_evidence","message":"Listing evidence conflicts and needs review","severity":"review"}));
         price.push("Conflicting listing evidence".into());
     }
-    if conflicts.contains(&"availability") || row["observation_conflict"] == true {
+    let availability_conflict = row
+        .get("availability_conflict")
+        .unwrap_or(&row["observation_conflict"])
+        == &Value::Bool(true);
+    if conflicts.contains(&"availability") || availability_conflict {
         stock.push("Availability evidence conflicts".into());
     }
     if arr(&row["relationships"])
@@ -1516,7 +1532,11 @@ pub fn quality(row: &Value, config: &Value, now: i64, peers: &[Value]) -> Value 
     } else {
         vec!["Original publication time is not established"]
     };
-    let duration = if conflicts.contains(&"availability") || row["observation_conflict"] == true {
+    let duration = if conflicts.contains(&"availability")
+        || availability_conflict
+        || arr(&row["events"]).iter().any(|event| {
+            event["kind"] == "observation_conflict" && event["scope"] == "availability"
+        }) {
         vec!["Availability evidence conflicts"]
     } else if row["inventory_type"] == "multiple_units" {
         vec!["Multi-unit stock does not establish an individual item's lifetime"]

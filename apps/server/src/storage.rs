@@ -42,14 +42,16 @@ fn automations_directory(lookup: impl Fn(&str) -> Option<OsString>) -> Option<Pa
         .map(|root| root.join("automations"))
 }
 
-fn configure_connection(db: &Connection) -> Result<()> {
+fn configure_connection(db: &Connection, schema: &str) -> Result<()> {
     let timeout = Duration::from_secs(10);
     let deadline = Instant::now() + timeout;
     loop {
         db.busy_timeout(deadline.saturating_duration_since(Instant::now()))?;
         // Concurrent first opens can fail the journal-mode lock upgrade without
         // invoking SQLite's busy handler. Retry only this connection setup step.
-        match db.execute_batch("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;") {
+        match db.execute_batch(&format!(
+            "PRAGMA {schema}.journal_mode=WAL; PRAGMA foreign_keys=ON;"
+        )) {
             Ok(()) => break,
             Err(e)
                 if matches!(
@@ -92,12 +94,15 @@ impl Workspace {
         };
         std::fs::create_dir_all(&folder)?;
         let db = Connection::open(folder.join("workspace.sqlite"))?;
-        configure_connection(&db)?;
+        configure_connection(&db, "main")?;
         initialize(&db)?;
         db.execute(
             "ATTACH DATABASE ? AS checks",
             [folder.join("connections.sqlite").to_string_lossy().as_ref()],
         )?;
+        // A rollback-journal attachment makes even an otherwise empty writer
+        // commit wait for readers. Keep both databases on the same WAL policy.
+        configure_connection(&db, "checks")?;
         let mut ws = Self {
             db,
             config: Value::Null,
@@ -564,6 +569,34 @@ pub fn device_browser() -> Value {
 #[cfg(test)]
 mod platform_tests {
     use super::*;
+
+    #[test]
+    fn connection_check_readers_do_not_block_workspace_writers() {
+        let directory = tempfile::tempdir().unwrap();
+        drop(Workspace::open(directory.path(), "live", "setup").unwrap());
+        let reader = Connection::open(directory.path().join("workspace.sqlite")).unwrap();
+        reader
+            .execute(
+                "ATTACH DATABASE ? AS checks",
+                [directory
+                    .path()
+                    .join("connections.sqlite")
+                    .to_string_lossy()
+                    .as_ref()],
+            )
+            .unwrap();
+        reader.execute_batch("BEGIN DEFERRED").unwrap();
+        let _: i64 = reader
+            .query_row("SELECT COUNT(*) FROM checks.connection_checks", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+
+        let writer = Workspace::open(directory.path(), "live", "writer")
+            .expect("A connection-check reader must not block workspace initialization");
+        writer.db.execute_batch("BEGIN IMMEDIATE; COMMIT").unwrap();
+        reader.execute_batch("ROLLBACK").unwrap();
+    }
 
     #[test]
     fn automation_directory_supports_windows_profile_and_explicit_overrides() {
