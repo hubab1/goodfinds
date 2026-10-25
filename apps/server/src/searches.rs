@@ -1395,9 +1395,16 @@ pub fn run_action(ws: &mut Workspace, action: &str, input: &Value) -> Result<Val
             "request",
             &json!({"now":ws.now,"search_exists":true,"fulfilled":fulfilled_searches(ws)?.contains(s(&saved["id"])),"request_supplied":true}),
         )?;
-        if let Some(existing) = find_run(ws, s(&args["request_id"]))? {
+        if let Some(mut existing) = find_run(ws, s(&args["request_id"]))? {
             if existing["search_id"] != saved["id"] {
                 return invalid("This request ID belongs to another search");
+            }
+            if scheduled_recovery(ws, &existing, &args) {
+                existing["phase"] = json!("requested");
+                existing["worker"] = Value::Null;
+                existing["interruption"] = Value::Null;
+                bump(&mut existing, ws.now);
+                save_run(ws, &existing)?;
             }
             return Ok(existing);
         }
@@ -1976,6 +1983,39 @@ fn local_slot(times: &[String], zone: &str, now: i64, grace: i64) -> Option<Stri
         .filter(|v| minute_of_day(v) <= minute)
         .max()
         .map(|t| format!("{date}T{t}"))
+}
+
+fn scheduled_recovery(ws: &Workspace, run: &Value, args: &Value) -> bool {
+    let projected = expired_run(run, ws.now);
+    let run = &projected;
+    if !b(&args["resume"])
+        || args["trigger"] != "scheduled"
+        || run["trigger"] != "scheduled"
+        || run["phase"] != "blocked"
+        || run["id"] != args["request_id"]
+        || run["search_id"] != args["search_id"]
+        || search(&ws.config, s(&run["search_id"]))
+            .is_none_or(|saved| hash(saved) != s(&run["search_revision"]))
+    {
+        return false;
+    }
+    let Ok(started) = time(s(&run["scheduled_at"])) else {
+        return false;
+    };
+    if ws.now < started {
+        return false;
+    }
+    let sid = s(&run["search_id"]);
+    let timing = timing_for(&ws.config, sid);
+    let plan = dispatcher_plan(&ws.config, &[sid.to_owned()], &HashSet::new(), ws.now);
+    let times = strings(&plan["times"]);
+    if times.is_empty() {
+        return timing["mode"] == "interval"
+            && ws.now - started < n(&timing["interval_minutes"]) * 60_000;
+    }
+    let grace = interval_grace_minutes(&timing);
+    let slot = local_slot(&times, s(&plan["timezone"]), started, grace);
+    slot.is_some() && slot == local_slot(&times, s(&plan["timezone"]), ws.now, grace)
 }
 fn timing_for(config: &Value, id: &str) -> Value {
     monitoring(config,id).filter(|m|!m["timing"].is_null()).map(|m|m["timing"].clone()).unwrap_or_else(||json!({"mode":"interval","interval_minutes":monitoring(config,id).map(|m|m["interval_minutes"].clone()).unwrap_or_else(||config["schedule"]["interval_minutes"].clone())}))
@@ -2942,13 +2982,18 @@ pub fn command(ws: &mut Workspace, action: &str, args: &Value) -> Result<Value> 
                 if let Some(latest) = latest_scheduled(ws, sid)? {
                     history.push(latest)
                 }
+                let recovery = find_run(ws, s(&request["request_id"]))?
+                    .is_some_and(|run| scheduled_recovery(ws, &run, request));
+                if recovery && history.iter().any(active) {
+                    return invalid("Another search run is already active");
+                }
                 let check = scheduled_check(
                     &ws.config,
                     sid,
                     ws.now,
                     &fulfilled,
                     &history,
-                    true,
+                    !recovery,
                     host_for_search(&ws.config, &hosts, sid),
                 );
                 if !b(&check["allowed"]) {

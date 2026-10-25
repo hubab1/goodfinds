@@ -11,6 +11,7 @@ import { rrulestr } from "rrule";
 import { NativeWorkspace } from "./helpers/native-workspace.ts";
 import { createNativeServer } from "./helpers/native-mcp.ts";
 import { operations } from "@goodfinds/contracts/operations";
+import { searchRunSchema } from "@goodfinds/contracts/search-workflow";
 import { dispatcherPlan } from "@goodfinds/contracts/scheduled-dispatch";
 import { revisionFor } from "./helpers/revisions.ts";
 import { availabilityIdentities } from "./helpers/availability-fixtures.ts";
@@ -499,6 +500,97 @@ void test("a shared wake-up can claim every independent search before any finish
     f.request("renew_search_lease", { request: { run_id: run.run_id, worker_id: run.worker_id } });
     assert.equal(f.state().search_runs.find((r) => r.id === run.run_id)?.phase, "discovering");
   }
+});
+
+void test("explicit scheduled recovery retains the occurrence and its completed coverage", (t) => {
+  const f = fixture(t, true);
+  f.writeHost();
+  f.report();
+  const reserved = required(f.batch().runs[0]);
+  const worker = randomUUID();
+  const claimed = searchRunSchema.parse(
+    f.request("claim_search_run", {
+      request: {
+        run_id: reserved.run_id,
+        expected_version: reserved.version,
+        worker_id: worker,
+        agent_id: "interrupted-worker",
+      },
+    })["run"],
+  );
+  const query = required(claimed.queries[0]);
+  f.request("update_search_run", {
+    request: {
+      run_id: reserved.run_id,
+      expected_version: claimed.version,
+      worker_id: worker,
+      query: { ...query, status: "completed", result_count: 3 },
+    },
+  });
+  f.at("2026-10-08T08:06:00Z");
+  const peerId = randomUUID();
+  f.request("request_search_run", {
+    request: {
+      search_id: reserved.search_id,
+      request_id: peerId,
+      trigger: "manual",
+      resume: false,
+    },
+  });
+  assert.throws(
+    () =>
+      f.request("request_search_run", {
+        request: {
+          search_id: reserved.search_id,
+          request_id: reserved.run_id,
+          trigger: "scheduled",
+          resume: true,
+        },
+      }),
+    /already active/u,
+  );
+  f.request("cancel_search_run", { request: { run_id: peerId } });
+  f.writeHost("PAUSED");
+  const paused = f.request("request_search_run", {
+    request: {
+      search_id: reserved.search_id,
+      request_id: reserved.run_id,
+      trigger: "scheduled",
+      resume: true,
+    },
+  });
+  assert.equal(
+    required(
+      operations.request_search_run.output.shape.scheduled_check.parse(paused["scheduled_check"]),
+    ).allowed,
+    false,
+  );
+  f.writeHost("ACTIVE");
+  const resume = () =>
+    searchRunSchema.parse(
+      f.request("request_search_run", {
+        request: {
+          search_id: reserved.search_id,
+          request_id: reserved.run_id,
+          trigger: "scheduled",
+          resume: true,
+        },
+      })["run"],
+    );
+  const resumed = resume();
+  assert.equal(resumed.id, reserved.run_id);
+  assert.equal(resumed.phase, "requested");
+  assert.equal(resumed.trigger, "scheduled");
+  assert.equal(resumed.scheduled_at, claimed.scheduled_at);
+  assert.equal(resumed.worker, null);
+  assert.equal(resumed.queries.find((q) => q.id === query.id)?.status, "completed");
+  assert.equal(resume().version, resumed.version, "A replay must not reset the reservation");
+  assert.throws(() =>
+    f.request("renew_search_lease", { request: { run_id: reserved.run_id, worker_id: worker } }),
+  );
+  f.at("2026-10-08T09:00:00Z");
+  assert.notEqual(resume().phase, "requested", "An earlier occurrence must not be revived");
+  assert.notEqual(f.batch().runs[0]?.run_id, reserved.run_id);
 });
 
 void test("pausing and removing one member preserves peers; the final member requires a stopped host", (t) => {
