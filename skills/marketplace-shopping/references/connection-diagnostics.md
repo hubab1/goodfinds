@@ -10,6 +10,8 @@ The doctor starts a real stdio connection, lists tools, reads the panel resource
 
 An existing chat can retain the previous server and tool schemas after its installed files change. If mounted capabilities disagree with the installed helper, record that mismatch and use the current helper for affected operations. After the host refreshes the plugin, recheck mounted capabilities and read its current context before returning to native tools. Reuse saved runs and observations; a refresh does not authorize duplicate searches.
 
+For an authorized reliability repair, distinguish source changes, the installed executable and the server already mounted in the chat. A passing branch test or open PR does not update the installed plugin. Build and validate the repaired package, preserve a rollback copy, verify the installed executable against the build, and exercise the affected operation through that executable. If the host retains the old process, use the current packaged helper for affected operations and keep that instruction in the existing automation until a refreshed mount is verified. Keep search preferences, data, accounts and unrelated schedules intact.
+
 If a fresh chat still lacks tools after the doctor passes, report that the packaged server is healthy but the host has not exposed it. Check the host's plugin loader instead of repeating the reinstall advice. The desktop app can bundle a different Codex version from the executable on PATH. An enabled skill or plugin entry does not establish that its MCP server was discovered.
 
 When only some tools are exposed, use the packaged helper for the missing operation; existing successful reads do not require a new diagnostic cycle. Inspect its complete input schema before the first write:
